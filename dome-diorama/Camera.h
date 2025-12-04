@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 
 class Input;
+struct GLFWwindow;
 
 enum class CameraMode { ORBIT, FPS };
 

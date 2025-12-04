@@ -1,14 +1,8 @@
 ﻿  Camera.cpp
-D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.h(16,22): error C2061: syntax error: identifier 'GLFWwindow'
-  (compiling source file 'Camera.cpp')
-  
-D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.cpp(132,14): error C2084: function 'void Camera::switchToOrbit(void)' already has a body
-      D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.cpp(116,14):
-      see previous definition of 'Camera::switchToOrbit'
-  
-D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.cpp(146,14): error C2511: 'void Camera::setCursorMode(GLFWwindow *) const': overloaded member function not found in 'Camera'
-      D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.h(8,7):
-      see declaration of 'Camera'
-  
-D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.cpp(147,12): error C2677: binary '==': no global operator found which takes type 'CameraMode' (or there is no acceptable conversion)
   main.cpp
+  Generating code
+  64 of 1595 functions ( 4.0%) were compiled, the rest were copied from previous compilation.
+    4 functions were new in current compilation
+    25 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  dome-diorama.vcxproj -> D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\x64\Release\dome-diorama.exe

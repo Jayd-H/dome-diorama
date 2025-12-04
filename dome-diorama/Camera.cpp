@@ -122,25 +122,11 @@ void Camera::switchToOrbit() {
 
   if (orbitRadius > 0.001f) {
     const glm::vec3 normalized = offset / orbitRadius;
-    orbitPhi = asin(normalized.y);
-    orbitTheta = atan2(normalized.x, normalized.z);
+    orbitPhi = acos(std::clamp(normalized.y, -1.0f, 1.0f));
+    orbitTheta = atan2(normalized.z, normalized.x);
   }
 
   Debug::log(Debug::Category::CAMERA, "Switched to ORBIT mode");
-}
-
-void Camera::switchToOrbit() {
-  mode = CameraMode::ORBIT;
-
-  const glm::vec3 offset = fpsPosition - orbitPivot;
-  orbitRadius = glm::length(offset);
-  orbitRadius = std::clamp(orbitRadius, MIN_RADIUS, MAX_RADIUS);
-
-  if (orbitRadius > 0.001f) {
-    const glm::vec3 normalized = offset / orbitRadius;
-    orbitPhi = asin(normalized.y);
-    orbitTheta = atan2(normalized.x, normalized.z);
-  }
 }
 
 void Camera::setCursorMode(GLFWwindow* window) const {
