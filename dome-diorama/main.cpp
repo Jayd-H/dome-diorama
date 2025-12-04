@@ -1371,15 +1371,19 @@ class DomeDiorama {
     return VK_FALSE;
   }
 
-  void createMaterialDescriptorSetLayout() {
-    std::array<VkDescriptorSetLayoutBinding, 7> bindings{};
+ void createMaterialDescriptorSetLayout() {
+    std::array<VkDescriptorSetLayoutBinding, 8> bindings{};
 
-    for (uint32_t i = 0; i < 7; i++) {
+    bindings[0].binding = 0;
+    bindings[0].descriptorCount = 1;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    for (uint32_t i = 1; i < 8; i++) {
       bindings[i].binding = i;
       bindings[i].descriptorCount = 1;
       bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
       bindings[i].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-      bindings[i].pImmutableSamplers = nullptr;
     }
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};

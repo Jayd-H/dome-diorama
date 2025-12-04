@@ -35,6 +35,9 @@ class Material {
 
   MaterialProperties properties;
 
+  VkBuffer propertiesBuffer = VK_NULL_HANDLE;
+  VkDeviceMemory propertiesBufferMemory = VK_NULL_HANDLE;
+
   bool isTransparent = false;
   bool doubleSided = false;
 

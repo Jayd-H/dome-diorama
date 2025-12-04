@@ -96,6 +96,18 @@ void MaterialManager::cleanup() {
 }
 
 void MaterialManager::createDescriptorSet(Material* material) {
+  VkDeviceSize bufferSize = sizeof(MaterialProperties);
+  createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+               material->propertiesBuffer, material->propertiesBufferMemory);
+
+  void* data;
+  vkMapMemory(device, material->propertiesBufferMemory, 0, bufferSize, 0,
+              &data);
+  memcpy(data, &material->properties, bufferSize);
+  vkUnmapMemory(device, material->propertiesBufferMemory);
+
   VkDescriptorSetAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
   allocInfo.descriptorPool = descriptorPool;
@@ -111,6 +123,11 @@ void MaterialManager::createDescriptorSet(Material* material) {
 }
 
 void MaterialManager::updateDescriptorSet(Material* material) {
+  VkDescriptorBufferInfo bufferInfo{};
+  bufferInfo.buffer = material->propertiesBuffer;
+  bufferInfo.offset = 0;
+  bufferInfo.range = sizeof(MaterialProperties);
+
   std::array<VkDescriptorImageInfo, 7> imageInfos{};
 
   imageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -142,17 +159,23 @@ void MaterialManager::updateDescriptorSet(Material* material) {
   imageInfos[6].imageView = textureManager->getImageView(material->aoMap);
   imageInfos[6].sampler = textureManager->getSampler(material->aoMap);
 
-  std::array<VkWriteDescriptorSet, 7> descriptorWrites{};
+  std::array<VkWriteDescriptorSet, 8> descriptorWrites{};
+
+  descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrites[0].dstSet = material->descriptorSet;
+  descriptorWrites[0].dstBinding = 0;
+  descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  descriptorWrites[0].descriptorCount = 1;
+  descriptorWrites[0].pBufferInfo = &bufferInfo;
 
   for (size_t i = 0; i < 7; i++) {
-    descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[i].dstSet = material->descriptorSet;
-    descriptorWrites[i].dstBinding = static_cast<uint32_t>(i);
-    descriptorWrites[i].dstArrayElement = 0;
-    descriptorWrites[i].descriptorType =
+    descriptorWrites[i + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[i + 1].dstSet = material->descriptorSet;
+    descriptorWrites[i + 1].dstBinding = static_cast<uint32_t>(i + 1);
+    descriptorWrites[i + 1].descriptorType =
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrites[i].descriptorCount = 1;
-    descriptorWrites[i].pImageInfo = &imageInfos[i];
+    descriptorWrites[i + 1].descriptorCount = 1;
+    descriptorWrites[i + 1].pImageInfo = &imageInfos[i];
   }
 
   vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()),
