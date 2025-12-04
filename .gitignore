@@ -1,0 +1,36 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vcxproj.user
+
+# Build results
+[Dd]ebug/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Build artifacts in nested dome-diorama folder
+dome-diorama/x64/Release/*.obj
+dome-diorama/x64/Release/*.log
+dome-diorama/x64/Release/*.pdb
+dome-diorama/x64/Release/*.iobj
+dome-diorama/x64/Release/*.ipdb
+dome-diorama/x64/Release/*.ilk
+dome-diorama/x64/Release/*.recipe
+dome-diorama/x64/Release/*.idb
+dome-diorama/x64/Release/*.pch
+dome-diorama/x64/Release/dome-diorama.tlog/
+
+# Build artifacts in top-level x64 folder
+x64/Release/*.pdb
+
+# Parasoft
+.parasoft.dat/

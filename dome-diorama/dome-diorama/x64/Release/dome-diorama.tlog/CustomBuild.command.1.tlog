@@ -1,0 +1,4 @@
+^D:\FILES\DOCUMENTS\APROJECTS\CPP\DOME-DIORAMA\DOME-DIORAMA\SHADERS\SHADER.FRAG
+glslc "D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\SHADERS\shader.frag" -o "D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\shaders\frag.spv"
+^D:\FILES\DOCUMENTS\APROJECTS\CPP\DOME-DIORAMA\DOME-DIORAMA\SHADERS\SHADER.VERT
+glslc "D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\SHADERS\shader.vert" -o "D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\shaders\vert.spv"
