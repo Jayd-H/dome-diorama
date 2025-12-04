@@ -1,5 +1,14 @@
+//==================================================
+// Vulkan ver 1.3 based
+//====================================================
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+// custom shit
+#include "Camera.h"
+#include "Debug.h"
+#include "Input.h"
 
 #define GLM_FORCE_RADIANS
 #include <algorithm>
@@ -21,6 +30,12 @@
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
+
+const bool DEBUG_MAIN = false;
+const bool DEBUG_CAMERA = true;
+const bool DEBUG_INPUT = true;
+const bool DEBUG_RENDERING = false;
+const bool DEBUG_VULKAN = false;
 
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"};
@@ -109,7 +124,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
   }
 }
 
-class VulkanApp {
+class DomeDiorama {
  public:
   void run() {
     initWindow();
@@ -158,6 +173,42 @@ class VulkanApp {
   std::vector<VkSemaphore> renderFinishedSemaphores;
   std::vector<VkFence> inFlightFences;
 
+  // Camera & Input
+  Input input;
+  Camera camera;
+  float lastFrameTime = 0.0f;
+
+  static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
+                          int mods) {
+    if (window == nullptr) return;
+
+    if (key == GLFW_KEY_ENTER && action == GLFW_PRESS) {
+      std::cout << "MAIN: Enter key pressed!" << std::endl;
+    }
+
+    auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
+    app->input.onKey(key, scancode, action, mods);
+  }
+
+  static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+    auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
+    app->input.onMouseMove(xpos, ypos);
+  }
+
+  static void mouseButtonCallback(GLFWwindow* window, int button, int action,
+                                  int mods) {
+    auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
+    app->input.onMouseButton(button, action, mods);
+  }
+
+  static void scrollCallback(GLFWwindow* window, double xoffset,
+                             double yoffset) {
+    std::cout << "MAIN: Scroll callback: " << yoffset << std::endl;
+
+    auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
+    app->input.onScroll(xoffset, yoffset);
+  }
+
   void initWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -165,6 +216,12 @@ class VulkanApp {
         glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Minimal", nullptr, nullptr);
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+    glfwSetKeyCallback(window, keyCallback);
+    glfwSetCursorPosCallback(window, cursorPosCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    glfwSetScrollCallback(window, scrollCallback);
+
+    lastFrameTime = static_cast<float>(glfwGetTime());
   }
 
   void initVulkan() {
@@ -190,9 +247,18 @@ class VulkanApp {
   void mainLoop() {
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
+
+      const float currentTime = static_cast<float>(glfwGetTime());
+      const float deltaTime = currentTime - lastFrameTime;
+      lastFrameTime = currentTime;
+
+      input.update();
+      camera.update(input, deltaTime);
+      camera.setCursorMode(window);
+      input.endFrame();
+
       drawFrame();
     }
-    vkDeviceWaitIdle(device);
   }
 
   void cleanup() {
@@ -949,12 +1015,10 @@ class VulkanApp {
     UniformBufferObject ubo{};
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f),
                             glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view =
-        glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                    glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = camera.getViewMatrix();
     ubo.proj = glm::perspective(
         glm::radians(45.0f),
-        swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+        swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
     ubo.proj[1][1] *= -1;
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
@@ -1233,7 +1297,7 @@ class VulkanApp {
 
   static void framebufferResizeCallback(GLFWwindow* window, int width,
                                         int height) {
-    auto app = reinterpret_cast<VulkanApp*>(glfwGetWindowUserPointer(window));
+    auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
     app->framebufferResized = true;
   }
 
@@ -1248,7 +1312,13 @@ class VulkanApp {
 };
 
 int main() {
-  VulkanApp app;
+  Debug::enableMain = DEBUG_MAIN;
+  Debug::enableCamera = DEBUG_CAMERA;
+  Debug::enableInput = DEBUG_INPUT;
+  Debug::enableRendering = DEBUG_RENDERING;
+  Debug::enableVulkan = DEBUG_VULKAN;
+
+  DomeDiorama app;
   try {
     app.run();
   } catch (const std::exception& e) {

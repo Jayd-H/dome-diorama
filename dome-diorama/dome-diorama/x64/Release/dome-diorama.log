@@ -1,6 +1,14 @@
-﻿  main.cpp
-  Generating code
-  Previous IPDB not found, fall back to full compilation.
-  All 1547 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
-  Finished generating code
-  dome-diorama.vcxproj -> D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\x64\Release\dome-diorama.exe
+﻿  Camera.cpp
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.h(16,22): error C2061: syntax error: identifier 'GLFWwindow'
+  (compiling source file 'Camera.cpp')
+  
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.cpp(132,14): error C2084: function 'void Camera::switchToOrbit(void)' already has a body
+      D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.cpp(116,14):
+      see previous definition of 'Camera::switchToOrbit'
+  
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.cpp(146,14): error C2511: 'void Camera::setCursorMode(GLFWwindow *) const': overloaded member function not found in 'Camera'
+      D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.h(8,7):
+      see declaration of 'Camera'
+  
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.cpp(147,12): error C2677: binary '==': no global operator found which takes type 'CameraMode' (or there is no acceptable conversion)
+  main.cpp
