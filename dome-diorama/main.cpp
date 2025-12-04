@@ -9,6 +9,8 @@
 #include "Camera.h"
 #include "Debug.h"
 #include "Input.h"
+#include "MaterialManager.h"
+#include "TextureManager.h"
 
 #define GLM_FORCE_RADIANS
 #include <algorithm>
@@ -31,12 +33,6 @@ const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
-const bool DEBUG_MAIN = false;
-const bool DEBUG_CAMERA = true;
-const bool DEBUG_INPUT = true;
-const bool DEBUG_RENDERING = false;
-const bool DEBUG_VULKAN = false;
-
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"};
 
@@ -45,8 +41,18 @@ const std::vector<const char*> deviceExtensions = {
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
+const bool DEBUG_MAIN = false;
+const bool DEBUG_CAMERA = false;
+const bool DEBUG_INPUT = false;
+const bool DEBUG_RENDERING = false;
+const bool DEBUG_VULKAN = false;
 #else
 const bool enableValidationLayers = true;
+const bool DEBUG_MAIN = true;
+const bool DEBUG_CAMERA = true;
+const bool DEBUG_INPUT = true;
+const bool DEBUG_RENDERING = true;
+const bool DEBUG_VULKAN = true;
 #endif
 
 struct QueueFamilyIndices {
@@ -67,6 +73,8 @@ struct SwapChainSupportDetails {
 struct Vertex {
   glm::vec3 pos;
   glm::vec3 color;
+  glm::vec2 texCoord;
+  glm::vec3 normal;
 
   static VkVertexInputBindingDescription getBindingDescription() {
     VkVertexInputBindingDescription bindingDescription{};
@@ -76,13 +84,19 @@ struct Vertex {
     return bindingDescription;
   }
 
-  static std::array<VkVertexInputAttributeDescription, 2>
+  static std::array<VkVertexInputAttributeDescription, 4>
   getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+    std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
+
     attributeDescriptions[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT,
                                 offsetof(Vertex, pos)};
     attributeDescriptions[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT,
                                 offsetof(Vertex, color)};
+    attributeDescriptions[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT,
+                                offsetof(Vertex, texCoord)};
+    attributeDescriptions[3] = {3, 0, VK_FORMAT_R32G32B32_SFLOAT,
+                                offsetof(Vertex, normal)};
+
     return attributeDescriptions;
   }
 };
@@ -94,10 +108,16 @@ struct UniformBufferObject {
 };
 
 const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}};
+    {{-0.5f, -0.5f, 0.0f},
+     {1.0f, 0.0f, 0.0f},
+     {0.0f, 0.0f},
+     {0.0f, 0.0f, 1.0f}},
+    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.0f},
+     {1.0f, 1.0f, 1.0f},
+     {0.0f, 1.0f},
+     {0.0f, 0.0f, 1.0f}}};
 
 const std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
 
@@ -154,6 +174,7 @@ class DomeDiorama {
   std::vector<VkImageView> swapChainImageViews;
 
   VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+  VkDescriptorSetLayout materialDescriptorSetLayout = VK_NULL_HANDLE;
   VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
   VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
@@ -177,6 +198,10 @@ class DomeDiorama {
   Input input;
   Camera camera;
   float lastFrameTime = 0.0f;
+
+  TextureManager* textureManager = nullptr;
+  MaterialManager* materialManager = nullptr;
+  MaterialID testMaterialID = 0;
 
   static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
                           int mods) {
@@ -233,12 +258,22 @@ class DomeDiorama {
     createSwapChain();
     createImageViews();
     createDescriptorSetLayout();
+    createMaterialDescriptorSetLayout();
     createGraphicsPipeline();
     createCommandPool();
+
+    textureManager =
+        new TextureManager(device, physicalDevice, commandPool, graphicsQueue);
+    materialManager = new MaterialManager(device, textureManager);
+
+    createDescriptorPool();
+    materialManager->init(materialDescriptorSetLayout, descriptorPool);
+
+    createTestMaterial();
+
     createVertexBuffer();
     createIndexBuffer();
     createUniformBuffers();
-    createDescriptorPool();
     createDescriptorSets();
     createCommandBuffers();
     createSyncObjects();
@@ -264,9 +299,19 @@ class DomeDiorama {
   void cleanup() {
     cleanupSwapChain();
 
+    if (materialManager) {
+      materialManager->cleanup();
+      delete materialManager;
+    }
+    if (textureManager) {
+      textureManager->cleanup();
+      delete textureManager;
+    }
+
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(device, materialDescriptorSetLayout, nullptr);
 
     vkDestroyBuffer(device, indexBuffer, nullptr);
     vkFreeMemory(device, indexBufferMemory, nullptr);
@@ -403,8 +448,12 @@ class DomeDiorama {
     sync2Features.synchronization2 = VK_TRUE;
     dynamicRenderingFeatures.pNext = &sync2Features;
 
+    VkPhysicalDeviceFeatures deviceFeatures{};
+    deviceFeatures.samplerAnisotropy = VK_TRUE;
+
     VkPhysicalDeviceFeatures2 deviceFeatures2{};
     deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    deviceFeatures2.features = deviceFeatures;
     deviceFeatures2.pNext = &dynamicRenderingFeatures;
 
     VkDeviceCreateInfo createInfo{};
@@ -616,10 +665,13 @@ class DomeDiorama {
         static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
+    std::array<VkDescriptorSetLayout, 2> layouts = {
+        descriptorSetLayout, materialDescriptorSetLayout};
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
+    pipelineLayoutInfo.pSetLayouts = layouts.data();
 
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
                                &pipelineLayout) != VK_SUCCESS) {
@@ -734,15 +786,18 @@ class DomeDiorama {
   }
 
   void createDescriptorPool() {
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[1].descriptorCount =
+        static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 20);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT + 20);
 
     if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) !=
         VK_SUCCESS) {
@@ -975,9 +1030,15 @@ class DomeDiorama {
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+    Material* material = materialManager->getMaterial(testMaterialID);
+
+    std::array<VkDescriptorSet, 2> setsToHind = {descriptorSets[currentFrame],
+                                                 material->descriptorSet};
+
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipelineLayout, 0, 1, &descriptorSets[currentFrame],
-                            0, nullptr);
+                            pipelineLayout, 0,
+                            static_cast<uint32_t>(setsToHind.size()),
+                            setsToHind.data(), 0, nullptr);
     vkCmdDrawIndexed(commandBuffer, static_cast<uint16_t>(indices.size()), 1, 0,
                      0, 0);
 
@@ -1308,6 +1369,41 @@ class DomeDiorama {
                 void* pUserData) {
     std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
     return VK_FALSE;
+  }
+
+  void createMaterialDescriptorSetLayout() {
+    std::array<VkDescriptorSetLayoutBinding, 7> bindings{};
+
+    for (uint32_t i = 0; i < 7; i++) {
+      bindings[i].binding = i;
+      bindings[i].descriptorCount = 1;
+      bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      bindings[i].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+      bindings[i].pImmutableSamplers = nullptr;
+    }
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
+
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr,
+                                    &materialDescriptorSetLayout) !=
+        VK_SUCCESS) {
+      throw std::runtime_error(
+          "Failed to create material descriptor set layout!");
+    }
+  }
+
+  void createTestMaterial() {
+    Material* testMat = MaterialBuilder()
+                            .name("Test Textured Material")
+                            .albedoColor(1.0f, 0.5f, 0.2f)
+                            .roughness(0.5f)
+                            .metallic(0.0f)
+                            .build();
+
+    testMaterialID = materialManager->registerMaterial(testMat);
   }
 };
 

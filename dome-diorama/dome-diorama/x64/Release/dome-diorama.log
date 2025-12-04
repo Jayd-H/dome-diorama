@@ -1,8 +1,9 @@
-﻿  Camera.cpp
+﻿  MaterialManager.cpp
+  TextureManager.cpp
   main.cpp
   Generating code
-  64 of 1595 functions ( 4.0%) were compiled, the rest were copied from previous compilation.
-    4 functions were new in current compilation
-    25 functions had inline decision re-evaluated but remain unchanged
+  494 of 1880 functions (26.3%) were compiled, the rest were copied from previous compilation.
+    289 functions were new in current compilation
+    271 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   dome-diorama.vcxproj -> D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\x64\Release\dome-diorama.exe
