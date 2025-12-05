@@ -3,11 +3,12 @@
 #include <vector>
 
 #include "Material.h"
+#include "RenderDevice.h"
 #include "TextureManager.h"
 
 class MaterialManager {
  public:
-  MaterialManager(VkDevice device, TextureManager* textureManager);
+  MaterialManager(RenderDevice* renderDevice, TextureManager* textureManager);
   ~MaterialManager();
 
   void init(VkDescriptorSetLayout descriptorSetLayout,
@@ -25,7 +26,7 @@ class MaterialManager {
   void cleanup();
 
  private:
-  VkDevice device;
+  RenderDevice* renderDevice;
   TextureManager* textureManager;
 
   VkDescriptorSetLayout descriptorSetLayout;

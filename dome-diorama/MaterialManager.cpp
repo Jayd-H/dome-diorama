@@ -3,9 +3,9 @@
 #include <array>
 #include <iostream>
 
-MaterialManager::MaterialManager(VkDevice device,
+MaterialManager::MaterialManager(RenderDevice* renderDevice,
                                  TextureManager* textureManager)
-    : device(device), textureManager(textureManager) {}
+    : renderDevice(renderDevice), textureManager(textureManager) {}
 
 MaterialManager::~MaterialManager() { cleanup(); }
 
@@ -96,11 +96,14 @@ void MaterialManager::cleanup() {
 }
 
 void MaterialManager::createDescriptorSet(Material* material) {
+  VkDevice device = renderDevice->getDevice();
   VkDeviceSize bufferSize = sizeof(MaterialProperties);
-  createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-               material->propertiesBuffer, material->propertiesBufferMemory);
+
+  renderDevice->createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                             material->propertiesBuffer,
+                             material->propertiesBufferMemory);
 
   void* data;
   vkMapMemory(device, material->propertiesBufferMemory, 0, bufferSize, 0,
@@ -123,6 +126,8 @@ void MaterialManager::createDescriptorSet(Material* material) {
 }
 
 void MaterialManager::updateDescriptorSet(Material* material) {
+  VkDevice device = renderDevice->getDevice();
+
   VkDescriptorBufferInfo bufferInfo{};
   bufferInfo.buffer = material->propertiesBuffer;
   bufferInfo.offset = 0;

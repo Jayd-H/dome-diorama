@@ -148,6 +148,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="MaterialManager.cpp" />
+    <ClCompile Include="RenderDevice.cpp" />
     <ClCompile Include="TextureManager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -180,6 +181,7 @@
     <ClInclude Include="Input.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MaterialManager.h" />
+    <ClInclude Include="RenderDevice.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />

@@ -36,6 +36,9 @@
     <ClCompile Include="MaterialManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RenderDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SHADERS\shader.vert">
@@ -69,6 +72,9 @@
     </ClInclude>
     <ClInclude Include="stb_image.h">
       <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderDevice.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
