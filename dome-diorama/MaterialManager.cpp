@@ -5,7 +5,11 @@
 
 MaterialManager::MaterialManager(RenderDevice* renderDevice,
                                  TextureManager* textureManager)
-    : renderDevice(renderDevice), textureManager(textureManager) {}
+    : renderDevice(renderDevice),
+      textureManager(textureManager),
+      descriptorSetLayout(VK_NULL_HANDLE),
+      descriptorPool(VK_NULL_HANDLE),
+      defaultMaterialID(0) {}
 
 MaterialManager::~MaterialManager() { cleanup(); }
 

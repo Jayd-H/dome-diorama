@@ -40,6 +40,7 @@ const std::vector<const char*> validationLayers = {
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
+// TODO: implement per-swapchain-image semaphores
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 const bool DEBUG_MAIN = false;
@@ -48,7 +49,7 @@ const bool DEBUG_INPUT = false;
 const bool DEBUG_RENDERING = false;
 const bool DEBUG_VULKAN = false;
 #else
-const bool enableValidationLayers = true;
+const bool enableValidationLayers = false;
 const bool DEBUG_MAIN = true;
 const bool DEBUG_CAMERA = true;
 const bool DEBUG_INPUT = true;
@@ -194,7 +195,6 @@ class DomeDiorama {
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;
   std::vector<VkFence> inFlightFences;
-  std::vector<VkFence> imagesInFlight;
 
   // Camera & Input
   Input input;
@@ -304,6 +304,8 @@ class DomeDiorama {
   }
 
   void cleanup() {
+    vkDeviceWaitIdle(device);
+
     cleanupSwapChain();
 
     if (materialManager) {
@@ -889,7 +891,6 @@ class DomeDiorama {
   void drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE,
                     UINT64_MAX);
-    vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(
@@ -903,44 +904,40 @@ class DomeDiorama {
       throw std::runtime_error("Failed to acquire swap chain image!");
     }
 
+    updateUniformBuffer(currentFrame);
+
+    vkResetFences(device, 1, &inFlightFences[currentFrame]);
+
     vkResetCommandBuffer(commandBuffers[currentFrame], 0);
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
-    updateUniformBuffer(currentFrame);
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphoreSubmitInfo waitSemaphoreInfo{};
-    waitSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    waitSemaphoreInfo.semaphore = imageAvailableSemaphores[currentFrame];
-    waitSemaphoreInfo.stageMask =
-        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
+    VkPipelineStageFlags waitStages[] = {
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
 
-    VkSemaphoreSubmitInfo signalSemaphoreInfo{};
-    signalSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    signalSemaphoreInfo.semaphore = renderFinishedSemaphores[currentFrame];
-    signalSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
-    VkCommandBufferSubmitInfo commandBufferInfo{};
-    commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-    commandBufferInfo.commandBuffer = commandBuffers[currentFrame];
+    VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
 
-    VkSubmitInfo2 submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-    submitInfo.waitSemaphoreInfoCount = 1;
-    submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
-    submitInfo.commandBufferInfoCount = 1;
-    submitInfo.pCommandBufferInfos = &commandBufferInfo;
-    submitInfo.signalSemaphoreInfoCount = 1;
-    submitInfo.pSignalSemaphoreInfos = &signalSemaphoreInfo;
-
-    if (vkQueueSubmit2(graphicsQueue, 1, &submitInfo,
-                       inFlightFences[currentFrame]) != VK_SUCCESS) {
+    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo,
+                      inFlightFences[currentFrame]) != VK_SUCCESS) {
       throw std::runtime_error("Failed to submit draw command buffer!");
     }
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &renderFinishedSemaphores[currentFrame];
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
     VkSwapchainKHR swapChains[] = {swapChain};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
@@ -969,28 +966,9 @@ class DomeDiorama {
 
     vkDeviceWaitIdle(device);
 
-    for (size_t i = 0; i < imageAvailableSemaphores.size(); i++) {
-      vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-      vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
-    }
-
     cleanupSwapChain();
     createSwapChain();
     createImageViews();
-
-    size_t imageCount = swapChainImages.size();
-    imageAvailableSemaphores.resize(imageCount);
-    renderFinishedSemaphores.resize(imageCount);
-
-    VkSemaphoreCreateInfo semaphoreInfo{};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    for (size_t i = 0; i < imageCount; i++) {
-      vkCreateSemaphore(device, &semaphoreInfo, nullptr,
-                        &imageAvailableSemaphores[i]);
-      vkCreateSemaphore(device, &semaphoreInfo, nullptr,
-                        &renderFinishedSemaphores[i]);
-    }
   }
 
   void cleanupSwapChain() {
