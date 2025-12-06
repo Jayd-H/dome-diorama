@@ -1515,16 +1515,9 @@ class DomeDiorama {
     Debug::log(Debug::Category::MAIN, "Creating test scene");
 
     MeshID cubeMesh = meshManager->getDefaultCube();
-    MeshID planeMesh = meshManager->createPlane(10.0f, 10.0f);
     MeshID sphereMesh = meshManager->createSphere(1.0f, 32);
     MeshID cylinderMesh = meshManager->createCylinder(0.5f, 2.0f, 32);
-
-    Object ground = ObjectBuilder()
-                        .name("Ground Plane")
-                        .position(0.0f, 0.0f, 0.0f)
-                        .mesh(planeMesh)
-                        .material(0)
-                        .build();
+    MeshID cactiMesh = meshManager->loadFromOBJ("./Models/Cacti/cacti2.obj");
 
     Object cube1 = ObjectBuilder()
                        .name("Orange Spinning Cube")
@@ -1557,11 +1550,18 @@ class DomeDiorama {
                        .material(4)
                        .build();
 
-    sceneObjects.push_back(ground);
+    Object cacti = ObjectBuilder()
+                       .name("Cacti")
+                       .position(0.0f, 0.0f, 0.0f)
+                       .mesh(cactiMesh)
+                       .material(0)
+                       .build();
+
     sceneObjects.push_back(cube1);
     sceneObjects.push_back(sphere);
     sceneObjects.push_back(cylinder);
     sceneObjects.push_back(cube2);
+    sceneObjects.push_back(cacti);
 
     Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
                " scene objects");

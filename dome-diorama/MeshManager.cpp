@@ -235,118 +235,91 @@ MeshID MeshManager::createCylinder(float radius, float height,
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Creating cylinder (radius: ", radius,
              ", height: ", height, ", segments: ", segments, ")");
-
   Mesh* mesh = new Mesh();
   mesh->name = "Cylinder";
   mesh->type = MeshType::Cylinder;
-
   uint32_t sliceCount = segments;
   uint32_t stackCount = 1;
-
   float stackHeight = height / stackCount;
   uint32_t ringCount = stackCount + 1;
-
   for (uint32_t i = 0; i < ringCount; ++i) {
     float y = -0.5f * height + i * stackHeight;
     float dTheta = 2.0f * glm::pi<float>() / sliceCount;
     for (uint32_t j = 0; j <= sliceCount; ++j) {
       Vertex vertex;
-
       float c = cosf(j * dTheta);
       float s = sinf(j * dTheta);
-
       vertex.pos = glm::vec3(radius * c, y, radius * s);
       vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
       vertex.normal = glm::normalize(glm::vec3(c, 0.0f, s));
       vertex.texCoord = glm::vec2(static_cast<float>(j) / sliceCount,
                                   static_cast<float>(i) / stackCount);
-
       mesh->vertices.push_back(vertex);
     }
   }
-
   uint32_t ringVertexCount = sliceCount + 1;
   for (uint32_t i = 0; i < stackCount; ++i) {
     for (uint32_t j = 0; j < sliceCount; ++j) {
       mesh->indices.push_back(i * ringVertexCount + j);
       mesh->indices.push_back((i + 1) * ringVertexCount + j);
       mesh->indices.push_back((i + 1) * ringVertexCount + j + 1);
-
       mesh->indices.push_back(i * ringVertexCount + j);
       mesh->indices.push_back((i + 1) * ringVertexCount + j + 1);
       mesh->indices.push_back(i * ringVertexCount + j + 1);
     }
   }
-
   uint32_t baseIndex = static_cast<uint32_t>(mesh->vertices.size());
   float dTheta = 2.0f * glm::pi<float>() / sliceCount;
-
   for (uint32_t i = 0; i <= sliceCount; ++i) {
     float x = radius * cosf(i * dTheta);
     float z = radius * sinf(i * dTheta);
     float y = -0.5f * height;
-
     Vertex vertex;
     vertex.pos = glm::vec3(x, y, z);
     vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
     vertex.normal = glm::vec3(0.0f, -1.0f, 0.0f);
     vertex.texCoord =
         glm::vec2(x / radius * 0.5f + 0.5f, z / radius * 0.5f + 0.5f);
-
     mesh->vertices.push_back(vertex);
   }
-
   Vertex centerVertex;
   centerVertex.pos = glm::vec3(0.0f, -0.5f * height, 0.0f);
   centerVertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
   centerVertex.normal = glm::vec3(0.0f, -1.0f, 0.0f);
   centerVertex.texCoord = glm::vec2(0.5f, 0.5f);
   mesh->vertices.push_back(centerVertex);
-
   uint32_t centerIndex = static_cast<uint32_t>(mesh->vertices.size()) - 1;
-
   for (uint32_t i = 0; i < sliceCount; ++i) {
     mesh->indices.push_back(centerIndex);
-    mesh->indices.push_back(baseIndex + i + 1);
     mesh->indices.push_back(baseIndex + i);
+    mesh->indices.push_back(baseIndex + i + 1);
   }
-
   baseIndex = static_cast<uint32_t>(mesh->vertices.size());
-
   for (uint32_t i = 0; i <= sliceCount; ++i) {
     float x = radius * cosf(i * dTheta);
     float z = radius * sinf(i * dTheta);
     float y = 0.5f * height;
-
     Vertex vertex;
     vertex.pos = glm::vec3(x, y, z);
     vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
     vertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
     vertex.texCoord =
         glm::vec2(x / radius * 0.5f + 0.5f, z / radius * 0.5f + 0.5f);
-
     mesh->vertices.push_back(vertex);
   }
-
   centerVertex.pos = glm::vec3(0.0f, 0.5f * height, 0.0f);
   centerVertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
   mesh->vertices.push_back(centerVertex);
-
   centerIndex = static_cast<uint32_t>(mesh->vertices.size()) - 1;
-
   for (uint32_t i = 0; i < sliceCount; ++i) {
     mesh->indices.push_back(centerIndex);
-    mesh->indices.push_back(baseIndex + i);
     mesh->indices.push_back(baseIndex + i + 1);
+    mesh->indices.push_back(baseIndex + i);
   }
-
   createBuffers(mesh);
-
   MeshID id = registerMesh(mesh);
-
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Created cylinder with ID: ", id);
-
   return id;
 }
 
@@ -362,11 +335,134 @@ MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Loading OBJ: ", filepath);
 
-  Debug::log(Debug::Category::RENDERING,
-             "MeshManager: OBJ loading not yet implemented, creating cube as "
-             "placeholder");
+  std::ifstream file(filepath);
+  if (!file.is_open()) {
+    Debug::log(Debug::Category::RENDERING,
+               "MeshManager: Failed to open OBJ file: ", filepath,
+               ", returning default cube");
+    return defaultCubeID;
+  }
 
-  return createCube(1.0f);
+  Mesh* mesh = new Mesh();
+  mesh->name = filepath.substr(filepath.find_last_of("/\\") + 1);
+  mesh->type = MeshType::Custom;
+
+  std::vector<glm::vec3> positions;
+  std::vector<glm::vec3> normals;
+  std::vector<glm::vec2> texCoords;
+
+  std::string line;
+  while (std::getline(file, line)) {
+    std::istringstream iss(line);
+    std::string prefix;
+    iss >> prefix;
+
+    if (prefix == "v") {
+      glm::vec3 pos;
+      iss >> pos.x >> pos.y >> pos.z;
+      positions.push_back(pos);
+    } else if (prefix == "vn") {
+      glm::vec3 normal;
+      iss >> normal.x >> normal.y >> normal.z;
+      normals.push_back(normal);
+    } else if (prefix == "vt") {
+      glm::vec2 texCoord;
+      iss >> texCoord.x >> texCoord.y;
+      texCoords.push_back(texCoord);
+    } else if (prefix == "f") {
+      std::string vertexData;
+      std::vector<uint16_t> faceIndices;
+
+      while (iss >> vertexData) {
+        std::istringstream viss(vertexData);
+        std::string indexStr;
+        int posIdx = 0, texIdx = 0, normIdx = 0;
+
+        if (std::getline(viss, indexStr, '/')) {
+          posIdx = std::stoi(indexStr) - 1;
+        }
+        if (std::getline(viss, indexStr, '/')) {
+          if (!indexStr.empty()) {
+            texIdx = std::stoi(indexStr) - 1;
+          }
+        }
+        if (std::getline(viss, indexStr, '/')) {
+          if (!indexStr.empty()) {
+            normIdx = std::stoi(indexStr) - 1;
+          }
+        }
+
+        Vertex vertex;
+        vertex.pos = positions[posIdx];
+        vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        vertex.texCoord =
+            (texIdx >= 0 && texIdx < static_cast<int>(texCoords.size()))
+                ? texCoords[texIdx]
+                : glm::vec2(0.0f, 0.0f);
+        vertex.normal =
+            (normIdx >= 0 && normIdx < static_cast<int>(normals.size()))
+                ? normals[normIdx]
+                : glm::vec3(0.0f, 1.0f, 0.0f);
+
+        mesh->vertices.push_back(vertex);
+        faceIndices.push_back(static_cast<uint16_t>(mesh->vertices.size() - 1));
+      }
+
+      if (faceIndices.size() == 3) {
+        mesh->indices.push_back(faceIndices[0]);
+        mesh->indices.push_back(faceIndices[1]);
+        mesh->indices.push_back(faceIndices[2]);
+      } else if (faceIndices.size() == 4) {
+        mesh->indices.push_back(faceIndices[0]);
+        mesh->indices.push_back(faceIndices[1]);
+        mesh->indices.push_back(faceIndices[2]);
+
+        mesh->indices.push_back(faceIndices[0]);
+        mesh->indices.push_back(faceIndices[2]);
+        mesh->indices.push_back(faceIndices[3]);
+      }
+    }
+  }
+
+  file.close();
+
+  if (!mesh->vertices.empty()) {
+    glm::vec3 minBounds(std::numeric_limits<float>::max());
+    glm::vec3 maxBounds(std::numeric_limits<float>::lowest());
+
+    for (const auto& vertex : mesh->vertices) {
+      minBounds.x = std::min(minBounds.x, vertex.pos.x);
+      minBounds.y = std::min(minBounds.y, vertex.pos.y);
+      minBounds.z = std::min(minBounds.z, vertex.pos.z);
+
+      maxBounds.x = std::max(maxBounds.x, vertex.pos.x);
+      maxBounds.y = std::max(maxBounds.y, vertex.pos.y);
+      maxBounds.z = std::max(maxBounds.z, vertex.pos.z);
+    }
+
+    glm::vec3 center = (minBounds + maxBounds) * 0.5f;
+
+    Debug::log(Debug::Category::RENDERING,
+               "MeshManager: Centering mesh - offset: (", center.x, ", ",
+               center.y, ", ", center.z, ")");
+
+    for (auto& vertex : mesh->vertices) {
+      vertex.pos -= center;
+    }
+  }
+
+  Debug::log(Debug::Category::RENDERING,
+             "MeshManager: OBJ loaded successfully - vertices: ",
+             mesh->vertices.size(), ", indices: ", mesh->indices.size());
+
+  createBuffers(mesh);
+  MeshID id = registerMesh(mesh);
+  filepathToID[filepath] = id;
+
+  Debug::log(Debug::Category::RENDERING,
+             "MeshManager: Registered OBJ with ID: ", id);
+
+  return id;
 }
 
 Mesh* MeshManager::getMesh(MeshID id) {
