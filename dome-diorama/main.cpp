@@ -5,11 +5,13 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-// custom shit
+// I LOVE OBJECT ORIENTED PROGRAMMING AND MODULAR CODE STRUCTURE
 #include "Camera.h"
 #include "Debug.h"
 #include "Input.h"
 #include "MaterialManager.h"
+#include "MeshManager.h"
+#include "Object.h"
 #include "RenderDevice.h"
 #include "TextureManager.h"
 
@@ -70,37 +72,6 @@ struct SwapChainSupportDetails {
   VkSurfaceCapabilitiesKHR capabilities{};
   std::vector<VkSurfaceFormatKHR> formats;
   std::vector<VkPresentModeKHR> presentModes;
-};
-
-struct Vertex {
-  glm::vec3 pos;
-  glm::vec3 color;
-  glm::vec2 texCoord;
-  glm::vec3 normal;
-
-  static VkVertexInputBindingDescription getBindingDescription() {
-    VkVertexInputBindingDescription bindingDescription{};
-    bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Vertex);
-    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    return bindingDescription;
-  }
-
-  static std::array<VkVertexInputAttributeDescription, 4>
-  getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
-
-    attributeDescriptions[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT,
-                                offsetof(Vertex, pos)};
-    attributeDescriptions[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT,
-                                offsetof(Vertex, color)};
-    attributeDescriptions[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT,
-                                offsetof(Vertex, texCoord)};
-    attributeDescriptions[3] = {3, 0, VK_FORMAT_R32G32B32_SFLOAT,
-                                offsetof(Vertex, normal)};
-
-    return attributeDescriptions;
-  }
 };
 
 struct UniformBufferObject {
@@ -208,6 +179,12 @@ class DomeDiorama {
   // Render Device
   RenderDevice* renderDevice = nullptr;
 
+  // Object stuff
+  std::vector<Object> sceneObjects;
+  MeshManager* meshManager = nullptr;
+
+  // Callbacks for Inputs!
+
   static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
                           int mods) {
     if (window == nullptr) return;
@@ -272,14 +249,14 @@ class DomeDiorama {
     textureManager =
         new TextureManager(device, physicalDevice, commandPool, graphicsQueue);
     materialManager = new MaterialManager(renderDevice, textureManager);
+    meshManager = new MeshManager(renderDevice);
 
     createDescriptorPool();
     materialManager->init(materialDescriptorSetLayout, descriptorPool);
 
     createTestMaterial();
+    createTestScene();
 
-    createVertexBuffer();
-    createIndexBuffer();
     createUniformBuffers();
     createDescriptorSets();
     createCommandBuffers();
@@ -319,6 +296,10 @@ class DomeDiorama {
     if (renderDevice) {
       delete renderDevice;
     }
+    if (meshManager) {
+      meshManager->cleanup();
+      delete meshManager;
+    }
 
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
@@ -354,30 +335,6 @@ class DomeDiorama {
 
     glfwDestroyWindow(window);
     glfwTerminate();
-  }
-
-  void createVertexBuffer() {
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    renderDevice->createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                               stagingBuffer, stagingBufferMemory);
-
-    void* data;
-    vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data(), (size_t)bufferSize);
-    vkUnmapMemory(device, stagingBufferMemory);
-
-    renderDevice->createBuffer(
-        bufferSize,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-    renderDevice->copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-
-    vkDestroyBuffer(device, stagingBuffer, nullptr);
-    vkFreeMemory(device, stagingBufferMemory, nullptr);
   }
 
   void createInstance() {
@@ -757,30 +714,6 @@ class DomeDiorama {
     }
   }
 
-  void createIndexBuffer() {
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    renderDevice->createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                               stagingBuffer, stagingBufferMemory);
-
-    void* data;
-    vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data(), (size_t)bufferSize);
-    vkUnmapMemory(device, stagingBufferMemory);
-
-    renderDevice->createBuffer(
-        bufferSize,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-    renderDevice->copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-
-    vkDestroyBuffer(device, stagingBuffer, nullptr);
-    vkFreeMemory(device, stagingBufferMemory, nullptr);
-  }
-
   void createUniformBuffers() {
     VkDeviceSize bufferSize = sizeof(UniformBufferObject);
     uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1035,21 +968,39 @@ class DomeDiorama {
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    VkBuffer vertexBuffers[] = {vertexBuffer};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-    Material* material = materialManager->getMaterial(testMaterialID);
+    for (const auto& object : sceneObjects) {
+      if (!object.visible) continue;
 
-    std::array<VkDescriptorSet, 2> setsToHind = {descriptorSets[currentFrame],
-                                                 material->descriptorSet};
+      UniformBufferObject ubo{};
+      ubo.model = object.getModelMatrix();
+      ubo.view = camera.getViewMatrix();
+      ubo.proj = glm::perspective(
+          glm::radians(45.0f),
+          swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
+      ubo.proj[1][1] *= -1;
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipelineLayout, 0,
-                            static_cast<uint32_t>(setsToHind.size()),
-                            setsToHind.data(), 0, nullptr);
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint16_t>(indices.size()), 1, 0,
-                     0, 0);
+      memcpy(uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
+
+      Mesh* mesh = meshManager->getMesh(object.meshID);
+      Material* material = materialManager->getMaterial(object.materialID);
+
+      VkBuffer vertexBuffers[] = {mesh->vertexBuffer};
+      VkDeviceSize offsets[] = {0};
+      vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+      vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer, 0,
+                           VK_INDEX_TYPE_UINT16);
+
+      std::array<VkDescriptorSet, 2> setsToHind = {descriptorSets[currentFrame],
+                                                   material->descriptorSet};
+
+      vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              pipelineLayout, 0,
+                              static_cast<uint32_t>(setsToHind.size()),
+                              setsToHind.data(), 0, nullptr);
+
+      vkCmdDrawIndexed(commandBuffer,
+                       static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
+    }
 
     vkCmdEndRendering(commandBuffer);
 
@@ -1082,16 +1033,9 @@ class DomeDiorama {
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float>(currentTime - startTime).count();
 
-    UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f),
-                            glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = camera.getViewMatrix();
-    ubo.proj = glm::perspective(
-        glm::radians(45.0f),
-        swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
-    ubo.proj[1][1] *= -1;
-
-    memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+    if (!sceneObjects.empty() && sceneObjects.size() > 1) {
+      sceneObjects[1].setRotationEuler(0.0f, time * glm::degrees(90.0f), 0.0f);
+    }
   }
 
   void populateDebugMessengerCreateInfo(
@@ -1335,14 +1279,94 @@ class DomeDiorama {
   }
 
   void createTestMaterial() {
-    Material* testMat = MaterialBuilder()
-                            .name("Test Textured Material")
-                            .albedoColor(1.0f, 0.5f, 0.2f)
-                            .roughness(0.5f)
+    Material* orangeMat = MaterialBuilder()
+                              .name("Orange Material")
+                              .albedoColor(1.0f, 0.5f, 0.2f)
+                              .roughness(0.3f)
+                              .metallic(0.0f)
+                              .build();
+
+    Material* blueMat = MaterialBuilder()
+                            .name("Blue Material")
+                            .albedoColor(0.2f, 0.4f, 1.0f)
+                            .roughness(0.7f)
                             .metallic(0.0f)
                             .build();
 
-    testMaterialID = materialManager->registerMaterial(testMat);
+    Material* greenMat = MaterialBuilder()
+                             .name("Green Material")
+                             .albedoColor(0.2f, 0.8f, 0.3f)
+                             .roughness(0.5f)
+                             .metallic(0.2f)
+                             .build();
+
+    Material* redMat = MaterialBuilder()
+                           .name("Red Metallic Material")
+                           .albedoColor(0.9f, 0.1f, 0.1f)
+                           .roughness(0.2f)
+                           .metallic(0.8f)
+                           .build();
+
+    testMaterialID = materialManager->registerMaterial(orangeMat);
+    MaterialID blueMaterialID = materialManager->registerMaterial(blueMat);
+    MaterialID greenMaterialID = materialManager->registerMaterial(greenMat);
+    MaterialID redMaterialID = materialManager->registerMaterial(redMat);
+  }
+
+  void createTestScene() {
+    Debug::log(Debug::Category::MAIN, "Creating test scene");
+
+    MeshID cubeMesh = meshManager->getDefaultCube();
+    MeshID planeMesh = meshManager->createPlane(10.0f, 10.0f);
+    MeshID sphereMesh = meshManager->createSphere(1.0f, 32);
+    MeshID cylinderMesh = meshManager->createCylinder(0.5f, 2.0f, 32);
+
+    Object ground = ObjectBuilder()
+                        .name("Ground Plane")
+                        .position(0.0f, -1.0f, 0.0f)
+                        .mesh(planeMesh)
+                        .material(0)
+                        .build();
+
+    Object cube1 = ObjectBuilder()
+                       .name("Orange Spinning Cube")
+                       .position(-4.0f, 0.5f, 0.0f)
+                       .scale(1.0f)
+                       .mesh(cubeMesh)
+                       .material(1)
+                       .build();
+
+    Object sphere = ObjectBuilder()
+                        .name("Blue Sphere")
+                        .position(-1.0f, 0.5f, 0.0f)
+                        .mesh(sphereMesh)
+                        .material(2)
+                        .build();
+
+    Object cylinder = ObjectBuilder()
+                          .name("Green Cylinder")
+                          .position(2.0f, 0.0f, 0.0f)
+                          .rotationEuler(0.0f, 0.0f, 0.0f)
+                          .mesh(cylinderMesh)
+                          .material(3)
+                          .build();
+
+    Object cube2 = ObjectBuilder()
+                       .name("Red Metallic Cube")
+                       .position(5.0f, 0.5f, 0.0f)
+                       .rotationEuler(0.0f, 45.0f, 0.0f)
+                       .mesh(cubeMesh)
+                       .material(4)
+                       .build();
+
+    sceneObjects.push_back(ground);
+    sceneObjects.push_back(cube1);
+    sceneObjects.push_back(sphere);
+    sceneObjects.push_back(cylinder);
+    sceneObjects.push_back(cube2);
+
+    Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
+               " scene objects");
   }
 };
 

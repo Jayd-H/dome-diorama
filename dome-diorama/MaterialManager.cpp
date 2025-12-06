@@ -1,7 +1,8 @@
 #include "MaterialManager.h"
 
 #include <array>
-#include <iostream>
+
+#include "Debug.h"
 
 MaterialManager::MaterialManager(RenderDevice* renderDevice,
                                  TextureManager* textureManager)
@@ -9,48 +10,75 @@ MaterialManager::MaterialManager(RenderDevice* renderDevice,
       textureManager(textureManager),
       descriptorSetLayout(VK_NULL_HANDLE),
       descriptorPool(VK_NULL_HANDLE),
-      defaultMaterialID(0) {}
+      defaultMaterialID(0) {
+  Debug::log(Debug::Category::RENDERING, "MaterialManager: Constructor called");
+}
 
-MaterialManager::~MaterialManager() { cleanup(); }
+MaterialManager::~MaterialManager() {
+  Debug::log(Debug::Category::RENDERING, "MaterialManager: Destructor called");
+  cleanup();
+}
 
 void MaterialManager::init(VkDescriptorSetLayout descriptorSetLayout,
                            VkDescriptorPool descriptorPool) {
+  Debug::log(
+      Debug::Category::RENDERING,
+      "MaterialManager: Initializing with descriptor set layout and pool");
+
   this->descriptorSetLayout = descriptorSetLayout;
   this->descriptorPool = descriptorPool;
 
   createDefaultMaterial();
 
-  std::cout << "MaterialManager: Initialized with default material"
-            << std::endl;
+  Debug::log(Debug::Category::RENDERING,
+             "MaterialManager: Initialized with default material ID: ",
+             defaultMaterialID);
 }
 
 MaterialID MaterialManager::registerMaterial(Material* material) {
   if (!material) {
-    std::cerr << "MaterialManager: Attempted to register null material!"
-              << std::endl;
+    Debug::log(Debug::Category::RENDERING,
+               "MaterialManager: Attempted to register null material!");
     return defaultMaterialID;
   }
 
+  Debug::log(Debug::Category::RENDERING,
+             "MaterialManager: Registering material '", material->name, "'");
+
   if (material->albedoMap == INVALID_TEXTURE_ID) {
     material->albedoMap = textureManager->getDefaultWhite();
+    Debug::log(Debug::Category::RENDERING,
+               "  - Using default white for albedo map");
   }
   if (material->normalMap == INVALID_TEXTURE_ID) {
     material->normalMap = textureManager->getDefaultNormal();
+    Debug::log(Debug::Category::RENDERING,
+               "  - Using default normal for normal map");
   }
   if (material->roughnessMap == INVALID_TEXTURE_ID) {
     material->roughnessMap = textureManager->getDefaultWhite();
+    Debug::log(Debug::Category::RENDERING,
+               "  - Using default white for roughness map");
   }
   if (material->metallicMap == INVALID_TEXTURE_ID) {
     material->metallicMap = textureManager->getDefaultBlack();
+    Debug::log(Debug::Category::RENDERING,
+               "  - Using default black for metallic map");
   }
   if (material->emissiveMap == INVALID_TEXTURE_ID) {
     material->emissiveMap = textureManager->getDefaultBlack();
+    Debug::log(Debug::Category::RENDERING,
+               "  - Using default black for emissive map");
   }
   if (material->heightMap == INVALID_TEXTURE_ID) {
     material->heightMap = textureManager->getDefaultBlack();
+    Debug::log(Debug::Category::RENDERING,
+               "  - Using default black for height map");
   }
   if (material->aoMap == INVALID_TEXTURE_ID) {
     material->aoMap = textureManager->getDefaultWhite();
+    Debug::log(Debug::Category::RENDERING,
+               "  - Using default white for AO map");
   }
 
   createDescriptorSet(material);
@@ -58,15 +86,18 @@ MaterialID MaterialManager::registerMaterial(Material* material) {
   MaterialID id = static_cast<MaterialID>(materials.size());
   materials.push_back(std::unique_ptr<Material>(material));
 
-  std::cout << "MaterialManager: Registered material '" << material->name
-            << "' (ID: " << id << ")" << std::endl;
+  Debug::log(Debug::Category::RENDERING,
+             "MaterialManager: Successfully registered material '",
+             material->name, "' with ID: ", id);
 
   return id;
 }
 
 Material* MaterialManager::getMaterial(MaterialID id) {
   if (id >= materials.size()) {
-    std::cerr << "MaterialManager: Invalid material ID: " << id << std::endl;
+    Debug::log(Debug::Category::RENDERING,
+               "MaterialManager: Invalid material ID requested: ", id,
+               ", returning default");
     return materials[defaultMaterialID].get();
   }
   return materials[id].get();
@@ -74,6 +105,9 @@ Material* MaterialManager::getMaterial(MaterialID id) {
 
 const Material* MaterialManager::getMaterial(MaterialID id) const {
   if (id >= materials.size()) {
+    Debug::log(Debug::Category::RENDERING,
+               "MaterialManager: Invalid material ID requested (const): ", id,
+               ", returning default");
     return materials[defaultMaterialID].get();
   }
   return materials[id].get();
@@ -82,24 +116,33 @@ const Material* MaterialManager::getMaterial(MaterialID id) const {
 void MaterialManager::updateMaterialProperties(
     MaterialID id, const MaterialProperties& properties) {
   if (id >= materials.size()) {
-    std::cerr << "MaterialManager: Cannot update invalid material ID: " << id
-              << std::endl;
+    Debug::log(Debug::Category::RENDERING,
+               "MaterialManager: Cannot update invalid material ID: ", id);
     return;
   }
+
+  Debug::log(Debug::Category::RENDERING,
+             "MaterialManager: Updating properties for material ID: ", id);
 
   materials[id]->properties = properties;
   updateDescriptorSet(materials[id].get());
 
-  std::cout << "MaterialManager: Updated properties for material ID: " << id
-            << std::endl;
+  Debug::log(Debug::Category::RENDERING,
+             "MaterialManager: Successfully updated material ID: ", id);
 }
 
 void MaterialManager::cleanup() {
+  Debug::log(Debug::Category::RENDERING, "MaterialManager: Cleaning up ",
+             materials.size(), " materials");
   materials.clear();
-  std::cout << "MaterialManager: Cleaned up all materials" << std::endl;
+  Debug::log(Debug::Category::RENDERING, "MaterialManager: Cleanup complete");
 }
 
 void MaterialManager::createDescriptorSet(Material* material) {
+  Debug::log(Debug::Category::RENDERING,
+             "MaterialManager: Creating descriptor set for material '",
+             material->name, "'");
+
   VkDevice device = renderDevice->getDevice();
   VkDeviceSize bufferSize = sizeof(MaterialProperties);
 
@@ -115,6 +158,8 @@ void MaterialManager::createDescriptorSet(Material* material) {
   memcpy(data, &material->properties, bufferSize);
   vkUnmapMemory(device, material->propertiesBufferMemory);
 
+  Debug::log(Debug::Category::RENDERING, "  - Created properties buffer");
+
   VkDescriptorSetAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
   allocInfo.descriptorPool = descriptorPool;
@@ -126,7 +171,11 @@ void MaterialManager::createDescriptorSet(Material* material) {
     throw std::runtime_error("Failed to allocate descriptor set for material!");
   }
 
+  Debug::log(Debug::Category::RENDERING, "  - Allocated descriptor set");
+
   updateDescriptorSet(material);
+
+  Debug::log(Debug::Category::RENDERING, "  - Updated descriptor set bindings");
 }
 
 void MaterialManager::updateDescriptorSet(Material* material) {
@@ -192,6 +241,9 @@ void MaterialManager::updateDescriptorSet(Material* material) {
 }
 
 void MaterialManager::createDefaultMaterial() {
+  Debug::log(Debug::Category::RENDERING,
+             "MaterialManager: Creating default material");
+
   Material* defaultMat = new Material();
   defaultMat->name = "Default Material";
   defaultMat->properties.albedoColor = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
@@ -199,4 +251,8 @@ void MaterialManager::createDefaultMaterial() {
   defaultMat->properties.metallic = 0.0f;
 
   defaultMaterialID = registerMaterial(defaultMat);
+
+  Debug::log(
+      Debug::Category::RENDERING,
+      "MaterialManager: Default material created with ID: ", defaultMaterialID);
 }

@@ -1,9 +1,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "TextureManager.h"
 
-#include <iostream>
 #include <stdexcept>
 
+#include "Debug.h"
 #include "stb_image.h"
 
 TextureManager::TextureManager(VkDevice device, VkPhysicalDevice physicalDevice,
@@ -12,32 +12,51 @@ TextureManager::TextureManager(VkDevice device, VkPhysicalDevice physicalDevice,
       physicalDevice(physicalDevice),
       commandPool(commandPool),
       graphicsQueue(graphicsQueue) {
+  Debug::log(Debug::Category::RENDERING, "TextureManager: Constructor called");
+
   textures.push_back(TextureData{});
 
   unsigned char whitePixel[] = {255, 255, 255, 255};
   defaultWhiteTexture =
       createDefaultTexture(whitePixel, 1, 1, TextureType::sRGB);
+  Debug::log(Debug::Category::RENDERING,
+             "TextureManager: Created default white texture (ID: ",
+             defaultWhiteTexture, ")");
 
   unsigned char normalPixel[] = {128, 128, 255, 255};
   defaultNormalTexture =
       createDefaultTexture(normalPixel, 1, 1, TextureType::Linear);
+  Debug::log(Debug::Category::RENDERING,
+             "TextureManager: Created default normal texture (ID: ",
+             defaultNormalTexture, ")");
 
   unsigned char blackPixel[] = {0, 0, 0, 255};
   defaultBlackTexture =
       createDefaultTexture(blackPixel, 1, 1, TextureType::sRGB);
+  Debug::log(Debug::Category::RENDERING,
+             "TextureManager: Created default black texture (ID: ",
+             defaultBlackTexture, ")");
 
-  std::cout << "TextureManager: Created default textures" << std::endl;
+  Debug::log(Debug::Category::RENDERING,
+             "TextureManager: Initialization complete");
 }
 
-TextureManager::~TextureManager() { cleanup(); }
+TextureManager::~TextureManager() {
+  Debug::log(Debug::Category::RENDERING, "TextureManager: Destructor called");
+  cleanup();
+}
 
 TextureID TextureManager::load(const TextureCreateInfo& createInfo) {
   auto it = filepathToID.find(createInfo.filepath);
   if (it != filepathToID.end()) {
-    std::cout << "TextureManager: Texture already loaded: "
-              << createInfo.filepath << std::endl;
+    Debug::log(Debug::Category::RENDERING,
+               "TextureManager: Texture already loaded: ", createInfo.filepath,
+               " (ID: ", it->second, ")");
     return it->second;
   }
+
+  Debug::log(Debug::Category::RENDERING,
+             "TextureManager: Loading new texture: ", createInfo.filepath);
 
   return createTexture(createInfo);
 }
@@ -51,6 +70,9 @@ TextureID TextureManager::load(const std::string& filepath, TextureType type) {
 
 VkImageView TextureManager::getImageView(TextureID id) const {
   if (id >= textures.size()) {
+    Debug::log(Debug::Category::RENDERING,
+               "TextureManager: Invalid texture ID for getImageView: ", id,
+               ", returning default white");
     return textures[defaultWhiteTexture].imageView;
   }
   return textures[id].imageView;
@@ -58,12 +80,18 @@ VkImageView TextureManager::getImageView(TextureID id) const {
 
 VkSampler TextureManager::getSampler(TextureID id) const {
   if (id >= textures.size()) {
+    Debug::log(Debug::Category::RENDERING,
+               "TextureManager: Invalid texture ID for getSampler: ", id,
+               ", returning default white");
     return textures[defaultWhiteTexture].sampler;
   }
   return textures[id].sampler;
 }
 
 void TextureManager::cleanup() {
+  Debug::log(Debug::Category::RENDERING, "TextureManager: Cleaning up ",
+             textures.size(), " textures");
+
   for (auto& texture : textures) {
     if (texture.sampler != VK_NULL_HANDLE) {
       vkDestroySampler(device, texture.sampler, nullptr);
@@ -79,18 +107,28 @@ void TextureManager::cleanup() {
     }
   }
   textures.clear();
+
+  Debug::log(Debug::Category::RENDERING, "TextureManager: Cleanup complete");
 }
 
 TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
+  Debug::log(
+      Debug::Category::RENDERING,
+      "TextureManager: Creating texture from file: ", createInfo.filepath);
+
   int texWidth, texHeight, texChannels;
   stbi_uc* pixels = stbi_load(createInfo.filepath.c_str(), &texWidth,
                               &texHeight, &texChannels, STBI_rgb_alpha);
 
   if (!pixels) {
-    std::cerr << "TextureManager: Failed to load texture: "
-              << createInfo.filepath << std::endl;
+    Debug::log(Debug::Category::RENDERING,
+               "TextureManager: Failed to load texture file: ",
+               createInfo.filepath, ", returning default white");
     return defaultWhiteTexture;
   }
+
+  Debug::log(Debug::Category::RENDERING, "  - Dimensions: ", texWidth, "x",
+             texHeight, ", channels: ", texChannels);
 
   VkDeviceSize imageSize = texWidth * texHeight * 4;
   uint32_t mipLevels = createInfo.generateMipmaps
@@ -98,6 +136,8 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
                                  std::log2(std::max(texWidth, texHeight)))) +
                                  1
                            : 1;
+
+  Debug::log(Debug::Category::RENDERING, "  - Mip levels: ", mipLevels);
 
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
@@ -146,6 +186,7 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
   copyBufferToImage(stagingBuffer, textureData.image, texWidth, texHeight);
 
   if (createInfo.generateMipmaps) {
+    Debug::log(Debug::Category::RENDERING, "  - Generating mipmaps");
     generateMipmaps(textureData.image, format, texWidth, texHeight, mipLevels);
   } else {
     transitionImageLayout(textureData.image, format,
@@ -183,8 +224,8 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
   textures.push_back(textureData);
   filepathToID[createInfo.filepath] = id;
 
-  std::cout << "TextureManager: Loaded texture: " << createInfo.filepath
-            << " (ID: " << id << ")" << std::endl;
+  Debug::log(Debug::Category::RENDERING,
+             "TextureManager: Successfully created texture (ID: ", id, ")");
 
   return id;
 }
@@ -192,6 +233,9 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
 TextureID TextureManager::createDefaultTexture(const unsigned char* pixelData,
                                                uint32_t width, uint32_t height,
                                                TextureType type) {
+  Debug::log(Debug::Category::RENDERING,
+             "TextureManager: Creating default texture ", width, "x", height);
+
   VkDeviceSize imageSize = width * height * 4;
 
   VkBuffer stagingBuffer;
@@ -264,6 +308,9 @@ TextureID TextureManager::createDefaultTexture(const unsigned char* pixelData,
 
   TextureID id = static_cast<TextureID>(textures.size());
   textures.push_back(textureData);
+
+  Debug::log(Debug::Category::RENDERING,
+             "TextureManager: Default texture created (ID: ", id, ")");
 
   return id;
 }
