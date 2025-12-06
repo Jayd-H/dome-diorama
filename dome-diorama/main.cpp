@@ -51,7 +51,7 @@ const bool DEBUG_INPUT = false;
 const bool DEBUG_RENDERING = false;
 const bool DEBUG_VULKAN = false;
 #else
-const bool enableValidationLayers = false;
+const bool enableValidationLayers = true;
 const bool DEBUG_MAIN = true;
 const bool DEBUG_CAMERA = true;
 const bool DEBUG_INPUT = true;
@@ -194,11 +194,6 @@ class DomeDiorama {
   static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
                           int mods) {
     if (window == nullptr) return;
-
-    if (key == GLFW_KEY_ENTER && action == GLFW_PRESS) {
-      std::cout << "MAIN: Enter key pressed!" << std::endl;
-    }
-
     auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
     app->input.onKey(key, scancode, action, mods);
   }
@@ -216,8 +211,6 @@ class DomeDiorama {
 
   static void scrollCallback(GLFWwindow* window, double xoffset,
                              double yoffset) {
-    std::cout << "MAIN: Scroll callback: " << yoffset << std::endl;
-
     auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
     app->input.onScroll(xoffset, yoffset);
   }
@@ -391,7 +384,7 @@ class DomeDiorama {
 
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Vulkan Minimal";
+    appInfo.pApplicationName = "Dome Diorama";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "No Engine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -1518,14 +1511,14 @@ class DomeDiorama {
 
     Object ground = ObjectBuilder()
                         .name("Ground Plane")
-                        .position(0.0f, -1.0f, 0.0f)
+                        .position(0.0f, 0.0f, 0.0f)
                         .mesh(planeMesh)
                         .material(0)
                         .build();
 
     Object cube1 = ObjectBuilder()
                        .name("Orange Spinning Cube")
-                       .position(-4.0f, 0.5f, 0.0f)
+                       .position(-4.0f, 0.5f, 2.0f)
                        .scale(1.0f)
                        .mesh(cubeMesh)
                        .material(1)
@@ -1533,14 +1526,14 @@ class DomeDiorama {
 
     Object sphere = ObjectBuilder()
                         .name("Blue Sphere")
-                        .position(-1.0f, 0.5f, 0.0f)
+                        .position(-1.0f, 1.0f, 2.0f)
                         .mesh(sphereMesh)
                         .material(2)
                         .build();
 
     Object cylinder = ObjectBuilder()
                           .name("Green Cylinder")
-                          .position(2.0f, 0.0f, 0.0f)
+                          .position(2.0f, 1.0f, 2.0f)
                           .rotationEuler(0.0f, 0.0f, 0.0f)
                           .mesh(cylinderMesh)
                           .material(3)
@@ -1548,7 +1541,7 @@ class DomeDiorama {
 
     Object cube2 = ObjectBuilder()
                        .name("Red Metallic Cube")
-                       .position(5.0f, 0.5f, 0.0f)
+                       .position(5.0f, 0.5f, 2.0f)
                        .rotationEuler(0.0f, 45.0f, 0.0f)
                        .mesh(cubeMesh)
                        .material(4)
