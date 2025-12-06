@@ -238,36 +238,75 @@ class DomeDiorama {
   }
 
   void initVulkan() {
+    Debug::log(Debug::Category::VULKAN, "Creating instance...");
     createInstance();
+    Debug::log(Debug::Category::VULKAN, "Setting up debug messenger...");
     setupDebugMessenger();
+    Debug::log(Debug::Category::VULKAN, "Creating surface...");
     createSurface();
+    Debug::log(Debug::Category::VULKAN, "Picking physical device...");
     pickPhysicalDevice();
+
+    Debug::log(Debug::Category::VULKAN, "Physical device: ", physicalDevice);
+    if (physicalDevice == VK_NULL_HANDLE) {
+      throw std::runtime_error("Physical device is null!");
+    }
+
+    Debug::log(Debug::Category::VULKAN, "Creating logical device...");
     createLogicalDevice();
+    Debug::log(Debug::Category::VULKAN, "Creating swap chain...");
     createSwapChain();
+    Debug::log(Debug::Category::VULKAN, "Creating image views...");
     createImageViews();
-    createDepthResources();
+
+    Debug::log(Debug::Category::VULKAN, "Finding depth format...");
+    depthFormat = findDepthFormat();
+    Debug::log(Debug::Category::VULKAN, "Depth format: ", depthFormat);
+
+    Debug::log(Debug::Category::VULKAN, "Creating descriptor set layout...");
     createDescriptorSetLayout();
+    Debug::log(Debug::Category::VULKAN,
+               "Creating material descriptor set layout...");
     createMaterialDescriptorSetLayout();
+    Debug::log(Debug::Category::VULKAN, "Creating graphics pipeline...");
     createGraphicsPipeline();
+    Debug::log(Debug::Category::VULKAN, "Creating command pool...");
     createCommandPool();
 
+    Debug::log(Debug::Category::VULKAN, "Creating render device...");
     renderDevice =
         new RenderDevice(device, physicalDevice, commandPool, graphicsQueue);
+
+    Debug::log(Debug::Category::VULKAN, "Creating depth resources...");
+    createDepthResources();
+
+    Debug::log(Debug::Category::VULKAN, "Creating texture manager...");
     textureManager =
         new TextureManager(device, physicalDevice, commandPool, graphicsQueue);
+    Debug::log(Debug::Category::VULKAN, "Creating material manager...");
     materialManager = new MaterialManager(renderDevice, textureManager);
+    Debug::log(Debug::Category::VULKAN, "Creating mesh manager...");
     meshManager = new MeshManager(renderDevice);
 
+    Debug::log(Debug::Category::VULKAN, "Creating descriptor pool...");
     createDescriptorPool();
+    Debug::log(Debug::Category::VULKAN, "Initializing material manager...");
     materialManager->init(materialDescriptorSetLayout, descriptorPool);
 
+    Debug::log(Debug::Category::MAIN, "Creating test material...");
     createTestMaterial();
+    Debug::log(Debug::Category::MAIN, "Creating test scene...");
     createTestScene();
 
+    Debug::log(Debug::Category::VULKAN, "Creating uniform buffers...");
     createUniformBuffers();
+    Debug::log(Debug::Category::VULKAN, "Creating descriptor sets...");
     createDescriptorSets();
+    Debug::log(Debug::Category::VULKAN, "Creating command buffers...");
     createCommandBuffers();
+    Debug::log(Debug::Category::VULKAN, "Creating sync objects...");
     createSyncObjects();
+    Debug::log(Debug::Category::VULKAN, "Vulkan initialization complete!");
   }
 
   void mainLoop() {
@@ -1104,18 +1143,26 @@ class DomeDiorama {
   VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates,
                                VkImageTiling tiling,
                                VkFormatFeatureFlags features) {
-    for (VkFormat format : candidates) {
-      VkPhysicalDeviceMemoryProperties memProperties;
-      vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+    Debug::log(Debug::Category::VULKAN,
+               "In findSupportedFormat, this = ", this);
+    Debug::log(Debug::Category::VULKAN, "physicalDevice = ", physicalDevice);
+    Debug::log(Debug::Category::VULKAN,
+               "candidates.size() = ", candidates.size());
 
+    for (VkFormat format : candidates) {
+      Debug::log(Debug::Category::VULKAN, "Checking format: ", format);
       VkFormatProperties props;
       vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
 
       if (tiling == VK_IMAGE_TILING_LINEAR &&
           (props.linearTilingFeatures & features) == features) {
+        Debug::log(Debug::Category::VULKAN,
+                   "Found suitable format (linear): ", format);
         return format;
       } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
                  (props.optimalTilingFeatures & features) == features) {
+        Debug::log(Debug::Category::VULKAN,
+                   "Found suitable format (optimal): ", format);
         return format;
       }
     }
@@ -1124,6 +1171,9 @@ class DomeDiorama {
   }
 
   VkFormat findDepthFormat() {
+    Debug::log(Debug::Category::VULKAN, "In findDepthFormat, this = ", this);
+    Debug::log(Debug::Category::VULKAN, "physicalDevice = ", physicalDevice);
+
     return findSupportedFormat(
         {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
          VK_FORMAT_D24_UNORM_S8_UINT},
@@ -1132,7 +1182,10 @@ class DomeDiorama {
   }
 
   void createDepthResources() {
-    depthFormat = findDepthFormat();
+    Debug::log(Debug::Category::VULKAN, "Creating depth image...");
+    Debug::log(Debug::Category::VULKAN, "Depth format: ", depthFormat);
+    Debug::log(Debug::Category::VULKAN, "Extent: ", swapChainExtent.width, "x",
+               swapChainExtent.height);
 
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1152,9 +1205,12 @@ class DomeDiorama {
     if (vkCreateImage(device, &imageInfo, nullptr, &depthImage) != VK_SUCCESS) {
       throw std::runtime_error("failed to create depth image!");
     }
+    Debug::log(Debug::Category::VULKAN, "Depth image created successfully");
 
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device, depthImage, &memRequirements);
+    Debug::log(Debug::Category::VULKAN,
+               "Memory requirements size: ", memRequirements.size);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -1166,8 +1222,10 @@ class DomeDiorama {
         VK_SUCCESS) {
       throw std::runtime_error("failed to allocate depth image memory!");
     }
+    Debug::log(Debug::Category::VULKAN, "Depth image memory allocated");
 
     vkBindImageMemory(device, depthImage, depthImageMemory, 0);
+    Debug::log(Debug::Category::VULKAN, "Depth image memory bound");
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1184,6 +1242,8 @@ class DomeDiorama {
         VK_SUCCESS) {
       throw std::runtime_error("failed to create depth image view!");
     }
+    Debug::log(Debug::Category::VULKAN,
+               "Depth image view created successfully");
   }
 
   bool isDeviceSuitable(VkPhysicalDevice device) {
