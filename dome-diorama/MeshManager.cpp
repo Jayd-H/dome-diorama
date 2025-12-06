@@ -187,7 +187,6 @@ MeshID MeshManager::createSphere(float radius, uint32_t segments) {
   return id;
 }
 
-
 MeshID MeshManager::createPlane(float width, float height) {
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Creating plane (width: ", width,
@@ -219,7 +218,7 @@ MeshID MeshManager::createPlane(float width, float height) {
        {0.0f, 1.0f, 0.0f}},
   };
 
-  mesh->indices = {0, 1, 2, 2, 3, 0};
+  mesh->indices = {0, 2, 1, 2, 0, 3};
 
   createBuffers(mesh);
 

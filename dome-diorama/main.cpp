@@ -75,7 +75,6 @@ struct SwapChainSupportDetails {
 };
 
 struct UniformBufferObject {
-  alignas(16) glm::mat4 model;
   alignas(16) glm::mat4 view;
   alignas(16) glm::mat4 proj;
 };
@@ -709,10 +708,17 @@ class DomeDiorama {
     std::array<VkDescriptorSetLayout, 2> layouts = {
         descriptorSetLayout, materialDescriptorSetLayout};
 
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(glm::mat4);
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
     pipelineLayoutInfo.pSetLayouts = layouts.data();
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
                                &pipelineLayout) != VK_SUCCESS) {
@@ -1053,15 +1059,10 @@ class DomeDiorama {
     for (const auto& object : sceneObjects) {
       if (!object.visible) continue;
 
-      UniformBufferObject ubo{};
-      ubo.model = object.getModelMatrix();
-      ubo.view = camera.getViewMatrix();
-      ubo.proj = glm::perspective(
-          glm::radians(45.0f),
-          swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
-      ubo.proj[1][1] *= -1;
-
-      memcpy(uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
+      glm::mat4 modelMatrix = object.getModelMatrix();
+      vkCmdPushConstants(commandBuffer, pipelineLayout,
+                         VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4),
+                         &modelMatrix);
 
       Mesh* mesh = meshManager->getMesh(object.meshID);
       Material* material = materialManager->getMaterial(object.materialID);
@@ -1118,6 +1119,15 @@ class DomeDiorama {
     if (!sceneObjects.empty() && sceneObjects.size() > 1) {
       sceneObjects[1].setRotationEuler(0.0f, time * glm::degrees(90.0f), 0.0f);
     }
+
+    UniformBufferObject ubo{};
+    ubo.view = camera.getViewMatrix();
+    ubo.proj = glm::perspective(
+        glm::radians(45.0f),
+        swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
+    ubo.proj[1][1] *= -1;
+
+    memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
   }
 
   void populateDebugMessengerCreateInfo(
