@@ -183,6 +183,12 @@ class DomeDiorama {
   std::vector<Object> sceneObjects;
   MeshManager* meshManager = nullptr;
 
+  // Depth Buffer
+  VkImage depthImage = VK_NULL_HANDLE;
+  VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
+  VkImageView depthImageView = VK_NULL_HANDLE;
+  VkFormat depthFormat;
+
   // Callbacks for Inputs!
 
   static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
@@ -239,6 +245,7 @@ class DomeDiorama {
     createLogicalDevice();
     createSwapChain();
     createImageViews();
+    createDepthResources();
     createDescriptorSetLayout();
     createMaterialDescriptorSetLayout();
     createGraphicsPipeline();
@@ -637,6 +644,15 @@ class DomeDiorama {
     multisampling.sampleShadingEnable = VK_FALSE;
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+    depthStencil.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.stencilTestEnable = VK_FALSE;
+
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
@@ -676,6 +692,7 @@ class DomeDiorama {
         VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
     renderingCreateInfo.colorAttachmentCount = 1;
     renderingCreateInfo.pColorAttachmentFormats = &swapChainImageFormat;
+    renderingCreateInfo.depthAttachmentFormat = depthFormat;
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -687,6 +704,7 @@ class DomeDiorama {
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = pipelineLayout;
@@ -902,9 +920,14 @@ class DomeDiorama {
     cleanupSwapChain();
     createSwapChain();
     createImageViews();
+    createDepthResources();
   }
 
   void cleanupSwapChain() {
+    vkDestroyImageView(device, depthImageView, nullptr);
+    vkDestroyImage(device, depthImage, nullptr);
+    vkFreeMemory(device, depthImageMemory, nullptr);
+
     for (auto imageView : swapChainImageViews) {
       vkDestroyImageView(device, imageView, nullptr);
     }
@@ -932,10 +955,27 @@ class DomeDiorama {
     imageBarrierToAttachment.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0,
                                                  1, 0, 1};
 
+    VkImageMemoryBarrier2 depthBarrier{};
+    depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    depthBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    depthBarrier.srcAccessMask = 0;
+    depthBarrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
+    depthBarrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    depthBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthBarrier.image = depthImage;
+    depthBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    depthBarrier.subresourceRange.baseMipLevel = 0;
+    depthBarrier.subresourceRange.levelCount = 1;
+    depthBarrier.subresourceRange.baseArrayLayer = 0;
+    depthBarrier.subresourceRange.layerCount = 1;
+
+    VkImageMemoryBarrier2 barriers[] = {imageBarrierToAttachment, depthBarrier};
+
     VkDependencyInfo dependencyInfoToAttachment{};
     dependencyInfoToAttachment.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dependencyInfoToAttachment.imageMemoryBarrierCount = 1;
-    dependencyInfoToAttachment.pImageMemoryBarriers = &imageBarrierToAttachment;
+    dependencyInfoToAttachment.imageMemoryBarrierCount = 2;
+    dependencyInfoToAttachment.pImageMemoryBarriers = barriers;
     vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToAttachment);
 
     VkRenderingAttachmentInfo colorAttachment{};
@@ -946,12 +986,22 @@ class DomeDiorama {
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     colorAttachment.clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
 
+    VkRenderingAttachmentInfo depthAttachment{};
+    depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    depthAttachment.imageView = depthImageView;
+    depthAttachment.imageLayout =
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.clearValue.depthStencil = {1.0f, 0};
+
     VkRenderingInfo renderingInfo{};
     renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
     renderingInfo.renderArea = {{0, 0}, swapChainExtent};
     renderingInfo.layerCount = 1;
     renderingInfo.colorAttachmentCount = 1;
     renderingInfo.pColorAttachments = &colorAttachment;
+    renderingInfo.pDepthAttachment = &depthAttachment;
 
     vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
@@ -1049,6 +1099,91 @@ class DomeDiorama {
                              VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                              VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     createInfo.pfnUserCallback = debugCallback;
+  }
+
+  VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates,
+                               VkImageTiling tiling,
+                               VkFormatFeatureFlags features) {
+    for (VkFormat format : candidates) {
+      VkPhysicalDeviceMemoryProperties memProperties;
+      vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+      VkFormatProperties props;
+      vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+
+      if (tiling == VK_IMAGE_TILING_LINEAR &&
+          (props.linearTilingFeatures & features) == features) {
+        return format;
+      } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+                 (props.optimalTilingFeatures & features) == features) {
+        return format;
+      }
+    }
+
+    throw std::runtime_error("failed to find supported format!");
+  }
+
+  VkFormat findDepthFormat() {
+    return findSupportedFormat(
+        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+         VK_FORMAT_D24_UNORM_S8_UINT},
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+  }
+
+  void createDepthResources() {
+    depthFormat = findDepthFormat();
+
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = swapChainExtent.width;
+    imageInfo.extent.height = swapChainExtent.height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = depthFormat;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateImage(device, &imageInfo, nullptr, &depthImage) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create depth image!");
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(device, depthImage, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = renderDevice->findMemoryType(
+        memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    if (vkAllocateMemory(device, &allocInfo, nullptr, &depthImageMemory) !=
+        VK_SUCCESS) {
+      throw std::runtime_error("failed to allocate depth image memory!");
+    }
+
+    vkBindImageMemory(device, depthImage, depthImageMemory, 0);
+
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = depthImage;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = depthFormat;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    if (vkCreateImageView(device, &viewInfo, nullptr, &depthImageView) !=
+        VK_SUCCESS) {
+      throw std::runtime_error("failed to create depth image view!");
+    }
   }
 
   bool isDeviceSuitable(VkPhysicalDevice device) {
