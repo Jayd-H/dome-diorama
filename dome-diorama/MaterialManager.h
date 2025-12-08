@@ -25,12 +25,16 @@ class MaterialManager {
 
   void cleanup();
 
+  MaterialID loadFromMTL(const std::string& mtlFilepath);
+
  private:
   RenderDevice* renderDevice;
   TextureManager* textureManager;
 
   VkDescriptorSetLayout descriptorSetLayout;
   VkDescriptorPool descriptorPool;
+
+  std::unordered_map<std::string, MaterialID> mtlFilepathToID;
 
   std::vector<std::unique_ptr<Material>> materials;
   MaterialID defaultMaterialID;

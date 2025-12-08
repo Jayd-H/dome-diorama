@@ -79,20 +79,6 @@ struct UniformBufferObject {
   alignas(16) glm::mat4 proj;
 };
 
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.0f},
-     {1.0f, 0.0f, 0.0f},
-     {0.0f, 0.0f},
-     {0.0f, 0.0f, 1.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f},
-     {1.0f, 1.0f, 1.0f},
-     {0.0f, 1.0f},
-     {0.0f, 0.0f, 1.0f}}};
-
-const std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
-
 VkResult CreateDebugUtilsMessengerEXT(
     VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -214,11 +200,14 @@ class DomeDiorama {
     app->input.onScroll(xoffset, yoffset);
   }
 
+  // Materials and stuff
+  MaterialID cactiMaterialID = 0;
+
   void initWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     window =
-        glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Minimal", nullptr, nullptr);
+        glfwCreateWindow(WIDTH, HEIGHT, "Dome Diorama", nullptr, nullptr);
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
     glfwSetKeyCallback(window, keyCallback);
@@ -789,16 +778,17 @@ class DomeDiorama {
   void createDescriptorPool() {
     std::array<VkDescriptorPoolSize, 2> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolSizes[0].descriptorCount =
+        static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT + 50);
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[1].descriptorCount =
-        static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 20);
+        static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 20 + 350);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT + 20);
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT + 50);
 
     if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) !=
         VK_SUCCESS) {
@@ -1509,6 +1499,8 @@ class DomeDiorama {
     MaterialID blueMaterialID = materialManager->registerMaterial(blueMat);
     MaterialID greenMaterialID = materialManager->registerMaterial(greenMat);
     MaterialID redMaterialID = materialManager->registerMaterial(redMat);
+
+    cactiMaterialID = materialManager->loadFromMTL("./Models/Cacti/cacti2.mtl");
   }
 
   void createTestScene() {
@@ -1554,7 +1546,7 @@ class DomeDiorama {
                        .name("Cacti")
                        .position(0.0f, 0.0f, 0.0f)
                        .mesh(cactiMesh)
-                       .material(0)
+                       .material(cactiMaterialID)
                        .build();
 
     sceneObjects.push_back(cube1);

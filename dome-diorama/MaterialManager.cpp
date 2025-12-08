@@ -1,6 +1,8 @@
 #include "MaterialManager.h"
 
 #include <array>
+#include <fstream>
+#include <sstream>
 
 #include "Debug.h"
 
@@ -238,6 +240,164 @@ void MaterialManager::updateDescriptorSet(Material* material) {
 
   vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()),
                          descriptorWrites.data(), 0, nullptr);
+}
+
+MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
+  auto it = mtlFilepathToID.find(mtlFilepath);
+  if (it != mtlFilepathToID.end()) {
+    Debug::log(Debug::Category::RENDERING,
+               "MaterialManager: MTL already loaded: ", mtlFilepath,
+               " (ID: ", it->second, ")");
+    return it->second;
+  }
+
+  Debug::log(Debug::Category::RENDERING,
+             "MaterialManager: Loading MTL: ", mtlFilepath);
+
+  std::ifstream file(mtlFilepath);
+  if (!file.is_open()) {
+    Debug::log(Debug::Category::RENDERING,
+               "MaterialManager: Failed to open MTL file: ", mtlFilepath,
+               ", returning default material");
+    return defaultMaterialID;
+  }
+
+  std::string baseDir =
+      mtlFilepath.substr(0, mtlFilepath.find_last_of("/\\") + 1);
+  std::vector<MaterialID> loadedMaterials;
+  Material* currentMaterial = nullptr;
+  std::string currentMaterialName;
+
+  auto extractFilename = [](const std::string& path) {
+    size_t lastSlash = path.find_last_of("/\\");
+    return (lastSlash != std::string::npos) ? path.substr(lastSlash + 1) : path;
+  };
+
+  std::string line;
+  while (std::getline(file, line)) {
+    std::istringstream iss(line);
+    std::string prefix;
+    iss >> prefix;
+
+    if (prefix == "newmtl") {
+      if (currentMaterial) {
+        MaterialID id = registerMaterial(currentMaterial);
+        loadedMaterials.push_back(id);
+        mtlFilepathToID[mtlFilepath + "::" + currentMaterialName] = id;
+      }
+
+      iss >> currentMaterialName;
+      currentMaterial = new Material();
+      currentMaterial->name = currentMaterialName;
+
+      Debug::log(Debug::Category::RENDERING,
+                 "  - Found material: ", currentMaterialName);
+
+    } else if (currentMaterial) {
+      if (prefix == "Ns") {
+        float ns;
+        iss >> ns;
+        currentMaterial->properties.roughness = 1.0f - (ns / 1000.0f);
+      } else if (prefix == "Ka") {
+      } else if (prefix == "Kd") {
+        float r, g, b;
+        iss >> r >> g >> b;
+        currentMaterial->properties.albedoColor = glm::vec4(r, g, b, 1.0f);
+      } else if (prefix == "Ks") {
+        float r, g, b;
+        iss >> r >> g >> b;
+        float specular = (r + g + b) / 3.0f;
+        currentMaterial->properties.metallic = specular;
+      } else if (prefix == "Ke") {
+        float r, g, b;
+        iss >> r >> g >> b;
+        float emission = (r + g + b) / 3.0f;
+        currentMaterial->properties.emissiveIntensity = emission;
+      } else if (prefix == "Ni") {
+        float ior;
+        iss >> ior;
+        currentMaterial->properties.indexOfRefraction = ior;
+      } else if (prefix == "d") {
+        float opacity;
+        iss >> opacity;
+        currentMaterial->properties.opacity = opacity;
+        if (opacity < 1.0f) {
+          currentMaterial->isTransparent = true;
+        }
+      } else if (prefix == "illum") {
+      } else if (prefix == "map_Kd") {
+        std::string texPath;
+        std::getline(iss, texPath);
+        texPath = texPath.substr(texPath.find_first_not_of(" \t"));
+
+        std::string filename = extractFilename(texPath);
+        std::string fullPath = baseDir + "textures/" + filename;
+        TextureID texID = textureManager->load(fullPath, TextureType::sRGB);
+        currentMaterial->albedoMap = texID;
+
+        Debug::log(Debug::Category::RENDERING,
+                   "    - Loaded albedo texture: ", fullPath);
+      } else if (prefix == "map_Ks") {
+        std::string texPath;
+        std::getline(iss, texPath);
+        texPath = texPath.substr(texPath.find_first_not_of(" \t"));
+
+        std::string filename = extractFilename(texPath);
+        std::string fullPath = baseDir + "textures/" + filename;
+        TextureID texID = textureManager->load(fullPath, TextureType::Linear);
+        currentMaterial->metallicMap = texID;
+
+        Debug::log(Debug::Category::RENDERING,
+                   "    - Loaded specular texture: ", fullPath);
+      } else if (prefix == "map_Bump" || prefix == "bump") {
+        std::string texPath;
+        std::getline(iss, texPath);
+        texPath = texPath.substr(texPath.find_first_not_of(" \t"));
+
+        std::string filename = extractFilename(texPath);
+        std::string fullPath = baseDir + "textures/" + filename;
+        TextureID texID = textureManager->load(fullPath, TextureType::Linear);
+        currentMaterial->normalMap = texID;
+
+        Debug::log(Debug::Category::RENDERING,
+                   "    - Loaded normal texture: ", fullPath);
+      } else if (prefix == "map_d") {
+        std::string texPath;
+        std::getline(iss, texPath);
+        texPath = texPath.substr(texPath.find_first_not_of(" \t"));
+
+        std::string filename = extractFilename(texPath);
+        std::string fullPath = baseDir + "textures/" + filename;
+        TextureID texID = textureManager->load(fullPath, TextureType::Linear);
+
+        Debug::log(Debug::Category::RENDERING,
+                   "    - Found opacity texture: ", fullPath);
+
+        currentMaterial->isTransparent = true;
+      }
+    }
+  }
+
+  if (currentMaterial) {
+    MaterialID id = registerMaterial(currentMaterial);
+    loadedMaterials.push_back(id);
+    mtlFilepathToID[mtlFilepath + "::" + currentMaterialName] = id;
+  }
+
+  file.close();
+
+  if (!loadedMaterials.empty()) {
+    mtlFilepathToID[mtlFilepath] = loadedMaterials[0];
+    Debug::log(Debug::Category::RENDERING, "MaterialManager: Loaded ",
+               loadedMaterials.size(),
+               " materials from MTL, returning first material ID: ",
+               loadedMaterials[0]);
+    return loadedMaterials[0];
+  }
+
+  Debug::log(Debug::Category::RENDERING,
+             "MaterialManager: No materials found in MTL, returning default");
+  return defaultMaterialID;
 }
 
 void MaterialManager::createDefaultMaterial() {
