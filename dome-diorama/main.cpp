@@ -5,7 +5,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-// I LOVE OBJECT ORIENTED PROGRAMMING AND MODULAR CODE STRUCTURE
+// I LOVE OBJECT ORIENTED PROGRAMMING AND (somewhat) MODULAR CODE STRUCTURE
 #include "Camera.h"
 #include "Debug.h"
 #include "Input.h"
@@ -13,6 +13,7 @@
 #include "MaterialManager.h"
 #include "MeshManager.h"
 #include "Object.h"
+#include "PostProcessing.h"
 #include "RenderDevice.h"
 #include "TextureManager.h"
 
@@ -208,6 +209,9 @@ class DomeDiorama {
   // Lights
   LightManager* lightManager = nullptr;
 
+  // Post Processing
+  PostProcessing* postProcessing = nullptr;
+
   void initWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -222,7 +226,7 @@ class DomeDiorama {
     lastFrameTime = static_cast<float>(glfwGetTime());
   }
 
- void initVulkan() {
+  void initVulkan() {
     Debug::log(Debug::Category::VULKAN, "Creating instance...");
     createInstance();
     Debug::log(Debug::Category::VULKAN, "Setting up debug messenger...");
@@ -262,9 +266,6 @@ class DomeDiorama {
     renderDevice =
         new RenderDevice(device, physicalDevice, commandPool, graphicsQueue);
 
-    Debug::log(Debug::Category::VULKAN, "Creating depth resources...");
-    createDepthResources();
-
     Debug::log(Debug::Category::VULKAN, "Creating texture manager...");
     textureManager =
         new TextureManager(device, physicalDevice, commandPool, graphicsQueue);
@@ -281,6 +282,12 @@ class DomeDiorama {
     materialManager->init(materialDescriptorSetLayout, descriptorPool);
     Debug::log(Debug::Category::VULKAN, "Initializing light manager...");
     lightManager->init();
+
+    Debug::log(Debug::Category::VULKAN, "Creating post-processing...");
+    postProcessing =
+        new PostProcessing(renderDevice, device, swapChainImageFormat);
+    postProcessing->init(descriptorPool, swapChainExtent.width,
+                         swapChainExtent.height);
 
     createScene();
 
@@ -316,6 +323,11 @@ class DomeDiorama {
     vkDeviceWaitIdle(device);
 
     cleanupSwapChain();
+
+    if (postProcessing) {
+      postProcessing->cleanup();
+      delete postProcessing;
+    }
 
     if (lightManager) {
       lightManager->cleanup();
@@ -371,45 +383,6 @@ class DomeDiorama {
 
     glfwDestroyWindow(window);
     glfwTerminate();
-  }
-
-  void createInstance() {
-    if (enableValidationLayers && !checkValidationLayerSupport()) {
-      throw std::runtime_error(
-          "Validation layers requested, but not available!");
-    }
-
-    VkApplicationInfo appInfo{};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Dome Diorama";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "No Engine";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_3;
-
-    VkInstanceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
-
-    auto extensions = getRequiredExtensions();
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-    createInfo.ppEnabledExtensionNames = extensions.data();
-
-    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-    if (enableValidationLayers) {
-      createInfo.enabledLayerCount =
-          static_cast<uint32_t>(validationLayers.size());
-      createInfo.ppEnabledLayerNames = validationLayers.data();
-      populateDebugMessengerCreateInfo(debugCreateInfo);
-      createInfo.pNext = &debugCreateInfo;
-    } else {
-      createInfo.enabledLayerCount = 0;
-      createInfo.pNext = nullptr;
-    }
-
-    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create instance!");
-    }
   }
 
   void setupDebugMessenger() {
@@ -980,16 +953,15 @@ class DomeDiorama {
     vkDeviceWaitIdle(device);
 
     cleanupSwapChain();
+
     createSwapChain();
     createImageViews();
-    createDepthResources();
+
+    postProcessing->resize(swapChainExtent.width, swapChainExtent.height,
+                           descriptorPool);
   }
 
   void cleanupSwapChain() {
-    vkDestroyImageView(device, depthImageView, nullptr);
-    vkDestroyImage(device, depthImage, nullptr);
-    vkFreeMemory(device, depthImageMemory, nullptr);
-
     for (auto imageView : swapChainImageViews) {
       vkDestroyImageView(device, imageView, nullptr);
     }
@@ -1003,69 +975,8 @@ class DomeDiorama {
       throw std::runtime_error("Failed to begin recording command buffer!");
     }
 
-    VkImageMemoryBarrier2 imageBarrierToAttachment{};
-    imageBarrierToAttachment.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    imageBarrierToAttachment.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-    imageBarrierToAttachment.dstStageMask =
-        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-    imageBarrierToAttachment.dstAccessMask =
-        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-    imageBarrierToAttachment.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageBarrierToAttachment.newLayout =
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    imageBarrierToAttachment.image = swapChainImages[imageIndex];
-    imageBarrierToAttachment.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0,
-                                                 1, 0, 1};
-
-    VkImageMemoryBarrier2 depthBarrier{};
-    depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    depthBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-    depthBarrier.srcAccessMask = 0;
-    depthBarrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
-    depthBarrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    depthBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    depthBarrier.image = depthImage;
-    depthBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    depthBarrier.subresourceRange.baseMipLevel = 0;
-    depthBarrier.subresourceRange.levelCount = 1;
-    depthBarrier.subresourceRange.baseArrayLayer = 0;
-    depthBarrier.subresourceRange.layerCount = 1;
-
-    VkImageMemoryBarrier2 barriers[] = {imageBarrierToAttachment, depthBarrier};
-
-    VkDependencyInfo dependencyInfoToAttachment{};
-    dependencyInfoToAttachment.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dependencyInfoToAttachment.imageMemoryBarrierCount = 2;
-    dependencyInfoToAttachment.pImageMemoryBarriers = barriers;
-    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToAttachment);
-
-    VkRenderingAttachmentInfo colorAttachment{};
-    colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    colorAttachment.imageView = swapChainImageViews[imageIndex];
-    colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-
-    VkRenderingAttachmentInfo depthAttachment{};
-    depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    depthAttachment.imageView = depthImageView;
-    depthAttachment.imageLayout =
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    depthAttachment.clearValue.depthStencil = {1.0f, 0};
-
-    VkRenderingInfo renderingInfo{};
-    renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-    renderingInfo.renderArea = {{0, 0}, swapChainExtent};
-    renderingInfo.layerCount = 1;
-    renderingInfo.colorAttachmentCount = 1;
-    renderingInfo.pColorAttachments = &colorAttachment;
-    renderingInfo.pDepthAttachment = &depthAttachment;
-
-    vkCmdBeginRendering(commandBuffer, &renderingInfo);
+    postProcessing->beginOffscreenPass(commandBuffer, depthImageView,
+                                       swapChainExtent);
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       graphicsPipeline);
@@ -1099,7 +1010,6 @@ class DomeDiorama {
 
       std::array<VkDescriptorSet, 2> setsToHind = {descriptorSets[currentFrame],
                                                    material->descriptorSet};
-
       vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                               pipelineLayout, 0,
                               static_cast<uint32_t>(setsToHind.size()),
@@ -1109,26 +1019,42 @@ class DomeDiorama {
                        static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
     }
 
-    vkCmdEndRendering(commandBuffer);
+    postProcessing->endOffscreenPass(commandBuffer);
 
-    VkImageMemoryBarrier2 imageBarrierToPresent{};
-    imageBarrierToPresent.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    imageBarrierToPresent.srcStageMask =
+    VkImageMemoryBarrier2 swapchainBarrier{};
+    swapchainBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    swapchainBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    swapchainBarrier.srcAccessMask = 0;
+    swapchainBarrier.dstStageMask =
         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-    imageBarrierToPresent.srcAccessMask =
-        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-    imageBarrierToPresent.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
-    imageBarrierToPresent.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    imageBarrierToPresent.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    imageBarrierToPresent.image = swapChainImages[imageIndex];
-    imageBarrierToPresent.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1,
-                                              0, 1};
+    swapchainBarrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    swapchainBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    swapchainBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    swapchainBarrier.image = swapChainImages[imageIndex];
+    swapchainBarrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
-    VkDependencyInfo dependencyInfoToPresent{};
-    dependencyInfoToPresent.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dependencyInfoToPresent.imageMemoryBarrierCount = 1;
-    dependencyInfoToPresent.pImageMemoryBarriers = &imageBarrierToPresent;
-    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToPresent);
+    VkDependencyInfo dependencyInfo{};
+    dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependencyInfo.imageMemoryBarrierCount = 1;
+    dependencyInfo.pImageMemoryBarriers = &swapchainBarrier;
+
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+
+    postProcessing->render(commandBuffer, swapChainImageViews[imageIndex],
+                           swapChainExtent, currentFrame);
+
+    swapchainBarrier.srcStageMask =
+        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    swapchainBarrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    swapchainBarrier.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+    swapchainBarrier.dstAccessMask = 0;
+    swapchainBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    swapchainBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    dependencyInfo.imageMemoryBarrierCount = 1;
+    dependencyInfo.pImageMemoryBarriers = &swapchainBarrier;
+
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
       throw std::runtime_error("Failed to record command buffer!");
@@ -1451,6 +1377,46 @@ class DomeDiorama {
     file.read(buffer.data(), fileSize);
     file.close();
     return buffer;
+  }
+
+  void createInstance() {
+    if (enableValidationLayers && !checkValidationLayerSupport()) {
+      throw std::runtime_error(
+          "validation layers requested, but not available!");
+    }
+
+    VkApplicationInfo appInfo{};
+    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pApplicationName = "Dome Diorama";
+    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.pEngineName = "No Engine";
+    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.apiVersion = VK_API_VERSION_1_3;
+
+    VkInstanceCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    createInfo.pApplicationInfo = &appInfo;
+
+    auto extensions = getRequiredExtensions();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    createInfo.ppEnabledExtensionNames = extensions.data();
+
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+    if (enableValidationLayers) {
+      createInfo.enabledLayerCount =
+          static_cast<uint32_t>(validationLayers.size());
+      createInfo.ppEnabledLayerNames = validationLayers.data();
+
+      populateDebugMessengerCreateInfo(debugCreateInfo);
+      createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+    } else {
+      createInfo.enabledLayerCount = 0;
+      createInfo.pNext = nullptr;
+    }
+
+    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create instance!");
+    }
   }
 
   VkShaderModule createShaderModule(const std::vector<char>& code) {

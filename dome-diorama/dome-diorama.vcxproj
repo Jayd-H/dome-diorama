@@ -152,6 +152,7 @@
     <ClCompile Include="MaterialManager.cpp" />
     <ClCompile Include="MeshManager.cpp" />
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="PostProcessing.cpp" />
     <ClCompile Include="RenderDevice.cpp" />
     <ClCompile Include="TextureManager.cpp" />
   </ItemGroup>
@@ -189,10 +190,35 @@
     <ClInclude Include="MaterialManager.h" />
     <ClInclude Include="MeshManager.h" />
     <ClInclude Include="Object.h" />
+    <ClInclude Include="PostProcessing.h" />
     <ClInclude Include="RenderDevice.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="SHADERS\postprocess.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">glslc.exe shaders/postprocess.frag -o shaders/postprocess_frag.spv</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">shaders/postprocess_frag.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">glslc.exe shaders/postprocess.frag -o shaders/postprocess_frag.spv</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/postprocess_frag.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe shaders/postprocess.frag -o shaders/postprocess_frag.spv</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">shaders/postprocess_frag.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe shaders/postprocess.frag -o shaders/postprocess_frag.spv</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">shaders/postprocess_frag.spv</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="SHADERS\postprocess.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">glslc.exe shaders/postprocess.vert -o shaders/postprocess_vert.spv</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">shaders/postprocess_vert.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">glslc.exe shaders/postprocess.vert -o shaders/postprocess_vert.spv</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/postprocess_vert.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe shaders/postprocess.vert -o shaders/postprocess_vert.spv</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">shaders/postprocess_vert.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe shaders/postprocess.vert -o shaders/postprocess_vert.spv</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">shaders/postprocess_vert.spv</Outputs>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
