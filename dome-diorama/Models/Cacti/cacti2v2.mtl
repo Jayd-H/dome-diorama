@@ -8,9 +8,9 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_bark_01_Carnegiea_gigantea_bark_01_LOD2_Color.png
-map_Ks D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_bark_01_Carnegiea_gigantea_bark_01_hl_LOD2_Specular.png
-map_Bump D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_bark_01_Carnegiea_gigantea_bark_01_n2_LOD2_Normal.png
+map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_bark_01_Carnegiea_gigantea_bark_01_LOD2_Color.png
+map_Ks textures//Carnegiea_gigantea_HD_Carnegiea_bark_01_Carnegiea_gigantea_bark_01_hl_LOD2_Specular.png
+map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_bark_01_Carnegiea_gigantea_bark_01_n2_LOD2_Normal.png
 
 newmtl Carnegiea_bark_03.005
 Ns 40.551991
@@ -19,9 +19,9 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_bark_03_Carnegiea_gigantea_bark_03_LOD2_Color.png
-map_Ks D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_bark_03_Carnegiea_gigantea_bark_03_hl_LOD2_Specular.png
-map_Bump D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_bark_03_Carnegiea_gigantea_bark_03_n2_LOD2_Normal.png
+map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_bark_03_Carnegiea_gigantea_bark_03_LOD2_Color.png
+map_Ks textures/Carnegiea_gigantea_HD_Carnegiea_bark_03_Carnegiea_gigantea_bark_03_hl_LOD2_Specular.png
+map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_bark_03_Carnegiea_gigantea_bark_03_n2_LOD2_Normal.png
 
 newmtl Carnegiea_flower_stalk.004
 Ns 40.551991
@@ -31,8 +31,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_flower_stalk_Cactus_flower_stalk_01_LOD2_Color.png
-map_Bump D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_flower_stalk_Cactus_flower_stalk_01_n_LOD2_Normal.png
+map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_flower_stalk_Cactus_flower_stalk_01_LOD2_Color.png
+map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_flower_stalk_Cactus_flower_stalk_01_n_LOD2_Normal.png
 
 newmtl Carnegiea_petal_01.004
 Ns 40.551991
@@ -41,9 +41,9 @@ Ks 0.200000 0.200000 0.200000
 Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 illum 2
-map_Kd D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_LOD2_Color.png
-map_d D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_a_LOD2_Transparency.png
-map_Bump D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_n_LOD2_Normal.png
+map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_LOD2_Color.png
+map_d textures/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_a_LOD2_Transparency.png
+map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_n_LOD2_Normal.png
 
 newmtl Carnegiea_petal_02.004
 Ns 40.551991
@@ -52,9 +52,9 @@ Ks 0.200000 0.200000 0.200000
 Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 illum 2
-map_Kd D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_LOD2_Color.png
-map_d D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_petal_02_Carnegiea_petal_05_a_LOD2_Transparency.png
-map_Bump D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_petal_02_Carnegiea_petal_05_n_LOD2_Normal.png
+map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_LOD2_Color.png
+map_d textures/Carnegiea_gigantea_HD_Carnegiea_petal_02_Carnegiea_petal_05_a_LOD2_Transparency.png
+map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_petal_02_Carnegiea_petal_05_n_LOD2_Normal.png
 
 newmtl Carnegiea_petal_03.004
 Ns 40.551991
@@ -63,6 +63,6 @@ Ks 0.200000 0.200000 0.200000
 Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 illum 2
-map_Kd D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_petal_03_Carnegiea_petal_06_LOD2_Color.png
-map_d D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_petal_03_Carnegiea_petal_06_a_LOD2_Transparency.png
-map_Bump D:/Files/Downloads/realistic-hd-saguaro-cactus-1530/source/Carnegiea gigantea HD_Western mat 100/zzz_LODs/LOD2/Carnegiea_gigantea_HD_Carnegiea_petal_03_Carnegiea_petal_06_n_LOD2_Normal.png
+map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_petal_03_Carnegiea_petal_06_LOD2_Color.png
+map_d textures/Carnegiea_gigantea_HD_Carnegiea_petal_03_Carnegiea_petal_06_a_LOD2_Transparency.png
+map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_petal_03_Carnegiea_petal_06_n_LOD2_Normal.png
