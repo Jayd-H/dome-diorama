@@ -9,6 +9,7 @@
 #include "Camera.h"
 #include "Debug.h"
 #include "Input.h"
+#include "LightManager.h"
 #include "MaterialManager.h"
 #include "MeshManager.h"
 #include "Object.h"
@@ -77,6 +78,7 @@ struct SwapChainSupportDetails {
 struct UniformBufferObject {
   alignas(16) glm::mat4 view;
   alignas(16) glm::mat4 proj;
+  alignas(16) glm::vec3 eyePos;
 };
 
 VkResult CreateDebugUtilsMessengerEXT(
@@ -203,11 +205,13 @@ class DomeDiorama {
   // Materials and stuff
   MaterialID cactiMaterialID = 0;
 
+  // Lights
+  LightManager* lightManager = nullptr;
+
   void initWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window =
-        glfwCreateWindow(WIDTH, HEIGHT, "Dome Diorama", nullptr, nullptr);
+    window = glfwCreateWindow(WIDTH, HEIGHT, "Dome Diorama", nullptr, nullptr);
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
     glfwSetKeyCallback(window, keyCallback);
@@ -218,7 +222,7 @@ class DomeDiorama {
     lastFrameTime = static_cast<float>(glfwGetTime());
   }
 
-  void initVulkan() {
+ void initVulkan() {
     Debug::log(Debug::Category::VULKAN, "Creating instance...");
     createInstance();
     Debug::log(Debug::Category::VULKAN, "Setting up debug messenger...");
@@ -268,16 +272,17 @@ class DomeDiorama {
     materialManager = new MaterialManager(renderDevice, textureManager);
     Debug::log(Debug::Category::VULKAN, "Creating mesh manager...");
     meshManager = new MeshManager(renderDevice);
+    Debug::log(Debug::Category::VULKAN, "Creating light manager...");
+    lightManager = new LightManager(renderDevice);
 
     Debug::log(Debug::Category::VULKAN, "Creating descriptor pool...");
     createDescriptorPool();
     Debug::log(Debug::Category::VULKAN, "Initializing material manager...");
     materialManager->init(materialDescriptorSetLayout, descriptorPool);
+    Debug::log(Debug::Category::VULKAN, "Initializing light manager...");
+    lightManager->init();
 
-    Debug::log(Debug::Category::MAIN, "Creating test material...");
-    createTestMaterial();
-    Debug::log(Debug::Category::MAIN, "Creating test scene...");
-    createTestScene();
+    createScene();
 
     Debug::log(Debug::Category::VULKAN, "Creating uniform buffers...");
     createUniformBuffers();
@@ -312,6 +317,10 @@ class DomeDiorama {
 
     cleanupSwapChain();
 
+    if (lightManager) {
+      lightManager->cleanup();
+      delete lightManager;
+    }
     if (materialManager) {
       materialManager->cleanup();
       delete materialManager;
@@ -587,12 +596,22 @@ class DomeDiorama {
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorCount = 1;
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    uboLayoutBinding.stageFlags =
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutBinding lightLayoutBinding{};
+    lightLayoutBinding.binding = 1;
+    lightLayoutBinding.descriptorCount = 1;
+    lightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding,
+                                                            lightLayoutBinding};
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &uboLayoutBinding;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
 
     if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr,
                                     &descriptorSetLayout) != VK_SUCCESS) {
@@ -779,7 +798,7 @@ class DomeDiorama {
     std::array<VkDescriptorPoolSize, 2> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount =
-        static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT + 50);
+        static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 2 + 50);
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[1].descriptorCount =
         static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 20 + 350);
@@ -817,15 +836,30 @@ class DomeDiorama {
       bufferInfo.offset = 0;
       bufferInfo.range = sizeof(UniformBufferObject);
 
-      VkWriteDescriptorSet descriptorWrite{};
-      descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      descriptorWrite.dstSet = descriptorSets[i];
-      descriptorWrite.dstBinding = 0;
-      descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      descriptorWrite.descriptorCount = 1;
-      descriptorWrite.pBufferInfo = &bufferInfo;
+      VkDescriptorBufferInfo lightBufferInfo{};
+      lightBufferInfo.buffer = lightManager->getLightBuffer();
+      lightBufferInfo.offset = 0;
+      lightBufferInfo.range = sizeof(LightBufferObject);
 
-      vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+      std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+
+      descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[0].dstSet = descriptorSets[i];
+      descriptorWrites[0].dstBinding = 0;
+      descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      descriptorWrites[0].descriptorCount = 1;
+      descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+      descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[1].dstSet = descriptorSets[i];
+      descriptorWrites[1].dstBinding = 1;
+      descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      descriptorWrites[1].descriptorCount = 1;
+      descriptorWrites[1].pBufferInfo = &lightBufferInfo;
+
+      vkUpdateDescriptorSets(device,
+                             static_cast<uint32_t>(descriptorWrites.size()),
+                             descriptorWrites.data(), 0, nullptr);
     }
   }
 
@@ -1116,6 +1150,15 @@ class DomeDiorama {
         glm::radians(45.0f),
         swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
     ubo.proj[1][1] *= -1;
+
+    glm::vec3 camPos = glm::vec3(0.0f);
+    if (camera.getMode() == CameraMode::ORBIT) {
+      float camX = 35.0f * sin(0.5f) * cos(0.0f);
+      float camY = 35.0f * cos(0.5f);
+      float camZ = 35.0f * sin(0.5f) * sin(0.0f);
+      camPos = glm::vec3(camX, camY, camZ);
+    }
+    ubo.eyePos = camPos;
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
   }
@@ -1466,7 +1509,9 @@ class DomeDiorama {
     }
   }
 
-  void createTestMaterial() {
+  void createScene() {
+    Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
+
     Material* orangeMat = MaterialBuilder()
                               .name("Orange Material")
                               .albedoColor(1.0f, 0.5f, 0.2f)
@@ -1501,10 +1546,6 @@ class DomeDiorama {
     MaterialID redMaterialID = materialManager->registerMaterial(redMat);
 
     cactiMaterialID = materialManager->loadFromMTL("./Models/Cacti/cacti2.mtl");
-  }
-
-  void createTestScene() {
-    Debug::log(Debug::Category::MAIN, "Creating test scene");
 
     MeshID cubeMesh = meshManager->getDefaultCube();
     MeshID sphereMesh = meshManager->createSphere(1.0f, 32);
@@ -1516,14 +1557,14 @@ class DomeDiorama {
                        .position(-4.0f, 0.5f, 2.0f)
                        .scale(1.0f)
                        .mesh(cubeMesh)
-                       .material(1)
+                       .material(testMaterialID)
                        .build();
 
     Object sphere = ObjectBuilder()
                         .name("Blue Sphere")
                         .position(-1.0f, 1.0f, 2.0f)
                         .mesh(sphereMesh)
-                        .material(2)
+                        .material(blueMaterialID)
                         .build();
 
     Object cylinder = ObjectBuilder()
@@ -1531,7 +1572,7 @@ class DomeDiorama {
                           .position(2.0f, 1.0f, 2.0f)
                           .rotationEuler(0.0f, 0.0f, 0.0f)
                           .mesh(cylinderMesh)
-                          .material(3)
+                          .material(greenMaterialID)
                           .build();
 
     Object cube2 = ObjectBuilder()
@@ -1539,7 +1580,7 @@ class DomeDiorama {
                        .position(5.0f, 0.5f, 2.0f)
                        .rotationEuler(0.0f, 45.0f, 0.0f)
                        .mesh(cubeMesh)
-                       .material(4)
+                       .material(redMaterialID)
                        .build();
 
     Object cacti = ObjectBuilder()
@@ -1555,8 +1596,27 @@ class DomeDiorama {
     sceneObjects.push_back(cube2);
     sceneObjects.push_back(cacti);
 
+    Light mainLight = LightBuilder()
+                          .type(LightType::Point)
+                          .name("Main Light")
+                          .position(3.0f, 5.0f, 3.0f)
+                          .color(1.0f, 1.0f, 1.0f)
+                          .intensity(1.5f)
+                          .build();
+
+    Light accentLight = LightBuilder()
+                            .type(LightType::Point)
+                            .name("Accent Light")
+                            .position(-3.0f, 2.0f, -2.0f)
+                            .color(0.3f, 0.5f, 1.0f)
+                            .intensity(1.0f)
+                            .build();
+
+    lightManager->addLight(mainLight);
+    lightManager->addLight(accentLight);
+
     Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
-               " scene objects");
+               " scene objects and ", lightManager->getLightCount(), " lights");
   }
 };
 
