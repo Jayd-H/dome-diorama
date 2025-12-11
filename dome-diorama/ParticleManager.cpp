@@ -88,6 +88,13 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
                              Mesh* quadMesh) {
   if (emitters.empty()) return;
 
+  if (shaderParamsMapped.empty() || currentFrame >= shaderParamsMapped.size()) {
+    Debug::log(Debug::Category::RENDERING,
+               "ParticleManager: Invalid shader params mapped array - size: ",
+               shaderParamsMapped.size(), ", currentFrame: ", currentFrame);
+    return;
+  }
+
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     particlePipeline);
 
@@ -101,11 +108,36 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
     const auto& emitter = emitters[i];
     if (!emitter || !emitter->active) continue;
 
+    if (i >= particleDescriptorSets.size()) {
+      Debug::log(Debug::Category::RENDERING,
+                 "ParticleManager: Invalid descriptor set index for emitter ",
+                 i);
+      continue;
+    }
+
+    if (currentFrame >= particleDescriptorSets[i].size()) {
+      Debug::log(Debug::Category::RENDERING,
+                 "ParticleManager: Invalid frame index for emitter ", i);
+      continue;
+    }
+
     const ParticleShaderParams& params = emitter->getShaderParams();
     memcpy(shaderParamsMapped[currentFrame], &params,
            sizeof(ParticleShaderParams));
 
     Material* material = materialManager->getMaterial(emitter->getMaterialID());
+    if (!material) {
+      Debug::log(Debug::Category::RENDERING,
+                 "ParticleManager: Invalid material for emitter ", i);
+      continue;
+    }
+
+    if (material->descriptorSet == VK_NULL_HANDLE) {
+      Debug::log(
+          Debug::Category::RENDERING,
+          "ParticleManager: Material descriptor set is null for emitter ", i);
+      continue;
+    }
 
     std::array<VkDescriptorSet, 3> descriptorSets = {
         cameraDescriptorSet, material->descriptorSet,
@@ -193,11 +225,13 @@ void ParticleManager::createShaderParamsBuffers(size_t frameCount) {
 
   VkDeviceSize bufferSize = sizeof(ParticleShaderParams);
 
-  shaderParamsBuffers.resize(frameCount);
-  shaderParamsMemory.resize(frameCount);
-  shaderParamsMapped.resize(frameCount);
+  size_t totalBuffersNeeded = frameCount * emitters.size();
 
-  for (size_t i = 0; i < frameCount; ++i) {
+  shaderParamsBuffers.resize(totalBuffersNeeded);
+  shaderParamsMemory.resize(totalBuffersNeeded);
+  shaderParamsMapped.resize(totalBuffersNeeded);
+
+  for (size_t i = 0; i < totalBuffersNeeded; ++i) {
     renderDevice->createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,

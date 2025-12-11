@@ -1216,9 +1216,9 @@ class DomeDiorama {
                        static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
     }
 
-    particleManager->render(commandBuffer, descriptorSets[currentFrame],
-                            pipelineLayout, currentFrame, particlePipeline,
-                            meshManager->getMesh(particleQuadMesh));
+    particleManager->render(
+        commandBuffer, descriptorSets[currentFrame], particlePipelineLayout,
+        currentFrame, particlePipeline, meshManager->getMesh(particleQuadMesh));
 
     postProcessing->endOffscreenPass(commandBuffer);
 
@@ -1809,8 +1809,6 @@ class DomeDiorama {
                                    .spawnRadius(0.2f)
                                    .particleScale(0.5f)
                                    .build();
-
-    particleManager->registerEmitter(fireEmitter);
 
     particleManager->registerEmitter(fireEmitter);
 
