@@ -323,6 +323,42 @@ MeshID MeshManager::createCylinder(float radius, float height,
   return id;
 }
 
+MeshID MeshManager::createParticleQuad() {
+  Debug::log(Debug::Category::RENDERING, "MeshManager: Creating particle quad");
+
+  Mesh* mesh = new Mesh();
+  mesh->name = "Particle Quad";
+  mesh->type = MeshType::Plane;
+
+  mesh->vertices = {
+      {{-0.5f, -0.5f, 0.0f},
+       {1.0f, 1.0f, 1.0f},
+       {0.0f, 0.0f},
+       {0.0f, 0.0f, 1.0f}},
+      {{0.5f, -0.5f, 0.0f},
+       {1.0f, 1.0f, 1.0f},
+       {1.0f, 0.0f},
+       {0.0f, 0.0f, 1.0f}},
+      {{0.5f, 0.5f, 0.0f},
+       {1.0f, 1.0f, 1.0f},
+       {1.0f, 1.0f},
+       {0.0f, 0.0f, 1.0f}},
+      {{-0.5f, 0.5f, 0.0f},
+       {1.0f, 1.0f, 1.0f},
+       {0.0f, 1.0f},
+       {0.0f, 0.0f, 1.0f}},
+  };
+
+  mesh->indices = {0, 1, 2, 2, 3, 0};
+
+  createBuffers(mesh);
+  MeshID id = registerMesh(mesh);
+
+  Debug::log(Debug::Category::RENDERING,
+             "MeshManager: Created particle quad with ID: ", id);
+  return id;
+}
+
 MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
   auto it = filepathToID.find(filepath);
   if (it != filepathToID.end()) {

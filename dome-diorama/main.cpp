@@ -8,11 +8,13 @@
 // I LOVE OBJECT ORIENTED PROGRAMMING AND (somewhat) MODULAR CODE STRUCTURE
 #include "Camera.h"
 #include "Debug.h"
+#include "FireEmitter.h"
 #include "Input.h"
 #include "LightManager.h"
 #include "MaterialManager.h"
 #include "MeshManager.h"
 #include "Object.h"
+#include "ParticleManager.h"
 #include "PostProcessing.h"
 #include "RenderDevice.h"
 #include "TextureManager.h"
@@ -53,7 +55,7 @@ const bool DEBUG_INPUT = false;
 const bool DEBUG_RENDERING = false;
 const bool DEBUG_VULKAN = false;
 #else
-const bool enableValidationLayers = true;
+const bool enableValidationLayers = false;
 const bool DEBUG_MAIN = true;
 const bool DEBUG_CAMERA = true;
 const bool DEBUG_INPUT = true;
@@ -175,7 +177,7 @@ class DomeDiorama {
   VkImage depthImage = VK_NULL_HANDLE;
   VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
   VkImageView depthImageView = VK_NULL_HANDLE;
-  VkFormat depthFormat;
+  VkFormat depthFormat = VK_FORMAT_UNDEFINED;
 
   // Callbacks for Inputs!
 
@@ -211,6 +213,11 @@ class DomeDiorama {
 
   // Post Processing
   PostProcessing* postProcessing = nullptr;
+
+  // Particle Stuff
+  ParticleManager* particleManager = nullptr;
+  VkPipeline particlePipeline = VK_NULL_HANDLE;
+  MeshID particleQuadMesh = 0;
 
   void initWindow() {
     glfwInit();
@@ -259,6 +266,8 @@ class DomeDiorama {
     createMaterialDescriptorSetLayout();
     Debug::log(Debug::Category::VULKAN, "Creating graphics pipeline...");
     createGraphicsPipeline();
+    Debug::log(Debug::Category::VULKAN, "Creating particle pipeline...");
+    createParticlePipeline();
     Debug::log(Debug::Category::VULKAN, "Creating command pool...");
     createCommandPool();
 
@@ -273,6 +282,8 @@ class DomeDiorama {
     materialManager = new MaterialManager(renderDevice, textureManager);
     Debug::log(Debug::Category::VULKAN, "Creating mesh manager...");
     meshManager = new MeshManager(renderDevice);
+    Debug::log(Debug::Category::VULKAN, "Creating particle quad mesh...");
+    particleQuadMesh = meshManager->createParticleQuad();
     Debug::log(Debug::Category::VULKAN, "Creating light manager...");
     lightManager = new LightManager(renderDevice);
 
@@ -282,6 +293,11 @@ class DomeDiorama {
     materialManager->init(materialDescriptorSetLayout, descriptorPool);
     Debug::log(Debug::Category::VULKAN, "Initializing light manager...");
     lightManager->init();
+
+    Debug::log(Debug::Category::VULKAN, "Creating particle manager...");
+    particleManager = new ParticleManager(renderDevice, materialManager);
+    Debug::log(Debug::Category::VULKAN, "Initializing particle manager...");
+    particleManager->init(materialDescriptorSetLayout, pipelineLayout);
 
     Debug::log(Debug::Category::VULKAN, "Creating post-processing...");
     postProcessing =
@@ -348,11 +364,18 @@ class DomeDiorama {
       meshManager->cleanup();
       delete meshManager;
     }
+    if (particleManager) {
+      particleManager->cleanup();
+      delete particleManager;
+    }
 
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
     vkDestroyDescriptorSetLayout(device, materialDescriptorSetLayout, nullptr);
+
+    vkDestroyPipeline(device, particlePipeline, nullptr);
+    vkDestroyPipeline(device, graphicsPipeline, nullptr);
 
     vkDestroyBuffer(device, indexBuffer, nullptr);
     vkFreeMemory(device, indexBufferMemory, nullptr);
@@ -374,7 +397,7 @@ class DomeDiorama {
     vkDestroyCommandPool(device, commandPool, nullptr);
     vkDestroyDevice(device, nullptr);
 
-    if (enableValidationLayers) {
+    if (enableValidationLayers && debugMessenger != VK_NULL_HANDLE) {
       DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
     }
 
@@ -739,6 +762,168 @@ class DomeDiorama {
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
   }
 
+  void createParticlePipeline() {
+    Debug::log(Debug::Category::VULKAN, "Creating particle pipeline...");
+
+    auto vertShaderCode = readFile("shaders/particle_vert.spv");
+    auto fragShaderCode = readFile("shaders/particle_frag.spv");
+
+    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+    vertShaderStageInfo.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertShaderStageInfo.module = vertShaderModule;
+    vertShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+    fragShaderStageInfo.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragShaderStageInfo.module = fragShaderModule;
+    fragShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo,
+                                                      fragShaderStageInfo};
+
+    auto bindingDescription = Vertex::getBindingDescription();
+    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+    VkVertexInputBindingDescription instanceBinding{};
+    instanceBinding.binding = 1;
+    instanceBinding.stride = sizeof(ParticleInstanceData);
+    instanceBinding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+
+    std::array<VkVertexInputBindingDescription, 2> bindings = {
+        bindingDescription, instanceBinding};
+
+    std::array<VkVertexInputAttributeDescription, 9> attributes;
+    attributes[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)};
+    attributes[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)};
+    attributes[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)};
+    attributes[3] = {3, 0, VK_FORMAT_R32G32B32_SFLOAT,
+                     offsetof(Vertex, normal)};
+
+    attributes[4] = {4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, 0};
+    attributes[5] = {5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4)};
+    attributes[6] = {6, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
+                     2 * sizeof(glm::vec4)};
+    attributes[7] = {7, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
+                     3 * sizeof(glm::vec4)};
+    attributes[8] = {8, 1, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::mat4)};
+
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputInfo.vertexBindingDescriptionCount =
+        static_cast<uint32_t>(bindings.size());
+    vertexInputInfo.pVertexBindingDescriptions = bindings.data();
+    vertexInputInfo.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(attributes.size());
+    vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+    inputAssembly.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+    VkPipelineViewportStateCreateInfo viewportState{};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.viewportCount = 1;
+    viewportState.scissorCount = 1;
+
+    VkPipelineRasterizationStateCreateInfo rasterizer{};
+    rasterizer.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.rasterizerDiscardEnable = VK_FALSE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode = VK_CULL_MODE_NONE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.depthBiasEnable = VK_FALSE;
+
+    VkPipelineMultisampleStateCreateInfo multisampling{};
+    multisampling.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+    depthStencil.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_FALSE;
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.stencilTestEnable = VK_FALSE;
+
+    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+    colorBlendAttachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_TRUE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachment.dstColorBlendFactor =
+        VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+    VkPipelineColorBlendStateCreateInfo colorBlending{};
+    colorBlending.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &colorBlendAttachment;
+
+    std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
+                                                 VK_DYNAMIC_STATE_SCISSOR};
+    VkPipelineDynamicStateCreateInfo dynamicState{};
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.dynamicStateCount =
+        static_cast<uint32_t>(dynamicStates.size());
+    dynamicState.pDynamicStates = dynamicStates.data();
+
+    VkPipelineRenderingCreateInfo renderingCreateInfo{};
+    renderingCreateInfo.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    renderingCreateInfo.colorAttachmentCount = 1;
+    renderingCreateInfo.pColorAttachmentFormats = &swapChainImageFormat;
+    renderingCreateInfo.depthAttachmentFormat = depthFormat;
+
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.pNext = &renderingCreateInfo;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.renderPass = VK_NULL_HANDLE;
+
+    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
+                                  nullptr, &particlePipeline) != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create particle graphics pipeline!");
+    }
+
+    vkDestroyShaderModule(device, fragShaderModule, nullptr);
+    vkDestroyShaderModule(device, vertShaderModule, nullptr);
+
+    Debug::log(Debug::Category::VULKAN,
+               "Particle pipeline created successfully");
+  }
+
   void createCommandPool() {
     QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
     VkCommandPoolCreateInfo poolInfo{};
@@ -1019,6 +1204,10 @@ class DomeDiorama {
                        static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
     }
 
+    particleManager->render(commandBuffer, descriptorSets[currentFrame],
+                            pipelineLayout, currentFrame, particlePipeline,
+                            meshManager->getMesh(particleQuadMesh));
+
     postProcessing->endOffscreenPass(commandBuffer);
 
     VkImageMemoryBarrier2 swapchainBarrier{};
@@ -1069,6 +1258,9 @@ class DomeDiorama {
     if (!sceneObjects.empty() && sceneObjects.size() > 1) {
       sceneObjects[1].setRotationEuler(0.0f, time * glm::degrees(90.0f), 0.0f);
     }
+
+    float deltaTime = time - (time - 0.016f);
+    particleManager->update(deltaTime);
 
     UniformBufferObject ubo{};
     ubo.view = camera.getViewMatrix();
@@ -1580,6 +1772,34 @@ class DomeDiorama {
 
     lightManager->addLight(mainLight);
     lightManager->addLight(accentLight);
+
+    Material* particleMat = MaterialBuilder()
+                                .name("Particle Material")
+                                .albedoColor(1.0f, 1.0f, 1.0f)
+                                .roughness(0.0f)
+                                .metallic(0.0f)
+                                .transparent(true)
+                                .build();
+    MaterialID particleMaterialID =
+        materialManager->registerMaterial(particleMat);
+
+    FireEmitter* fireEmitter = FireEmitterBuilder()
+                                   .name("Fire Emitter")
+                                   .position(0.0f, 0.5f, 5.0f)
+                                   .maxParticles(500)
+                                   .spawnRate(100.0f)
+                                   .particleLifetime(2.0f)
+                                   .material(particleMaterialID)
+                                   .waveFrequency(2.0f)
+                                   .waveAmplitude(0.5f)
+                                   .baseColor(1.0f, 0.9f, 0.1f)
+                                   .tipColor(1.0f, 0.3f, 0.0f)
+                                   .upwardSpeed(2.0f)
+                                   .build();
+
+    particleManager->registerEmitter(fireEmitter);
+
+    Debug::log(Debug::Category::MAIN, "Created particle emitter");
 
     Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
                " scene objects and ", lightManager->getLightCount(), " lights");

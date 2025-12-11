@@ -49,6 +49,8 @@ class MeshManager {
   MeshID createCylinder(float radius = 1.0f, float height = 2.0f,
                         uint32_t segments = 32);
 
+  MeshID createParticleQuad();
+
   MeshID loadFromOBJ(const std::string& filepath);
 
   Mesh* getMesh(MeshID id);

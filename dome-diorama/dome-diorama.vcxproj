@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="FireEmitter.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="LightManager.cpp" />
@@ -152,6 +153,8 @@
     <ClCompile Include="MaterialManager.cpp" />
     <ClCompile Include="MeshManager.cpp" />
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="ParticleEmitter.cpp" />
+    <ClCompile Include="ParticleManager.cpp" />
     <ClCompile Include="PostProcessing.cpp" />
     <ClCompile Include="RenderDevice.cpp" />
     <ClCompile Include="TextureManager.cpp" />
@@ -183,6 +186,7 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Debug.h" />
+    <ClInclude Include="FireEmitter.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="LightManager.h" />
@@ -190,6 +194,8 @@
     <ClInclude Include="MaterialManager.h" />
     <ClInclude Include="MeshManager.h" />
     <ClInclude Include="Object.h" />
+    <ClInclude Include="ParticleEmitter.h" />
+    <ClInclude Include="ParticleManager.h" />
     <ClInclude Include="PostProcessing.h" />
     <ClInclude Include="RenderDevice.h" />
     <ClInclude Include="stb_image.h" />
@@ -218,6 +224,30 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">shaders/postprocess_vert.spv</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe shaders/postprocess.vert -o shaders/postprocess_vert.spv</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">shaders/postprocess_vert.spv</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="SHADERS\particle.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">glslc.exe "$(ProjectDir)SHADERS\particle.frag" -o "$(ProjectDir)shaders\particle_frag.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)shaders\particle_frag.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">glslc.exe "$(ProjectDir)SHADERS\particle.frag" -o "$(ProjectDir)shaders\particle_frag.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)shaders\particle_frag.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe "$(ProjectDir)SHADERS\particle.frag" -o "$(ProjectDir)shaders\particle_frag.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\particle_frag.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe "$(ProjectDir)SHADERS\particle.frag" -o "$(ProjectDir)shaders\particle_frag.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\particle_frag.spv</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="SHADERS\particle.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">glslc.exe "$(ProjectDir)SHADERS\particle.vert" -o "$(ProjectDir)shaders\particle_vert.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)shaders\particle_vert.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">glslc.exe "$(ProjectDir)SHADERS\particle.vert" -o "$(ProjectDir)shaders\particle_vert.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)shaders\particle_vert.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe "$(ProjectDir)SHADERS\particle.vert" -o "$(ProjectDir)shaders\particle_vert.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\particle_vert.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe "$(ProjectDir)SHADERS\particle.vert" -o "$(ProjectDir)shaders\particle_vert.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\particle_vert.spv</Outputs>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
