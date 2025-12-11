@@ -88,7 +88,7 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
   vkCmdBindIndexBuffer(commandBuffer, quadMesh->indexBuffer, 0,
                        VK_INDEX_TYPE_UINT16);
 
-  for (auto& emitter : emitters) {
+  for (const auto& emitter : emitters) {
     if (!emitter || emitter->getActiveParticleCount() == 0) continue;
 
     Material* material = materialManager->getMaterial(emitter->getMaterialID());

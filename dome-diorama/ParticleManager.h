@@ -8,6 +8,7 @@
 #include "RenderDevice.h"
 
 class MaterialManager;
+class Mesh;
 
 class ParticleManager {
  public:
