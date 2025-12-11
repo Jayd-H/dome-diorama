@@ -11,19 +11,26 @@
 using EmitterID = uint32_t;
 constexpr EmitterID INVALID_EMITTER_ID = 0;
 
-struct ParticleData {
-  glm::vec3 position;
-  glm::vec3 velocity;
-  glm::vec4 color;
-  float lifetime;
-  float age;
-  float scale;
-  bool active;
+struct ParticleInstanceData {
+  float particleIndex;
+  float padding1;
+  float padding2;
+  float padding3;
 };
 
-struct ParticleInstanceData {
-  glm::mat4 modelMatrix;
-  glm::vec4 color;
+struct ParticleShaderParams {
+  alignas(16) glm::vec3 emitterPosition;
+  alignas(4) float time;
+  alignas(16) glm::vec3 baseColor;
+  alignas(4) float waveFrequency;
+  alignas(16) glm::vec3 tipColor;
+  alignas(4) float waveAmplitude;
+  alignas(16) glm::vec3 velocityBase;
+  alignas(4) float particleLifetime;
+  alignas(4) float upwardSpeed;
+  alignas(4) float particleScale;
+  alignas(4) float spawnRadius;
+  alignas(4) float maxParticles;
 };
 
 class ParticleEmitter {
@@ -39,28 +46,20 @@ class ParticleEmitter {
   void setPosition(const glm::vec3& pos);
   void setActive(bool isActive);
 
-  const std::vector<ParticleInstanceData>& getInstanceData() const {
-    return instanceData;
-  }
-  size_t getActiveParticleCount() const { return activeParticleCount; }
-
+  size_t getMaxParticles() const { return maxParticles; }
   MaterialID getMaterialID() const { return materialID; }
 
+  const ParticleShaderParams& getShaderParams() const { return shaderParams; }
+
  protected:
-  std::vector<ParticleData> particles;
-  std::vector<ParticleInstanceData> instanceData;
   size_t maxParticles;
-  size_t activeParticleCount;
-  float spawnRate;
-  float spawnAccumulator;
   float particleLifetime;
   MaterialID materialID;
+  float time;
 
-  virtual void initializeParticle(ParticleData& particle) = 0;
-  virtual void updateParticle(ParticleData& particle, float deltaTime) = 0;
+  ParticleShaderParams shaderParams;
 
-  void spawnParticle();
-  void updateInstanceData();
+  virtual void updateShaderParams() = 0;
 
   friend class ParticleEmitterBuilder;
 };
@@ -74,7 +73,6 @@ class ParticleEmitterBuilder {
   ParticleEmitterBuilder& position(const glm::vec3& pos);
   ParticleEmitterBuilder& position(float x, float y, float z);
   ParticleEmitterBuilder& maxParticles(size_t count);
-  ParticleEmitterBuilder& spawnRate(float rate);
   ParticleEmitterBuilder& particleLifetime(float lifetime);
   ParticleEmitterBuilder& material(MaterialID id);
   ParticleEmitterBuilder& active(bool isActive);

@@ -1,51 +1,42 @@
 #include "FireEmitter.h"
 
-#include <cmath>
-#include <random>
-
-static std::random_device rd;
-static std::mt19937 gen(rd());
-
-static float randomFloat(float min, float max) {
-  std::uniform_real_distribution<float> dis(min, max);
-  return dis(gen);
-}
-
 FireEmitter::FireEmitter()
     : waveFrequency(2.0f),
       waveAmplitude(0.5f),
       upwardSpeed(2.0f),
+      spawnRadius(0.2f),
+      particleScale(0.5f),
       baseColor(1.0f, 0.9f, 0.1f),
-      tipColor(1.0f, 0.3f, 0.0f) {}
-
-void FireEmitter::initializeParticle(ParticleData& particle) {
-  particle.position = position;
-  particle.position.x += randomFloat(-0.2f, 0.2f);
-  particle.position.z += randomFloat(-0.2f, 0.2f);
-
-  particle.velocity = glm::vec3(0.0f, upwardSpeed, 0.0f);
-  particle.velocity.x = randomFloat(-0.5f, 0.5f);
-  particle.velocity.z = randomFloat(-0.5f, 0.5f);
-
-  particle.color = glm::vec4(baseColor, 1.0f);
-  particle.scale = randomFloat(0.3f, 0.6f);
+      tipColor(1.0f, 0.3f, 0.0f) {
+  updateShaderParams();
 }
 
-void FireEmitter::updateParticle(ParticleData& particle, float deltaTime) {
-  float lifeRatio = particle.age / particle.lifetime;
+void FireEmitter::setWaveFrequency(float frequency) {
+  waveFrequency = frequency;
+}
 
-  float sineWave =
-      sin(particle.age * waveFrequency + particle.position.x * 2.0f);
-  particle.velocity.x += sineWave * waveAmplitude * deltaTime;
+void FireEmitter::setWaveAmplitude(float amplitude) {
+  waveAmplitude = amplitude;
+}
 
-  particle.position += particle.velocity * deltaTime;
+void FireEmitter::setBaseColor(const glm::vec3& color) { baseColor = color; }
 
-  glm::vec3 currentColor = glm::mix(baseColor, tipColor, lifeRatio);
-  float alpha = 1.0f - lifeRatio;
+void FireEmitter::setTipColor(const glm::vec3& color) { tipColor = color; }
 
-  particle.color = glm::vec4(currentColor, alpha);
+void FireEmitter::setUpwardSpeed(float speed) { upwardSpeed = speed; }
 
-  particle.scale *= (1.0f - deltaTime * 0.5f);
+void FireEmitter::setSpawnRadius(float radius) { spawnRadius = radius; }
+
+void FireEmitter::setParticleScale(float scale) { particleScale = scale; }
+
+void FireEmitter::updateShaderParams() {
+  shaderParams.baseColor = baseColor;
+  shaderParams.tipColor = tipColor;
+  shaderParams.waveFrequency = waveFrequency;
+  shaderParams.waveAmplitude = waveAmplitude;
+  shaderParams.upwardSpeed = upwardSpeed;
+  shaderParams.particleScale = particleScale;
+  shaderParams.spawnRadius = spawnRadius;
 }
 
 FireEmitterBuilder::FireEmitterBuilder() {
@@ -70,11 +61,6 @@ FireEmitterBuilder& FireEmitterBuilder::position(float x, float y, float z) {
 
 FireEmitterBuilder& FireEmitterBuilder::maxParticles(size_t count) {
   ParticleEmitterBuilder::maxParticles(count);
-  return *this;
-}
-
-FireEmitterBuilder& FireEmitterBuilder::spawnRate(float rate) {
-  ParticleEmitterBuilder::spawnRate(rate);
   return *this;
 }
 
@@ -125,6 +111,16 @@ FireEmitterBuilder& FireEmitterBuilder::tipColor(float r, float g, float b) {
 
 FireEmitterBuilder& FireEmitterBuilder::upwardSpeed(float speed) {
   fireEmitter->setUpwardSpeed(speed);
+  return *this;
+}
+
+FireEmitterBuilder& FireEmitterBuilder::spawnRadius(float radius) {
+  fireEmitter->setSpawnRadius(radius);
+  return *this;
+}
+
+FireEmitterBuilder& FireEmitterBuilder::particleScale(float scale) {
+  fireEmitter->setParticleScale(scale);
   return *this;
 }
 

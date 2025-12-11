@@ -218,6 +218,7 @@ class DomeDiorama {
   ParticleManager* particleManager = nullptr;
   VkPipeline particlePipeline = VK_NULL_HANDLE;
   MeshID particleQuadMesh = 0;
+  VkPipelineLayout particlePipelineLayout = VK_NULL_HANDLE;
 
   void initWindow() {
     glfwInit();
@@ -266,8 +267,7 @@ class DomeDiorama {
     createMaterialDescriptorSetLayout();
     Debug::log(Debug::Category::VULKAN, "Creating graphics pipeline...");
     createGraphicsPipeline();
-    Debug::log(Debug::Category::VULKAN, "Creating particle pipeline...");
-    createParticlePipeline();
+
     Debug::log(Debug::Category::VULKAN, "Creating command pool...");
     createCommandPool();
 
@@ -298,6 +298,9 @@ class DomeDiorama {
     particleManager = new ParticleManager(renderDevice, materialManager);
     Debug::log(Debug::Category::VULKAN, "Initializing particle manager...");
     particleManager->init(materialDescriptorSetLayout, pipelineLayout);
+
+    Debug::log(Debug::Category::VULKAN, "Creating particle pipeline...");
+    createParticlePipeline();
 
     Debug::log(Debug::Category::VULKAN, "Creating post-processing...");
     postProcessing =
@@ -375,6 +378,7 @@ class DomeDiorama {
     vkDestroyDescriptorSetLayout(device, materialDescriptorSetLayout, nullptr);
 
     vkDestroyPipeline(device, particlePipeline, nullptr);
+    vkDestroyPipelineLayout(device, particlePipelineLayout, nullptr);
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
 
     vkDestroyBuffer(device, indexBuffer, nullptr);
@@ -799,20 +803,14 @@ class DomeDiorama {
     std::array<VkVertexInputBindingDescription, 2> bindings = {
         bindingDescription, instanceBinding};
 
-    std::array<VkVertexInputAttributeDescription, 9> attributes;
+    std::array<VkVertexInputAttributeDescription, 5> attributes;
     attributes[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)};
     attributes[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)};
     attributes[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)};
     attributes[3] = {3, 0, VK_FORMAT_R32G32B32_SFLOAT,
                      offsetof(Vertex, normal)};
-
-    attributes[4] = {4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, 0};
-    attributes[5] = {5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4)};
-    attributes[6] = {6, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
-                     2 * sizeof(glm::vec4)};
-    attributes[7] = {7, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
-                     3 * sizeof(glm::vec4)};
-    attributes[8] = {8, 1, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::mat4)};
+    attributes[4] = {4, 1, VK_FORMAT_R32_SFLOAT,
+                     offsetof(ParticleInstanceData, particleIndex)};
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType =
@@ -889,6 +887,20 @@ class DomeDiorama {
         static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
+    std::array<VkDescriptorSetLayout, 3> layouts = {
+        descriptorSetLayout, materialDescriptorSetLayout,
+        particleManager->getParticleParamsLayout()};
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
+    pipelineLayoutInfo.pSetLayouts = layouts.data();
+
+    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
+                               &particlePipelineLayout) != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create particle pipeline layout!");
+    }
+
     VkPipelineRenderingCreateInfo renderingCreateInfo{};
     renderingCreateInfo.sType =
         VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -909,7 +921,7 @@ class DomeDiorama {
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.layout = particlePipelineLayout;
     pipelineInfo.renderPass = VK_NULL_HANDLE;
 
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
@@ -1787,7 +1799,6 @@ class DomeDiorama {
                                    .name("Fire Emitter")
                                    .position(0.0f, 0.5f, 5.0f)
                                    .maxParticles(500)
-                                   .spawnRate(100.0f)
                                    .particleLifetime(2.0f)
                                    .material(particleMaterialID)
                                    .waveFrequency(2.0f)
@@ -1795,7 +1806,11 @@ class DomeDiorama {
                                    .baseColor(1.0f, 0.9f, 0.1f)
                                    .tipColor(1.0f, 0.3f, 0.0f)
                                    .upwardSpeed(2.0f)
+                                   .spawnRadius(0.2f)
+                                   .particleScale(0.5f)
                                    .build();
+
+    particleManager->registerEmitter(fireEmitter);
 
     particleManager->registerEmitter(fireEmitter);
 
