@@ -32,7 +32,7 @@ layout(binding = 0, set = 1) uniform MaterialProperties {
     float opacity;
     float indexOfRefraction;
     float heightScale;
-    float padding1;
+    float textureScale;
     float padding2;
 } material;
 
@@ -127,7 +127,9 @@ vec3 calculateSpotLight(LightData light, vec3 normal, vec3 fragPos, vec3 viewDir
 }
 
 void main() {
-    vec4 albedoSample = texture(albedoMap, fragTexCoord) * material.albedoColor;
+    vec2 scaledTexCoord = fragTexCoord * material.textureScale;
+    
+    vec4 albedoSample = texture(albedoMap, scaledTexCoord) * material.albedoColor;
     vec3 albedo = albedoSample.rgb;
     
     vec3 normal = normalize(fragNormal);

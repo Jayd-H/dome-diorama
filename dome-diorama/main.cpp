@@ -1682,14 +1682,15 @@ void createScene() {
     MaterialID domeBaseMaterialID =
         materialManager->loadFromMTL("./Models/domebase.mtl");
 
-    MaterialID sandMaterialID = materialManager->registerMaterial(
+MaterialID sandMaterialID = materialManager->registerMaterial(
         MaterialBuilder()
             .name("Sand Material")
             .albedoMap("./Models/textures/gravelly_sand_diff_1k.jpg")
             .normalMap("./Models/textures/gravelly_sand_nor_gl_1k.png")
             .roughnessMap("./Models/textures/gravelly_sand_rough_1k.png")
             .heightMap("./Models/textures/gravelly_sand_disp_1k.png")
-            .heightScale(0.02f));
+            .heightScale(0.02f)
+            .textureScale(10.0f));
 
     MeshID cactiMesh = meshManager->loadFromOBJ("./Models/Cacti/cacti2.obj");
     MeshID domeBaseMesh = meshManager->loadFromOBJ("./Models/domebase.obj");

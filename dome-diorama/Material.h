@@ -19,7 +19,7 @@ struct MaterialProperties {
 
   float indexOfRefraction = 1.5f;
   float heightScale = 0.05f;
-  float padding1 = 0.0f;
+  float textureScale = 1.0f;
   float padding2 = 0.0f;
 };
 
@@ -48,44 +48,146 @@ class Material {
 
 class MaterialBuilder {
  public:
-  MaterialBuilder();
+  MaterialBuilder() { material.properties = MaterialProperties{}; }
 
-  MaterialBuilder& name(const std::string& name);
+  MaterialBuilder& name(const std::string& n) {
+    material.name = n;
+    return *this;
+  }
 
-  MaterialBuilder& albedoMap(TextureID id);
-  MaterialBuilder& albedoMap(const std::string& filepath);
-  MaterialBuilder& albedoColor(const glm::vec3& color);
-  MaterialBuilder& albedoColor(float r, float g, float b);
+  MaterialBuilder& albedoMap(TextureID id) {
+    material.albedoMap = id;
+    return *this;
+  }
 
-  MaterialBuilder& normalMap(TextureID id);
-  MaterialBuilder& normalMap(const std::string& filepath);
+  MaterialBuilder& albedoMap(const std::string& filepath) {
+    hasAlbedoTexture = true;
+    albedoFilepath = filepath;
+    return *this;
+  }
 
-  MaterialBuilder& roughnessMap(TextureID id);
-  MaterialBuilder& roughnessMap(const std::string& filepath);
-  MaterialBuilder& roughness(float value);
+  MaterialBuilder& albedoColor(const glm::vec3& color) {
+    material.properties.albedoColor = glm::vec4(color, 1.0f);
+    return *this;
+  }
 
-  MaterialBuilder& metallicMap(TextureID id);
-  MaterialBuilder& metallicMap(const std::string& filepath);
-  MaterialBuilder& metallic(float value);
+  MaterialBuilder& albedoColor(float r, float g, float b) {
+    material.properties.albedoColor = glm::vec4(r, g, b, 1.0f);
+    return *this;
+  }
 
-  MaterialBuilder& emissiveMap(TextureID id);
-  MaterialBuilder& emissiveMap(const std::string& filepath);
-  MaterialBuilder& emissiveIntensity(float value);
+  MaterialBuilder& normalMap(TextureID id) {
+    material.normalMap = id;
+    return *this;
+  }
 
-  MaterialBuilder& heightMap(TextureID id);
-  MaterialBuilder& heightMap(const std::string& filepath);
-  MaterialBuilder& heightScale(float value);
+  MaterialBuilder& normalMap(const std::string& filepath) {
+    hasNormalTexture = true;
+    normalFilepath = filepath;
+    return *this;
+  }
 
-  MaterialBuilder& aoMap(TextureID id);
-  MaterialBuilder& aoMap(const std::string& filepath);
+  MaterialBuilder& roughnessMap(TextureID id) {
+    material.roughnessMap = id;
+    return *this;
+  }
 
-  MaterialBuilder& transparent(bool enabled = true);
-  MaterialBuilder& opacity(float value);
-  MaterialBuilder& indexOfRefraction(float ior);
+  MaterialBuilder& roughnessMap(const std::string& filepath) {
+    hasRoughnessTexture = true;
+    roughnessFilepath = filepath;
+    return *this;
+  }
 
-  MaterialBuilder& doubleSided(bool enabled = true);
+  MaterialBuilder& roughness(float value) {
+    material.properties.roughness = value;
+    return *this;
+  }
 
-  Material* build();
+  MaterialBuilder& metallicMap(TextureID id) {
+    material.metallicMap = id;
+    return *this;
+  }
+
+  MaterialBuilder& metallicMap(const std::string& filepath) {
+    hasMetallicTexture = true;
+    metallicFilepath = filepath;
+    return *this;
+  }
+
+  MaterialBuilder& metallic(float value) {
+    material.properties.metallic = value;
+    return *this;
+  }
+
+  MaterialBuilder& emissiveMap(TextureID id) {
+    material.emissiveMap = id;
+    return *this;
+  }
+
+  MaterialBuilder& emissiveMap(const std::string& filepath) {
+    hasEmissiveTexture = true;
+    emissiveFilepath = filepath;
+    return *this;
+  }
+
+  MaterialBuilder& emissiveIntensity(float value) {
+    material.properties.emissiveIntensity = value;
+    return *this;
+  }
+
+  MaterialBuilder& heightMap(TextureID id) {
+    material.heightMap = id;
+    return *this;
+  }
+
+  MaterialBuilder& heightMap(const std::string& filepath) {
+    hasHeightTexture = true;
+    heightFilepath = filepath;
+    return *this;
+  }
+
+  MaterialBuilder& heightScale(float value) {
+    material.properties.heightScale = value;
+    return *this;
+  }
+
+  MaterialBuilder& aoMap(TextureID id) {
+    material.aoMap = id;
+    return *this;
+  }
+
+  MaterialBuilder& aoMap(const std::string& filepath) {
+    hasAOTexture = true;
+    aoFilepath = filepath;
+    return *this;
+  }
+
+  MaterialBuilder& transparent(bool enabled = true) {
+    material.isTransparent = enabled;
+    return *this;
+  }
+
+  MaterialBuilder& opacity(float value) {
+    material.properties.opacity = value;
+    return *this;
+  }
+
+  MaterialBuilder& indexOfRefraction(float ior) {
+    material.properties.indexOfRefraction = ior;
+    return *this;
+  }
+
+  MaterialBuilder& doubleSided(bool enabled = true) {
+    material.doubleSided = enabled;
+    return *this;
+  }
+
+  MaterialBuilder& textureScale(float value) {
+    material.properties.textureScale = value;
+    return *this;
+  }
+
+  Material* build() { return new Material(material); }
 
   bool hasAlbedoTexture = false;
   std::string albedoFilepath;

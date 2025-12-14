@@ -149,7 +149,6 @@
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="LightManager.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Material.cpp" />
     <ClCompile Include="MaterialManager.cpp" />
     <ClCompile Include="MeshManager.cpp" />
     <ClCompile Include="Object.cpp" />

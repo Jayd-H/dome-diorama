@@ -30,9 +30,6 @@
     <ClCompile Include="TextureManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Material.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MaterialManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
