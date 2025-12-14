@@ -15,6 +15,7 @@ class MaterialManager {
             VkDescriptorPool descriptorPool);
 
   MaterialID registerMaterial(Material* material);
+  MaterialID registerMaterial(MaterialBuilder& builder);
   Material* getMaterial(MaterialID id);
   const Material* getMaterial(MaterialID id) const;
 

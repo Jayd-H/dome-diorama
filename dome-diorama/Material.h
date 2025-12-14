@@ -87,9 +87,6 @@ class MaterialBuilder {
 
   Material* build();
 
- private:
-  Material material;
-
   bool hasAlbedoTexture = false;
   std::string albedoFilepath;
 
@@ -110,4 +107,7 @@ class MaterialBuilder {
 
   bool hasAOTexture = false;
   std::string aoFilepath;
+
+ private:
+  Material material;
 };

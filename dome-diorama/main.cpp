@@ -1675,36 +1675,27 @@ class DomeDiorama {
     }
   }
 
-  void createScene() {
+void createScene() {
     Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
 
     cactiMaterialID = materialManager->loadFromMTL("./Models/Cacti/cacti2.mtl");
     MaterialID domeBaseMaterialID =
         materialManager->loadFromMTL("./Models/domebase.mtl");
 
-    Material* sandMat =
+    MaterialID sandMaterialID = materialManager->registerMaterial(
         MaterialBuilder()
             .name("Sand Material")
             .albedoMap("./Models/textures/gravelly_sand_diff_1k.jpg")
             .normalMap("./Models/textures/gravelly_sand_nor_gl_1k.png")
             .roughnessMap("./Models/textures/gravelly_sand_rough_1k.png")
             .heightMap("./Models/textures/gravelly_sand_disp_1k.png")
-            .heightScale(0.02f)
-            .build();
-    MaterialID sandMaterialID = materialManager->registerMaterial(sandMat);
+            .heightScale(0.02f));
 
     MeshID cactiMesh = meshManager->loadFromOBJ("./Models/Cacti/cacti2.obj");
     MeshID domeBaseMesh = meshManager->loadFromOBJ("./Models/domebase.obj");
 
     MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
-        100.0f,  // radius
-        100,     // segments
-        10.0f,   // heightScale: max dune height
-        2.0f,    // noiseScale: frequency of dunes
-        2,       // octaves: detail levels
-        0.6f,    // persistence: how much each octave contributes
-        42       // seed: random seed for reproducibility
-    );
+        100.0f, 100, 10.0f, 2.0f, 2, 0.6f, 42);
 
     Object domeBase = ObjectBuilder()
                           .name("Dome Base")
@@ -1750,15 +1741,13 @@ class DomeDiorama {
     lightManager->addLight(mainLight);
     lightManager->addLight(accentLight);
 
-    Material* particleMat = MaterialBuilder()
-                                .name("Particle Material")
-                                .albedoColor(1.0f, 1.0f, 1.0f)
-                                .roughness(0.0f)
-                                .metallic(0.0f)
-                                .transparent(true)
-                                .build();
     MaterialID particleMaterialID =
-        materialManager->registerMaterial(particleMat);
+        materialManager->registerMaterial(MaterialBuilder()
+                                              .name("Particle Material")
+                                              .albedoColor(1.0f, 1.0f, 1.0f)
+                                              .roughness(0.0f)
+                                              .metallic(0.0f)
+                                              .transparent(true));
 
     FireEmitter* fireEmitter = FireEmitterBuilder()
                                    .name("Fire Emitter")

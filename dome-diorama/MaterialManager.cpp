@@ -95,6 +95,41 @@ MaterialID MaterialManager::registerMaterial(Material* material) {
   return id;
 }
 
+MaterialID MaterialManager::registerMaterial(MaterialBuilder& builder) {
+  Material* material = builder.build();
+
+  if (builder.hasAlbedoTexture) {
+    material->albedoMap =
+        textureManager->load(builder.albedoFilepath, TextureType::sRGB);
+  }
+  if (builder.hasNormalTexture) {
+    material->normalMap =
+        textureManager->load(builder.normalFilepath, TextureType::Linear);
+  }
+  if (builder.hasRoughnessTexture) {
+    material->roughnessMap =
+        textureManager->load(builder.roughnessFilepath, TextureType::Linear);
+  }
+  if (builder.hasMetallicTexture) {
+    material->metallicMap =
+        textureManager->load(builder.metallicFilepath, TextureType::Linear);
+  }
+  if (builder.hasEmissiveTexture) {
+    material->emissiveMap =
+        textureManager->load(builder.emissiveFilepath, TextureType::sRGB);
+  }
+  if (builder.hasHeightTexture) {
+    material->heightMap =
+        textureManager->load(builder.heightFilepath, TextureType::Linear);
+  }
+  if (builder.hasAOTexture) {
+    material->aoMap =
+        textureManager->load(builder.aoFilepath, TextureType::Linear);
+  }
+
+  return registerMaterial(material);
+}
+
 Material* MaterialManager::getMaterial(MaterialID id) {
   if (id >= materials.size()) {
     Debug::log(Debug::Category::RENDERING,

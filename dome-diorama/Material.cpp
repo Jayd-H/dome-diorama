@@ -11,7 +11,6 @@ MaterialBuilder& MaterialBuilder::name(const std::string& name) {
 
 MaterialBuilder& MaterialBuilder::albedoMap(TextureID id) {
   material.albedoMap = id;
-  hasAlbedoTexture = true;
   return *this;
 }
 
@@ -33,7 +32,6 @@ MaterialBuilder& MaterialBuilder::albedoColor(float r, float g, float b) {
 
 MaterialBuilder& MaterialBuilder::normalMap(TextureID id) {
   material.normalMap = id;
-  hasNormalTexture = true;
   return *this;
 }
 
@@ -45,7 +43,6 @@ MaterialBuilder& MaterialBuilder::normalMap(const std::string& filepath) {
 
 MaterialBuilder& MaterialBuilder::roughnessMap(TextureID id) {
   material.roughnessMap = id;
-  hasRoughnessTexture = true;
   return *this;
 }
 
@@ -62,7 +59,6 @@ MaterialBuilder& MaterialBuilder::roughness(float value) {
 
 MaterialBuilder& MaterialBuilder::metallicMap(TextureID id) {
   material.metallicMap = id;
-  hasMetallicTexture = true;
   return *this;
 }
 
@@ -79,7 +75,6 @@ MaterialBuilder& MaterialBuilder::metallic(float value) {
 
 MaterialBuilder& MaterialBuilder::emissiveMap(TextureID id) {
   material.emissiveMap = id;
-  hasEmissiveTexture = true;
   return *this;
 }
 
@@ -96,7 +91,6 @@ MaterialBuilder& MaterialBuilder::emissiveIntensity(float value) {
 
 MaterialBuilder& MaterialBuilder::heightMap(TextureID id) {
   material.heightMap = id;
-  hasHeightTexture = true;
   return *this;
 }
 
@@ -113,7 +107,6 @@ MaterialBuilder& MaterialBuilder::heightScale(float value) {
 
 MaterialBuilder& MaterialBuilder::aoMap(TextureID id) {
   material.aoMap = id;
-  hasAOTexture = true;
   return *this;
 }
 
