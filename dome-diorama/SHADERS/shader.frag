@@ -17,6 +17,9 @@ struct LightData {
     float quadratic;
     float cutOff;
     float outerCutOff;
+    int castsShadows;
+    int shadowMapIndex;
+    mat4 lightSpaceMatrix;
 };
 
 layout(binding = 1, set = 0) uniform LightBuffer {
@@ -44,6 +47,8 @@ layout(binding = 5, set = 1) uniform sampler2D emissiveMap;
 layout(binding = 6, set = 1) uniform sampler2D heightMap;
 layout(binding = 7, set = 1) uniform sampler2D aoMap;
 
+layout(binding = 0, set = 2) uniform sampler2D shadowMaps[8];
+
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragNormal;
@@ -53,7 +58,41 @@ layout(location = 0) out vec4 outColor;
 
 const float PI = 3.14159265359;
 
-vec3 calculatePointLight(LightData light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo, float roughness, float metallic) {
+float calculateShadow(int lightIndex, vec3 fragPos, vec3 normal, vec3 lightDir) {
+    if (lightBuffer.lights[lightIndex].castsShadows == 0) {
+        return 1.0;
+    }
+    
+    int shadowMapIndex = lightBuffer.lights[lightIndex].shadowMapIndex;
+    if (shadowMapIndex < 0) {
+        return 1.0;
+    }
+    
+    vec4 fragPosLightSpace = lightBuffer.lights[lightIndex].lightSpaceMatrix * vec4(fragPos, 1.0);
+    
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+    
+    if (projCoords.z > 1.0) {
+        return 1.0;
+    }
+    
+    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
+    
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(shadowMaps[shadowMapIndex], 0);
+    for(int x = -1; x <= 1; ++x) {
+        for(int y = -1; y <= 1; ++y) {
+            float pcfDepth = texture(shadowMaps[shadowMapIndex], projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += (projCoords.z - bias) > pcfDepth ? 0.0 : 1.0;
+        }
+    }
+    shadow /= 9.0;
+    
+    return shadow;
+}
+
+vec3 calculatePointLight(LightData light, int lightIndex, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo, float roughness, float metallic) {
     vec3 lightDir = normalize(light.position - fragPos);
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
@@ -72,10 +111,12 @@ vec3 calculatePointLight(LightData light, vec3 normal, vec3 fragPos, vec3 viewDi
     vec3 diffuse = kD * albedo / PI;
     vec3 specular = kS * spec;
     
-    return (diffuse + specular) * light.color * light.intensity * diff * attenuation;
+    float shadow = calculateShadow(lightIndex, fragPos, normal, lightDir);
+    
+    return (diffuse + specular) * light.color * light.intensity * diff * attenuation * shadow;
 }
 
-vec3 calculateDirectionalLight(LightData light, vec3 normal, vec3 viewDir, vec3 albedo, float roughness, float metallic) {
+vec3 calculateDirectionalLight(LightData light, int lightIndex, vec3 normal, vec3 viewDir, vec3 albedo, float roughness, float metallic) {
     vec3 lightDir = normalize(-light.direction);
     
     float diff = max(dot(normal, lightDir), 0.0);
@@ -92,10 +133,12 @@ vec3 calculateDirectionalLight(LightData light, vec3 normal, vec3 viewDir, vec3 
     vec3 diffuse = kD * albedo / PI;
     vec3 specular = kS * spec;
     
-    return (diffuse + specular) * light.color * light.intensity * diff;
+    float shadow = calculateShadow(lightIndex, fragWorldPos, normal, lightDir);
+    
+    return (diffuse + specular) * light.color * light.intensity * diff * shadow;
 }
 
-vec3 calculateSpotLight(LightData light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo, float roughness, float metallic) {
+vec3 calculateSpotLight(LightData light, int lightIndex, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo, float roughness, float metallic) {
     vec3 lightDir = normalize(light.position - fragPos);
     float distance = length(light.position - fragPos);
     
@@ -120,7 +163,9 @@ vec3 calculateSpotLight(LightData light, vec3 normal, vec3 fragPos, vec3 viewDir
         vec3 diffuse = kD * albedo / PI;
         vec3 specular = kS * spec;
         
-        return (diffuse + specular) * light.color * light.intensity * diff * attenuation * spotIntensity;
+        float shadow = calculateShadow(lightIndex, fragPos, normal, lightDir);
+        
+        return (diffuse + specular) * light.color * light.intensity * diff * attenuation * spotIntensity * shadow;
     }
     
     return vec3(0.0);
@@ -145,11 +190,11 @@ void main() {
         LightData light = lightBuffer.lights[i];
         
         if (light.type == 0) {
-            lighting += calculatePointLight(light, normal, fragWorldPos, viewDir, albedo, roughness, metallic);
+            lighting += calculatePointLight(light, i, normal, fragWorldPos, viewDir, albedo, roughness, metallic);
         } else if (light.type == 1) {
-            lighting += calculateDirectionalLight(light, normal, viewDir, albedo, roughness, metallic);
+            lighting += calculateDirectionalLight(light, i, normal, viewDir, albedo, roughness, metallic);
         } else if (light.type == 2) {
-            lighting += calculateSpotLight(light, normal, fragWorldPos, viewDir, albedo, roughness, metallic);
+            lighting += calculateSpotLight(light, i, normal, fragWorldPos, viewDir, albedo, roughness, metallic);
         }
     }
     

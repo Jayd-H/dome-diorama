@@ -12,6 +12,7 @@ LightBuilder::LightBuilder() {
   light.quadratic = 0.032f;
   light.cutOff = 12.5f;
   light.outerCutOff = 17.5f;
+  light.castsShadows = false;
 }
 
 LightBuilder& LightBuilder::type(LightType t) {
@@ -73,6 +74,11 @@ LightBuilder& LightBuilder::spotAngles(float inner, float outer) {
   return *this;
 }
 
+LightBuilder& LightBuilder::castsShadows(bool shadows) {
+  light.castsShadows = shadows;
+  return *this;
+}
+
 Light LightBuilder::build() { return light; }
 
 Light::Light() {
@@ -87,4 +93,10 @@ Light::Light() {
   cutOff = 12.5f;
   outerCutOff = 17.5f;
   name = "Unnamed Light";
+  castsShadows = false;
+  shadowMap = VK_NULL_HANDLE;
+  shadowMapMemory = VK_NULL_HANDLE;
+  shadowMapView = VK_NULL_HANDLE;
+  shadowMapSampler = VK_NULL_HANDLE;
+  lightSpaceMatrix = glm::mat4(1.0f);
 }

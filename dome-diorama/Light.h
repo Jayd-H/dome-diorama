@@ -1,4 +1,6 @@
 #pragma once
+#include <vulkan/vulkan.h>
+
 #include <glm/glm.hpp>
 #include <string>
 
@@ -24,6 +26,15 @@ class Light {
 
   std::string name;
 
+  bool castsShadows;
+
+  VkImage shadowMap;
+  VkDeviceMemory shadowMapMemory;
+  VkImageView shadowMapView;
+  VkSampler shadowMapSampler;
+
+  glm::mat4 lightSpaceMatrix;
+
   Light();
 };
 
@@ -42,6 +53,7 @@ class LightBuilder {
   LightBuilder& intensity(float intensity);
   LightBuilder& attenuation(float constant, float linear, float quadratic);
   LightBuilder& spotAngles(float cutOff, float outerCutOff);
+  LightBuilder& castsShadows(bool shadows);
 
   Light build();
 

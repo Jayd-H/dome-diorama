@@ -250,6 +250,30 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\particle_vert.spv</Outputs>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="SHADERS\shadow.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">glslc "%(FullPath)" -o "$(ProjectDir)shaders\shadow_frag.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)shaders\shadow_frag.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">glslc "%(FullPath)" -o "$(ProjectDir)shaders\shadow_frag.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)shaders\shadow_frag.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc "%(FullPath)" -o "$(ProjectDir)shaders\shadow_frag.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\shadow_frag.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc "%(FullPath)" -o "$(ProjectDir)shaders\shadow_frag.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\shadow_frag.spv</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="SHADERS\shadow.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">glslc "%(FullPath)" -o "$(ProjectDir)shaders\shadow_vert.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)shaders\shadow_vert.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">glslc "%(FullPath)" -o "$(ProjectDir)shaders\shadow_vert.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)shaders\shadow_vert.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc "%(FullPath)" -o "$(ProjectDir)shaders\shadow_vert.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\shadow_vert.spv</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc "%(FullPath)" -o "$(ProjectDir)shaders\shadow_vert.spv"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\shadow_vert.spv</Outputs>
+    </CustomBuild>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
