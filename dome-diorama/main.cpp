@@ -1678,48 +1678,33 @@ class DomeDiorama {
   void createScene() {
     Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
 
-    Material* orangeMat = MaterialBuilder()
-                              .name("Orange Material")
-                              .albedoColor(1.0f, 0.5f, 0.2f)
-                              .roughness(0.3f)
-                              .metallic(0.0f)
-                              .build();
-
-    Material* blueMat = MaterialBuilder()
-                            .name("Blue Material")
-                            .albedoColor(0.2f, 0.4f, 1.0f)
-                            .roughness(0.7f)
-                            .metallic(0.0f)
-                            .build();
-
-    Material* greenMat = MaterialBuilder()
-                             .name("Green Material")
-                             .albedoColor(0.2f, 0.8f, 0.3f)
-                             .roughness(0.5f)
-                             .metallic(0.2f)
-                             .build();
-
-    Material* redMat = MaterialBuilder()
-                           .name("Red Metallic Material")
-                           .albedoColor(0.9f, 0.1f, 0.1f)
-                           .roughness(0.2f)
-                           .metallic(0.8f)
-                           .build();
-
-    testMaterialID = materialManager->registerMaterial(orangeMat);
-    MaterialID blueMaterialID = materialManager->registerMaterial(blueMat);
-    MaterialID greenMaterialID = materialManager->registerMaterial(greenMat);
-    MaterialID redMaterialID = materialManager->registerMaterial(redMat);
-
     cactiMaterialID = materialManager->loadFromMTL("./Models/Cacti/cacti2.mtl");
     MaterialID domeBaseMaterialID =
         materialManager->loadFromMTL("./Models/domebase.mtl");
 
-    MeshID cubeMesh = meshManager->getDefaultCube();
-    MeshID sphereMesh = meshManager->createSphere(1.0f, 32);
-    MeshID cylinderMesh = meshManager->createCylinder(0.5f, 2.0f, 32);
+    Material* sandMat =
+        MaterialBuilder()
+            .name("Sand Material")
+            .albedoMap("./Models/textures/gravelly_sand_diff_1k.jpg")
+            .normalMap("./Models/textures/gravelly_sand_nor_gl_1k.png")
+            .roughnessMap("./Models/textures/gravelly_sand_rough_1k.png")
+            .heightMap("./Models/textures/gravelly_sand_disp_1k.png")
+            .heightScale(0.02f)
+            .build();
+    MaterialID sandMaterialID = materialManager->registerMaterial(sandMat);
+
     MeshID cactiMesh = meshManager->loadFromOBJ("./Models/Cacti/cacti2.obj");
     MeshID domeBaseMesh = meshManager->loadFromOBJ("./Models/domebase.obj");
+
+    MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
+        100.0f,  // radius
+        100,     // segments
+        10.0f,   // heightScale: max dune height
+        2.0f,    // noiseScale: frequency of dunes
+        2,       // octaves: detail levels
+        0.6f,    // persistence: how much each octave contributes
+        42       // seed: random seed for reproducibility
+    );
 
     Object domeBase = ObjectBuilder()
                           .name("Dome Base")
@@ -1727,6 +1712,13 @@ class DomeDiorama {
                           .mesh(domeBaseMesh)
                           .material(domeBaseMaterialID)
                           .build();
+
+    Object sandPlane = ObjectBuilder()
+                           .name("Sand Terrain")
+                           .position(0.0f, 0.0f, 0.0f)
+                           .mesh(sandTerrainMesh)
+                           .material(sandMaterialID)
+                           .build();
 
     Object cacti = ObjectBuilder()
                        .name("Cacti")
@@ -1736,22 +1728,23 @@ class DomeDiorama {
                        .build();
 
     sceneObjects.push_back(domeBase);
+    sceneObjects.push_back(sandPlane);
     sceneObjects.push_back(cacti);
 
     Light mainLight = LightBuilder()
                           .type(LightType::Point)
                           .name("Main Light")
-                          .position(0.0f, 5.0f, 0.0f)
+                          .position(0.0f, 500.0f, 0.0f)
                           .color(1.0f, 1.0f, 1.0f)
-                          .intensity(2.0f)
+                          .intensity(5000.0f)
                           .build();
 
     Light accentLight = LightBuilder()
                             .type(LightType::Point)
                             .name("Accent Light")
-                            .position(-3.0f, 2.0f, 3.0f)
+                            .position(-300.0f, 200.0f, 300.0f)
                             .color(1.0f, 0.8f, 0.6f)
-                            .intensity(1.0f)
+                            .intensity(2000.0f)
                             .build();
 
     lightManager->addLight(mainLight);

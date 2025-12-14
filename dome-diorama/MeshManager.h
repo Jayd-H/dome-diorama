@@ -1,12 +1,12 @@
 #pragma once
 #include <vulkan/vulkan.h>
 
+#include <array>
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <array>
 
 #include "Object.h"
 #include "RenderDevice.h"
@@ -59,6 +59,12 @@ class MeshManager {
   MeshID getDefaultCube() const { return defaultCubeID; }
 
   void cleanup();
+
+  MeshID createProceduralTerrain(float radius, uint32_t segments,
+                                 float heightScale = 1.0f,
+                                 float noiseScale = 4.0f, int octaves = 4,
+                                 float persistence = 0.5f,
+                                 unsigned int seed = 0);
 
  private:
   RenderDevice* renderDevice;

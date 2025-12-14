@@ -196,6 +196,7 @@
     <ClInclude Include="Object.h" />
     <ClInclude Include="ParticleEmitter.h" />
     <ClInclude Include="ParticleManager.h" />
+    <ClInclude Include="PerlinNoise.h" />
     <ClInclude Include="PostProcessing.h" />
     <ClInclude Include="RenderDevice.h" />
     <ClInclude Include="stb_image.h" />

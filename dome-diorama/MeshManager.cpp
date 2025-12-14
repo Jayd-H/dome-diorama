@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "Debug.h"
+#include "PerlinNoise.h"
 
 VkVertexInputBindingDescription Vertex::getBindingDescription() {
   VkVertexInputBindingDescription bindingDescription{};
@@ -560,6 +561,118 @@ MeshID MeshManager::registerMesh(Mesh* mesh) {
 
   Debug::log(Debug::Category::RENDERING, "MeshManager: Registered mesh '",
              mesh->name, "' (ID: ", id, ", vertices: ", mesh->vertices.size(),
+             ", indices: ", mesh->indices.size(), ")");
+
+  return id;
+}
+
+MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
+                                            float heightScale, float noiseScale,
+                                            int octaves, float persistence,
+                                            unsigned int seed) {
+  Debug::log(Debug::Category::RENDERING,
+             "MeshManager: Creating circular procedural terrain (radius: ",
+             radius, ", segments: ", segments, ")");
+
+  Mesh* mesh = new Mesh();
+  mesh->name = "Procedural Terrain";
+  mesh->type = MeshType::Plane;
+
+  PerlinNoise perlin(seed);
+
+  uint32_t radialSegments = segments * 4;
+
+  Vertex centerVertex;
+  centerVertex.pos = glm::vec3(
+      0.0f, perlin.octaveNoise(0.0f, 0.0f, octaves, persistence) * heightScale,
+      0.0f);
+  centerVertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
+  centerVertex.texCoord = glm::vec2(0.5f, 0.5f);
+  centerVertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+  mesh->vertices.push_back(centerVertex);
+
+  for (uint32_t ring = 1; ring <= segments; ring++) {
+    float ringRadius = (ring / (float)segments) * radius;
+
+    for (uint32_t point = 0; point < radialSegments; point++) {
+      float angle = (point / (float)radialSegments) * 2.0f * glm::pi<float>();
+
+      float xPos = ringRadius * cos(angle);
+      float zPos = ringRadius * sin(angle);
+
+      float noiseX = (xPos / radius) * noiseScale;
+      float noiseZ = (zPos / radius) * noiseScale;
+
+      float height = perlin.octaveNoise(noiseX, noiseZ, octaves, persistence) *
+                     heightScale;
+
+      Vertex vertex;
+      vertex.pos = glm::vec3(xPos, height, zPos);
+      vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
+      vertex.texCoord = glm::vec2((xPos / radius + 1.0f) * 0.5f,
+                                  (zPos / radius + 1.0f) * 0.5f);
+      vertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+
+      mesh->vertices.push_back(vertex);
+    }
+  }
+
+  for (uint32_t point = 0; point < radialSegments; point++) {
+    uint32_t nextPoint = (point + 1) % radialSegments;
+
+    mesh->indices.push_back(0);
+    mesh->indices.push_back(1 + nextPoint);
+    mesh->indices.push_back(1 + point);
+  }
+
+  for (uint32_t ring = 1; ring < segments; ring++) {
+    uint32_t currentRingStart = 1 + (ring - 1) * radialSegments;
+    uint32_t nextRingStart = 1 + ring * radialSegments;
+
+    for (uint32_t point = 0; point < radialSegments; point++) {
+      uint32_t nextPoint = (point + 1) % radialSegments;
+
+      uint32_t current = currentRingStart + point;
+      uint32_t currentNext = currentRingStart + nextPoint;
+      uint32_t next = nextRingStart + point;
+      uint32_t nextNext = nextRingStart + nextPoint;
+
+      mesh->indices.push_back(current);
+      mesh->indices.push_back(nextNext);
+      mesh->indices.push_back(next);
+
+      mesh->indices.push_back(current);
+      mesh->indices.push_back(currentNext);
+      mesh->indices.push_back(nextNext);
+    }
+  }
+
+  for (size_t i = 0; i < mesh->indices.size(); i += 3) {
+    uint32_t idx0 = mesh->indices[i];
+    uint32_t idx1 = mesh->indices[i + 1];
+    uint32_t idx2 = mesh->indices[i + 2];
+
+    glm::vec3 v0 = mesh->vertices[idx0].pos;
+    glm::vec3 v1 = mesh->vertices[idx1].pos;
+    glm::vec3 v2 = mesh->vertices[idx2].pos;
+
+    glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+
+    mesh->vertices[idx0].normal += normal;
+    mesh->vertices[idx1].normal += normal;
+    mesh->vertices[idx2].normal += normal;
+  }
+
+  for (auto& vertex : mesh->vertices) {
+    vertex.normal = glm::normalize(vertex.normal);
+  }
+
+  createBuffers(mesh);
+  MeshID id = registerMesh(mesh);
+
+  Debug::log(Debug::Category::RENDERING,
+             "MeshManager: Created circular procedural terrain with ID: ", id,
+             " (vertices: ", mesh->vertices.size(),
              ", indices: ", mesh->indices.size(), ")");
 
   return id;
