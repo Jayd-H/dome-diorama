@@ -187,7 +187,7 @@ class MaterialBuilder {
     return *this;
   }
 
-  Material* build() { return new Material(material); }
+  Material* build() const { return new Material(material); }
 
   bool hasAlbedoTexture = false;
   std::string albedoFilepath;

@@ -2,6 +2,13 @@
 // Vulkan ver 1.3 based
 //====================================================
 
+// Memory leak detection (everyone say thank you warren)
+#ifdef _DEBUG
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#define new new (_NORMAL_BLOCK, __FILE__, __LINE__)
+#endif
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -181,7 +188,7 @@ class DomeDiorama {
 
   // Callbacks for Inputs!
 
-static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
+  static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
                           int mods) {
     if (window == nullptr) return;
     auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
@@ -849,7 +856,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
     std::array<VkVertexInputBindingDescription, 2> bindings = {
         bindingDescription, instanceBinding};
 
-    std::array<VkVertexInputAttributeDescription, 5> attributes;
+    std::array<VkVertexInputAttributeDescription, 5> attributes{};
     attributes[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)};
     attributes[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)};
     attributes[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)};
@@ -1491,7 +1498,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
     return requiredExtensions.empty();
   }
 
-  QueueFamilyIndices const findQueueFamilies(VkPhysicalDevice device) {
+  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const {
     QueueFamilyIndices indices;
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
@@ -1517,7 +1524,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
     return indices;
   }
 
-  SwapChainSupportDetails const querySwapChainSupport(VkPhysicalDevice device) {
+  SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) const {
     SwapChainSupportDetails details;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
                                               &details.capabilities);
@@ -1626,9 +1633,11 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
   }
 
   void createInstance() {
-    if (enableValidationLayers && !checkValidationLayerSupport()) {
-      throw std::runtime_error(
-          "validation layers requested, but not available!");
+    if (enableValidationLayers) {
+      if (!checkValidationLayerSupport()) {
+        throw std::runtime_error(
+            "validation layers requested, but not available!");
+      }
     }
 
     VkApplicationInfo appInfo{};
@@ -1665,7 +1674,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
     }
   }
 
-  VkShaderModule const createShaderModule(const std::vector<char>& code) {
+  VkShaderModule createShaderModule(const std::vector<char>& code) const {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
@@ -1725,8 +1734,6 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
     Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
 
     cactiMaterialID = materialManager->loadFromMTL("./Models/Cacti/cacti2.mtl");
-    MaterialID domeBaseMaterialID =
-        materialManager->loadFromMTL("./Models/domebase.mtl");
 
     MaterialID sandMaterialID = materialManager->registerMaterial(
         MaterialBuilder()
@@ -1739,17 +1746,9 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
             .textureScale(40.0f));
 
     MeshID cactiMesh = meshManager->loadFromOBJ("./Models/Cacti/cacti2.obj");
-    MeshID domeBaseMesh = meshManager->loadFromOBJ("./Models/domebase.obj");
 
     MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
         100.0f, 100, 10.0f, 2.0f, 2, 0.6f, 42);
-
-    Object domeBase = ObjectBuilder()
-                          .name("Dome Base")
-                          .position(0.0f, 0.0f, 0.0f)
-                          .mesh(domeBaseMesh)
-                          .material(domeBaseMaterialID)
-                          .build();
 
     Object sandPlane = ObjectBuilder()
                            .name("Sand Terrain")
@@ -1765,7 +1764,6 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
                        .material(cactiMaterialID)
                        .build();
 
-    sceneObjects.push_back(domeBase);
     sceneObjects.push_back(sandPlane);
     sceneObjects.push_back(cacti);
 
@@ -1820,6 +1818,10 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
 };
 
 int main() {
+#ifdef _DEBUG
+  _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
   Debug::enableMain = DEBUG_MAIN;
   Debug::enableCamera = DEBUG_CAMERA;
   Debug::enableInput = DEBUG_INPUT;

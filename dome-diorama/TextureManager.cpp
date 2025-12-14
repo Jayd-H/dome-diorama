@@ -130,7 +130,8 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
   Debug::log(Debug::Category::RENDERING, "  - Dimensions: ", texWidth, "x",
              texHeight, ", channels: ", texChannels);
 
-  VkDeviceSize imageSize = texWidth * texHeight * 4;
+  VkDeviceSize imageSize = static_cast<VkDeviceSize>(texWidth) *
+                           static_cast<VkDeviceSize>(texHeight) * 4;
   uint32_t mipLevels = createInfo.generateMipmaps
                            ? static_cast<uint32_t>(std::floor(
                                  std::log2(std::max(texWidth, texHeight)))) +
@@ -236,7 +237,8 @@ TextureID TextureManager::createDefaultTexture(const unsigned char* pixelData,
   Debug::log(Debug::Category::RENDERING,
              "TextureManager: Creating default texture ", width, "x", height);
 
-  VkDeviceSize imageSize = width * height * 4;
+  VkDeviceSize imageSize =
+      static_cast<VkDeviceSize>(width) * static_cast<VkDeviceSize>(height) * 4;
 
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
@@ -356,8 +358,8 @@ void TextureManager::createImage(uint32_t width, uint32_t height,
   vkBindImageMemory(device, image, imageMemory, 0);
 }
 
-uint32_t TextureManager::findMemoryType(uint32_t typeFilter,
-                                        VkMemoryPropertyFlags properties) {
+uint32_t TextureManager::findMemoryType(
+    uint32_t typeFilter, VkMemoryPropertyFlags properties) const {
   VkPhysicalDeviceMemoryProperties memProperties;
   vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
@@ -537,7 +539,7 @@ void TextureManager::generateMipmaps(VkImage image, VkFormat format,
 }
 
 VkSampler TextureManager::createSampler(TextureFilter filter, TextureWrap wrap,
-                                        uint32_t mipLevels) {
+                                        uint32_t mipLevels) const {
   VkSamplerCreateInfo samplerInfo{};
   samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
   samplerInfo.magFilter =
@@ -622,7 +624,7 @@ void TextureManager::recreateSamplers(VkFilter magFilter, VkFilter minFilter) {
              " samplers");
 }
 
-VkCommandBuffer TextureManager::beginSingleTimeCommands() {
+VkCommandBuffer TextureManager::beginSingleTimeCommands() const {
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -641,7 +643,7 @@ VkCommandBuffer TextureManager::beginSingleTimeCommands() {
   return commandBuffer;
 }
 
-void TextureManager::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
+void TextureManager::endSingleTimeCommands(VkCommandBuffer commandBuffer) const {
   vkEndCommandBuffer(commandBuffer);
 
   VkSubmitInfo submitInfo{};

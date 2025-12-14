@@ -115,7 +115,7 @@ MeshID MeshManager::createSphere(float radius, uint32_t segments) {
   uint32_t sliceCount = segments;
   uint32_t stackCount = segments;
 
-  Vertex topVertex;
+  Vertex topVertex{};
   topVertex.pos = glm::vec3(0.0f, radius, 0.0f);
   topVertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
   topVertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -130,7 +130,7 @@ MeshID MeshManager::createSphere(float radius, uint32_t segments) {
     for (uint32_t j = 0; j <= sliceCount; ++j) {
       float theta = j * thetaStep;
 
-      Vertex v;
+      Vertex v{};
       v.pos.x = radius * sinf(phi) * cosf(theta);
       v.pos.y = radius * cosf(phi);
       v.pos.z = radius * sinf(phi) * sinf(theta);
@@ -143,7 +143,7 @@ MeshID MeshManager::createSphere(float radius, uint32_t segments) {
     }
   }
 
-  Vertex bottomVertex;
+  Vertex bottomVertex{};
   bottomVertex.pos = glm::vec3(0.0f, -radius, 0.0f);
   bottomVertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
   bottomVertex.normal = glm::vec3(0.0f, -1.0f, 0.0f);
@@ -247,7 +247,7 @@ MeshID MeshManager::createCylinder(float radius, float height,
     float y = -0.5f * height + i * stackHeight;
     float dTheta = 2.0f * glm::pi<float>() / sliceCount;
     for (uint32_t j = 0; j <= sliceCount; ++j) {
-      Vertex vertex;
+      Vertex vertex{};
       float c = cosf(j * dTheta);
       float s = sinf(j * dTheta);
       vertex.pos = glm::vec3(radius * c, y, radius * s);
@@ -275,7 +275,7 @@ MeshID MeshManager::createCylinder(float radius, float height,
     float x = radius * cosf(i * dTheta);
     float z = radius * sinf(i * dTheta);
     float y = -0.5f * height;
-    Vertex vertex;
+    Vertex vertex{};
     vertex.pos = glm::vec3(x, y, z);
     vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
     vertex.normal = glm::vec3(0.0f, -1.0f, 0.0f);
@@ -283,7 +283,7 @@ MeshID MeshManager::createCylinder(float radius, float height,
         glm::vec2(x / radius * 0.5f + 0.5f, z / radius * 0.5f + 0.5f);
     mesh->vertices.push_back(vertex);
   }
-  Vertex centerVertex;
+  Vertex centerVertex{};
   centerVertex.pos = glm::vec3(0.0f, -0.5f * height, 0.0f);
   centerVertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
   centerVertex.normal = glm::vec3(0.0f, -1.0f, 0.0f);
@@ -300,7 +300,7 @@ MeshID MeshManager::createCylinder(float radius, float height,
     float x = radius * cosf(i * dTheta);
     float z = radius * sinf(i * dTheta);
     float y = 0.5f * height;
-    Vertex vertex;
+    Vertex vertex{};
     vertex.pos = glm::vec3(x, y, z);
     vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
     vertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -308,8 +308,11 @@ MeshID MeshManager::createCylinder(float radius, float height,
         glm::vec2(x / radius * 0.5f + 0.5f, z / radius * 0.5f + 0.5f);
     mesh->vertices.push_back(vertex);
   }
+  centerVertex = Vertex{};
   centerVertex.pos = glm::vec3(0.0f, 0.5f * height, 0.0f);
+  centerVertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
   centerVertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+  centerVertex.texCoord = glm::vec2(0.5f, 0.5f);
   mesh->vertices.push_back(centerVertex);
   centerIndex = static_cast<uint32_t>(mesh->vertices.size()) - 1;
   for (uint32_t i = 0; i < sliceCount; ++i) {
@@ -395,15 +398,15 @@ MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
     iss >> prefix;
 
     if (prefix == "v") {
-      glm::vec3 pos;
+      glm::vec3 pos{};
       iss >> pos.x >> pos.y >> pos.z;
       positions.push_back(pos);
     } else if (prefix == "vn") {
-      glm::vec3 normal;
+      glm::vec3 normal{};
       iss >> normal.x >> normal.y >> normal.z;
       normals.push_back(normal);
     } else if (prefix == "vt") {
-      glm::vec2 texCoord;
+      glm::vec2 texCoord{};
       iss >> texCoord.x >> texCoord.y;
       texCoords.push_back(texCoord);
     } else if (prefix == "f") {
@@ -429,7 +432,7 @@ MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
           }
         }
 
-        Vertex vertex;
+        Vertex vertex{};
         vertex.pos = positions[posIdx];
         vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
         vertex.texCoord =
@@ -582,7 +585,7 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
 
   uint32_t radialSegments = segments * 4;
 
-  Vertex centerVertex;
+  Vertex centerVertex{};
   centerVertex.pos = glm::vec3(
       0.0f, perlin.octaveNoise(0.0f, 0.0f, octaves, persistence) * heightScale,
       0.0f);
@@ -606,7 +609,7 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
       float height = perlin.octaveNoise(noiseX, noiseZ, octaves, persistence) *
                      heightScale;
 
-      Vertex vertex;
+      Vertex vertex{};
       vertex.pos = glm::vec3(xPos, height, zPos);
       vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
       vertex.texCoord = glm::vec2((xPos / radius + 1.0f) * 0.5f,

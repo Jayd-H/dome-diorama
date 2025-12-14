@@ -66,11 +66,11 @@ class TextureManager {
                        uint32_t height, uint32_t mipLevels);
 
   VkSampler createSampler(TextureFilter filter, TextureWrap wrap,
-                          uint32_t mipLevels);
+                          uint32_t mipLevels) const;
 
   uint32_t findMemoryType(uint32_t typeFilter,
-                          VkMemoryPropertyFlags properties);
+                          VkMemoryPropertyFlags properties) const;
 
-  VkCommandBuffer beginSingleTimeCommands();
-  void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+  VkCommandBuffer beginSingleTimeCommands() const;
+  void endSingleTimeCommands(VkCommandBuffer commandBuffer) const;
 };

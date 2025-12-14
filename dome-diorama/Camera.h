@@ -21,6 +21,7 @@ class Camera {
         fpsPosition(2.0f, 2.0f, 2.0f),
         fpsYaw(-135.0f),
         fpsPitch(-35.0f),
+        fpsSpeed(10.0f),
         lastOrbitPosition(0.0f) {}
 
   inline void update(const Input& input, float deltaTime) {
@@ -46,7 +47,7 @@ class Camera {
                          glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
-    glm::vec3 forward;
+    glm::vec3 forward{};
     forward.x = cos(glm::radians(fpsYaw)) * cos(glm::radians(fpsPitch));
     forward.y = sin(glm::radians(fpsPitch));
     forward.z = sin(glm::radians(fpsYaw)) * cos(glm::radians(fpsPitch));
@@ -85,7 +86,6 @@ class Camera {
       Debug::log(Debug::Category::CAMERA, "Scroll: ", scroll,
                  ", radius: ", orbitRadius);
       orbitRadius -= static_cast<float>(scroll) * ZOOM_SENSITIVITY;
-      orbitRadius = std::clamp(orbitRadius, MIN_RADIUS, MAX_RADIUS);
       Debug::log(Debug::Category::CAMERA, "New radius: ", orbitRadius);
     }
 
@@ -96,7 +96,7 @@ class Camera {
     lastOrbitPosition = orbitPivot + glm::vec3(x, y, z);
   }
 
-  inline void updateFPSMode(const Input& input, float deltaTime) {
+ inline void updateFPSMode(const Input& input, float deltaTime) {
     double dx = 0.0;
     double dy = 0.0;
     input.getMouseDelta(dx, dy);
@@ -105,7 +105,14 @@ class Camera {
     fpsPitch -= static_cast<float>(dy) * FPS_MOUSE_SENSITIVITY;
     fpsPitch = std::clamp(fpsPitch, -89.0f, 89.0f);
 
-    glm::vec3 forward;
+    const double scroll = input.getScrollDelta();
+    if (scroll != 0.0) {
+      fpsSpeed += static_cast<float>(scroll) * SPEED_CHANGE_RATE;
+      fpsSpeed = std::max(1.0f, fpsSpeed);
+      Debug::log(Debug::Category::CAMERA, "FPS speed: ", fpsSpeed);
+    }
+
+    glm::vec3 forward{};
     forward.x = cos(glm::radians(fpsYaw)) * cos(glm::radians(fpsPitch));
     forward.y = sin(glm::radians(fpsPitch));
     forward.z = sin(glm::radians(fpsYaw)) * cos(glm::radians(fpsPitch));
@@ -113,7 +120,7 @@ class Camera {
 
     const glm::vec3 right =
         glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
-    const float speed = FPS_MOVE_SPEED * deltaTime;
+    const float speed = fpsSpeed * deltaTime;
 
     if (input.isKeyPressed(GLFW_KEY_W)) {
       fpsPosition += forward * speed;
@@ -126,6 +133,13 @@ class Camera {
     }
     if (input.isKeyPressed(GLFW_KEY_D)) {
       fpsPosition += right * speed;
+    }
+    if (input.isKeyPressed(GLFW_KEY_SPACE)) {
+      fpsPosition.y += speed;
+    }
+    if (input.isKeyPressed(GLFW_KEY_LEFT_SHIFT) ||
+        input.isKeyPressed(GLFW_KEY_RIGHT_SHIFT)) {
+      fpsPosition.y -= speed;
     }
   }
 
@@ -145,7 +159,6 @@ class Camera {
 
     const glm::vec3 offset = fpsPosition - orbitPivot;
     orbitRadius = glm::length(offset);
-    orbitRadius = std::clamp(orbitRadius, MIN_RADIUS, MAX_RADIUS);
 
     if (orbitRadius > 0.001f) {
       const glm::vec3 normalized = offset / orbitRadius;
@@ -164,12 +177,11 @@ class Camera {
   glm::vec3 fpsPosition;
   float fpsYaw;
   float fpsPitch;
+  float fpsSpeed;
   glm::vec3 lastOrbitPosition;
 
   static constexpr float ORBIT_SENSITIVITY = 0.005f;
   static constexpr float ZOOM_SENSITIVITY = 2.0f;
-  static constexpr float MIN_RADIUS = 5.0f;
-  static constexpr float MAX_RADIUS = 100.0f;
   static constexpr float FPS_MOUSE_SENSITIVITY = 0.1f;
-  static constexpr float FPS_MOVE_SPEED = 10.0f;
+  static constexpr float SPEED_CHANGE_RATE = 2.0f;
 };

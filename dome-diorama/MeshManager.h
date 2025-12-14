@@ -28,14 +28,12 @@ class Mesh {
  public:
   std::vector<Vertex> vertices;
   std::vector<uint16_t> indices;
-
   VkBuffer vertexBuffer = VK_NULL_HANDLE;
   VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
   VkBuffer indexBuffer = VK_NULL_HANDLE;
   VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
-
   std::string name;
-  MeshType type;
+  MeshType type = MeshType::Custom;
 };
 
 class MeshManager {

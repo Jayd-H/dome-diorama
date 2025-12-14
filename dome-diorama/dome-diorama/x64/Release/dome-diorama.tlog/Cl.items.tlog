@@ -1,9 +1,12 @@
-D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Camera.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\Camera.obj
-D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Input.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\Input.obj
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\FireEmitter.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\FireEmitter.obj
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Light.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\Light.obj
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\LightManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\LightManager.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\main.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\main.obj
-D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Material.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\Material.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\MaterialManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\MaterialManager.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\MeshManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\MeshManager.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\Object.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\Object.obj
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\ParticleEmitter.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\ParticleEmitter.obj
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\ParticleManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\ParticleManager.obj
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\PostProcessing.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\PostProcessing.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\RenderDevice.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\RenderDevice.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\TextureManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\TextureManager.obj
