@@ -1,0 +1,60 @@
+#pragma once
+#include <random>
+#include <vector>
+
+#include "MaterialManager.h"
+#include "MeshManager.h"
+#include "Object.h"
+
+enum class PlantType { Cactus, Tree };
+
+struct PlantTypeData {
+  std::vector<MeshID> stageMeshes;
+  std::vector<MaterialID> stageMaterials;
+};
+
+class Plant {
+ public:
+  size_t objectIndex;
+  PlantType type;
+  int stage;
+  int variant;
+
+  Plant(size_t objIndex, PlantType t, int s, int v)
+      : objectIndex(objIndex), type(t), stage(s), variant(v) {}
+};
+
+class PlantManager {
+ public:
+  PlantManager(MeshManager* meshManager, MaterialManager* materialManager);
+  ~PlantManager();
+
+  void init();
+
+  void spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
+                            const Mesh* terrainMesh, int numCacti,
+                            int numTrees);
+
+  void growPlant(std::vector<Object>& sceneObjects, size_t plantIndex);
+
+  const std::vector<Plant>& getPlants() const { return plants; }
+
+ private:
+  MeshManager* meshManager;
+  MaterialManager* materialManager;
+
+  std::vector<Plant> plants;
+
+  std::vector<MeshID> cactusMeshes[3];
+  std::vector<MaterialID> cactusMaterials[3];
+
+  std::vector<MeshID> treeMeshes;
+  std::vector<MaterialID> treeMaterials;
+
+  std::mt19937 rng;
+
+  void loadCactiModels();
+  void loadTreeModels();
+
+  float getTerrainHeightAt(const Mesh* terrainMesh, float x, float z);
+};

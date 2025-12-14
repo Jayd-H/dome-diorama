@@ -22,6 +22,7 @@
 #include "MeshManager.h"
 #include "Object.h"
 #include "ParticleManager.h"
+#include "PlantManager.h"
 #include "PostProcessing.h"
 #include "RenderDevice.h"
 #include "TextureManager.h"
@@ -267,6 +268,9 @@ class DomeDiorama {
   VkPipeline shadowPipeline = VK_NULL_HANDLE;
   VkPipelineLayout shadowPipelineLayout = VK_NULL_HANDLE;
 
+  // Plant
+  PlantManager* plantManager = nullptr;
+
   void initWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -331,6 +335,8 @@ class DomeDiorama {
     particleQuadMesh = meshManager->createParticleQuad();
     Debug::log(Debug::Category::VULKAN, "Creating light manager...");
     lightManager = new LightManager(renderDevice);
+    Debug::log(Debug::Category::VULKAN, "Creating plant manager...");
+    plantManager = new PlantManager(meshManager, materialManager);
 
     Debug::log(Debug::Category::VULKAN, "Creating descriptor pool...");
     createDescriptorPool();
@@ -338,6 +344,8 @@ class DomeDiorama {
     materialManager->init(materialDescriptorSetLayout, descriptorPool);
     Debug::log(Debug::Category::VULKAN, "Initializing light manager...");
     lightManager->init();
+    Debug::log(Debug::Category::VULKAN, "Initializing plant manager...");
+    plantManager->init();
 
     Debug::log(Debug::Category::VULKAN, "Creating particle manager...");
     particleManager = new ParticleManager(renderDevice, materialManager);
@@ -386,7 +394,6 @@ class DomeDiorama {
       drawFrame();
     }
   }
-
   void cleanup() {
     vkDeviceWaitIdle(device);
 
@@ -400,6 +407,9 @@ class DomeDiorama {
     if (lightManager) {
       lightManager->cleanup();
       delete lightManager;
+    }
+    if (plantManager) {
+      delete plantManager;
     }
     if (materialManager) {
       materialManager->cleanup();
@@ -674,7 +684,7 @@ class DomeDiorama {
     }
   }
 
- void createGraphicsPipeline() {
+  void createGraphicsPipeline() {
     auto vertShaderCode = readFile("shaders/vert.spv");
     auto fragShaderCode = readFile("shaders/frag.spv");
 
@@ -1182,16 +1192,16 @@ class DomeDiorama {
     std::array<VkDescriptorPoolSize, 2> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount =
-        static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 2 + 50);
+        static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 2 + 100);
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[1].descriptorCount =
-        static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 20 + 350);
+        static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 20 + 700);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT + 50);
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT + 100);
 
     if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) !=
         VK_SUCCESS) {
@@ -1593,12 +1603,12 @@ class DomeDiorama {
     const float sunOrbitRadius = 150.0f;
     glm::vec3 sunDirection = worldState.getSunDirection();
     glm::vec3 sunPosition = sunDirection * sunOrbitRadius;
-    sceneObjects[2].setPosition(sunPosition);
+    sceneObjects[0].setPosition(sunPosition);
 
     const float moonOrbitRadius = 130.0f;
     glm::vec3 moonDirection = worldState.getMoonDirection();
     glm::vec3 moonPosition = moonDirection * moonOrbitRadius;
-    sceneObjects[3].setPosition(moonPosition);
+    sceneObjects[1].setPosition(moonPosition);
 
     Light* sunLight = lightManager->getLight(sunLightID);
     if (sunLight) {
@@ -2090,20 +2100,8 @@ class DomeDiorama {
     }
   }
 
-  void createScene() {
+void createScene() {
     Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
-
-    cactiMaterialID = materialManager->loadFromMTL("./Models/Cacti/cacti2.mtl");
-
-    MaterialID sandMaterialID = materialManager->registerMaterial(
-        MaterialBuilder()
-            .name("Sand Material")
-            .albedoMap("./Models/textures/gravelly_sand_diff_1k.jpg")
-            .normalMap("./Models/textures/gravelly_sand_nor_gl_1k.png")
-            .roughnessMap("./Models/textures/gravelly_sand_rough_1k.png")
-            .heightMap("./Models/textures/gravelly_sand_disp_1k.png")
-            .heightScale(0.02f)
-            .textureScale(40.0f));
 
     MaterialID sunMaterialID =
         materialManager->registerMaterial(MaterialBuilder()
@@ -2121,26 +2119,19 @@ class DomeDiorama {
                                               .roughness(0.8f)
                                               .metallic(0.0f));
 
-    MeshID cactiMesh = meshManager->loadFromOBJ("./Models/Cacti/cacti2.obj");
-
-    MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
-        100.0f, 100, 10.0f, 2.0f, 2, 0.6f, 42);
+    MaterialID sandMaterialID = materialManager->registerMaterial(
+        MaterialBuilder()
+            .name("Sand Material")
+            .albedoMap("./Models/textures/gravelly_sand_diff_1k.jpg")
+            .normalMap("./Models/textures/gravelly_sand_nor_gl_1k.png")
+            .roughnessMap("./Models/textures/gravelly_sand_rough_1k.png")
+            .heightMap("./Models/textures/gravelly_sand_disp_1k.png")
+            .heightScale(0.02f)
+            .textureScale(40.0f));
 
     MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
-
-    Object sandPlane = ObjectBuilder()
-                           .name("Sand Terrain")
-                           .position(0.0f, 0.0f, 0.0f)
-                           .mesh(sandTerrainMesh)
-                           .material(sandMaterialID)
-                           .build();
-
-    Object cacti = ObjectBuilder()
-                       .name("Cacti")
-                       .position(0.0f, 0.0f, 0.0f)
-                       .mesh(cactiMesh)
-                       .material(cactiMaterialID)
-                       .build();
+    MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
+        100.0f, 100, 10.0f, 2.0f, 2, 0.6f, 42);
 
     Object sun = ObjectBuilder()
                      .name("Sun")
@@ -2158,10 +2149,19 @@ class DomeDiorama {
                       .scale(0.8f)
                       .build();
 
-    sceneObjects.push_back(sandPlane);
-    sceneObjects.push_back(cacti);
+    Object sandPlane = ObjectBuilder()
+                           .name("Sand Terrain")
+                           .position(0.0f, 0.0f, 0.0f)
+                           .mesh(sandTerrainMesh)
+                           .material(sandMaterialID)
+                           .build();
+
     sceneObjects.push_back(sun);
     sceneObjects.push_back(moon);
+    sceneObjects.push_back(sandPlane);
+
+    const Mesh* terrainMesh = meshManager->getMesh(sandTerrainMesh);
+    plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, 15, 10);
 
     Light sunLight = LightBuilder()
                          .type(LightType::Directional)
@@ -2221,6 +2221,8 @@ class DomeDiorama {
     Debug::log(Debug::Category::MAIN, "Created particle emitter");
     Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
                " scene objects and ", lightManager->getLightCount(), " lights");
+    Debug::log(Debug::Category::MAIN, "Spawned ",
+               plantManager->getPlants().size(), " plants");
   }
 };
 
