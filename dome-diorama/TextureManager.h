@@ -17,6 +17,9 @@ class TextureManager {
   TextureID getDefaultWhite() const { return defaultWhiteTexture; }
   TextureID getDefaultNormal() const { return defaultNormalTexture; }
   TextureID getDefaultBlack() const { return defaultBlackTexture; }
+
+  void recreateSamplers(VkFilter magFilter, VkFilter minFilter);
+
   void cleanup();
 
  private:

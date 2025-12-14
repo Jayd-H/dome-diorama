@@ -1,45 +1,175 @@
 #pragma once
-#include <glm/glm.hpp>
+#include <GLFW/glfw3.h>
 
-class Input;
-struct GLFWwindow;
+#include <algorithm>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include "Debug.h"
+#include "Input.h"
 
 enum class CameraMode { ORBIT, FPS };
 
 class Camera {
  public:
-  Camera();
+  Camera()
+      : mode(CameraMode::ORBIT),
+        orbitRadius(350.0f),
+        orbitTheta(0.0f),
+        orbitPhi(0.5f),
+        orbitPivot(0.0f, 0.0f, 0.0f),
+        fpsPosition(2.0f, 2.0f, 2.0f),
+        fpsYaw(-135.0f),
+        fpsPitch(-35.0f),
+        lastOrbitPosition(0.0f) {}
 
-  void update(const Input& input, float deltaTime);
-  glm::mat4 getViewMatrix() const;
+  inline void update(const Input& input, float deltaTime) {
+    if (input.wasKeyJustPressed(GLFW_KEY_ENTER)) {
+      Debug::log(Debug::Category::CAMERA, "Enter detected! Switching modes...");
+      if (mode == CameraMode::ORBIT) {
+        switchToFPS();
+      } else {
+        switchToOrbit();
+      }
+    }
+
+    if (mode == CameraMode::ORBIT) {
+      updateOrbitMode(input, deltaTime);
+    } else {
+      updateFPSMode(input, deltaTime);
+    }
+  }
+
+  inline glm::mat4 getViewMatrix() const {
+    if (mode == CameraMode::ORBIT) {
+      return glm::lookAt(lastOrbitPosition, orbitPivot,
+                         glm::vec3(0.0f, 1.0f, 0.0f));
+    }
+
+    glm::vec3 forward;
+    forward.x = cos(glm::radians(fpsYaw)) * cos(glm::radians(fpsPitch));
+    forward.y = sin(glm::radians(fpsPitch));
+    forward.z = sin(glm::radians(fpsYaw)) * cos(glm::radians(fpsPitch));
+    forward = glm::normalize(forward);
+
+    return glm::lookAt(fpsPosition, fpsPosition + forward,
+                       glm::vec3(0.0f, 1.0f, 0.0f));
+  }
 
   inline CameraMode getMode() const { return mode; }
-  void setCursorMode(GLFWwindow* window) const;
+
+  inline void setCursorMode(GLFWwindow* window) const {
+    if (mode == CameraMode::FPS) {
+      glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    } else {
+      glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
+  }
 
  private:
-  void updateOrbitMode(const Input& input, float deltaTime);
-  void updateFPSMode(const Input& input, float deltaTime);
-  void switchToFPS();
-  void switchToOrbit();
+  inline void updateOrbitMode(const Input& input, float deltaTime) {
+    (void)deltaTime;
+
+    double dx = 0.0;
+    double dy = 0.0;
+    input.getMouseDelta(dx, dy);
+
+    if (input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+      orbitTheta -= static_cast<float>(dx) * ORBIT_SENSITIVITY;
+      orbitPhi += static_cast<float>(dy) * ORBIT_SENSITIVITY;
+      orbitPhi = std::clamp(orbitPhi, 0.1f, glm::pi<float>() - 0.1f);
+    }
+
+    const double scroll = input.getScrollDelta();
+    if (scroll != 0.0) {
+      Debug::log(Debug::Category::CAMERA, "Scroll: ", scroll,
+                 ", radius: ", orbitRadius);
+      orbitRadius -= static_cast<float>(scroll) * ZOOM_SENSITIVITY;
+      orbitRadius = std::clamp(orbitRadius, MIN_RADIUS, MAX_RADIUS);
+      Debug::log(Debug::Category::CAMERA, "New radius: ", orbitRadius);
+    }
+
+    const float x = orbitRadius * sin(orbitPhi) * cos(orbitTheta);
+    const float y = orbitRadius * cos(orbitPhi);
+    const float z = orbitRadius * sin(orbitPhi) * sin(orbitTheta);
+
+    lastOrbitPosition = orbitPivot + glm::vec3(x, y, z);
+  }
+
+  inline void updateFPSMode(const Input& input, float deltaTime) {
+    double dx = 0.0;
+    double dy = 0.0;
+    input.getMouseDelta(dx, dy);
+
+    fpsYaw += static_cast<float>(dx) * FPS_MOUSE_SENSITIVITY;
+    fpsPitch -= static_cast<float>(dy) * FPS_MOUSE_SENSITIVITY;
+    fpsPitch = std::clamp(fpsPitch, -89.0f, 89.0f);
+
+    glm::vec3 forward;
+    forward.x = cos(glm::radians(fpsYaw)) * cos(glm::radians(fpsPitch));
+    forward.y = sin(glm::radians(fpsPitch));
+    forward.z = sin(glm::radians(fpsYaw)) * cos(glm::radians(fpsPitch));
+    forward = glm::normalize(forward);
+
+    const glm::vec3 right =
+        glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
+    const float speed = FPS_MOVE_SPEED * deltaTime;
+
+    if (input.isKeyPressed(GLFW_KEY_W)) {
+      fpsPosition += forward * speed;
+    }
+    if (input.isKeyPressed(GLFW_KEY_S)) {
+      fpsPosition -= forward * speed;
+    }
+    if (input.isKeyPressed(GLFW_KEY_A)) {
+      fpsPosition -= right * speed;
+    }
+    if (input.isKeyPressed(GLFW_KEY_D)) {
+      fpsPosition += right * speed;
+    }
+  }
+
+  inline void switchToFPS() {
+    mode = CameraMode::FPS;
+    fpsPosition = lastOrbitPosition;
+
+    const glm::vec3 direction = glm::normalize(orbitPivot - lastOrbitPosition);
+    fpsYaw = glm::degrees(atan2(direction.z, direction.x));
+    fpsPitch = glm::degrees(asin(direction.y));
+
+    Debug::log(Debug::Category::CAMERA, "Switched to FPS mode");
+  }
+
+  inline void switchToOrbit() {
+    mode = CameraMode::ORBIT;
+
+    const glm::vec3 offset = fpsPosition - orbitPivot;
+    orbitRadius = glm::length(offset);
+    orbitRadius = std::clamp(orbitRadius, MIN_RADIUS, MAX_RADIUS);
+
+    if (orbitRadius > 0.001f) {
+      const glm::vec3 normalized = offset / orbitRadius;
+      orbitPhi = acos(std::clamp(normalized.y, -1.0f, 1.0f));
+      orbitTheta = atan2(normalized.z, normalized.x);
+    }
+
+    Debug::log(Debug::Category::CAMERA, "Switched to ORBIT mode");
+  }
 
   CameraMode mode;
-
   float orbitRadius;
   float orbitTheta;
   float orbitPhi;
   glm::vec3 orbitPivot;
-
   glm::vec3 fpsPosition;
   float fpsYaw;
   float fpsPitch;
-
   glm::vec3 lastOrbitPosition;
 
   static constexpr float ORBIT_SENSITIVITY = 0.005f;
   static constexpr float ZOOM_SENSITIVITY = 2.0f;
   static constexpr float MIN_RADIUS = 5.0f;
   static constexpr float MAX_RADIUS = 100.0f;
-
   static constexpr float FPS_MOUSE_SENSITIVITY = 0.1f;
   static constexpr float FPS_MOVE_SPEED = 10.0f;
 };

@@ -181,11 +181,38 @@ class DomeDiorama {
 
   // Callbacks for Inputs!
 
-  static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
+static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
                           int mods) {
     if (window == nullptr) return;
     auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
     app->input.onKey(key, scancode, action, mods);
+
+    if (action == GLFW_PRESS) {
+      if (key == GLFW_KEY_1) {
+        app->currentPolygonMode = VK_POLYGON_MODE_FILL;
+        app->recreateGraphicsPipeline();
+        glfwSetWindowTitle(window, "Dome Diorama - FILL MODE");
+        Debug::log(Debug::Category::INPUT, "Switched to FILL mode");
+      } else if (key == GLFW_KEY_2) {
+        app->currentPolygonMode = VK_POLYGON_MODE_LINE;
+        app->recreateGraphicsPipeline();
+        glfwSetWindowTitle(window, "Dome Diorama - WIREFRAME MODE");
+        Debug::log(Debug::Category::INPUT, "Switched to WIREFRAME mode");
+      } else if (key == GLFW_KEY_3) {
+        app->currentPolygonMode = VK_POLYGON_MODE_POINT;
+        app->recreateGraphicsPipeline();
+        glfwSetWindowTitle(window, "Dome Diorama - POINT MODE");
+        Debug::log(Debug::Category::INPUT, "Switched to POINT mode");
+      } else if (key == GLFW_KEY_4) {
+        app->recreateTextureSamplers(VK_FILTER_NEAREST, VK_FILTER_NEAREST);
+        glfwSetWindowTitle(window, "Dome Diorama - NEAREST FILTERING");
+        Debug::log(Debug::Category::INPUT, "Switched to NEAREST filtering");
+      } else if (key == GLFW_KEY_5) {
+        app->recreateTextureSamplers(VK_FILTER_LINEAR, VK_FILTER_LINEAR);
+        glfwSetWindowTitle(window, "Dome Diorama - LINEAR FILTERING");
+        Debug::log(Debug::Category::INPUT, "Switched to LINEAR filtering");
+      }
+    }
   }
 
   static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
@@ -219,6 +246,9 @@ class DomeDiorama {
   VkPipeline particlePipeline = VK_NULL_HANDLE;
   MeshID particleQuadMesh = 0;
   VkPipelineLayout particlePipelineLayout = VK_NULL_HANDLE;
+
+  // Options and stuff
+  VkPolygonMode currentPolygonMode = VK_POLYGON_MODE_FILL;
 
   void initWindow() {
     glfwInit();
@@ -671,7 +701,7 @@ class DomeDiorama {
         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.polygonMode = currentPolygonMode;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -764,6 +794,22 @@ class DomeDiorama {
 
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
+  }
+
+  void recreateGraphicsPipeline() {
+    vkDeviceWaitIdle(device);
+    vkDestroyPipeline(device, graphicsPipeline, nullptr);
+    createGraphicsPipeline();
+  }
+
+  void recreateTextureSamplers(VkFilter magFilter, VkFilter minFilter) {
+    vkDeviceWaitIdle(device);
+
+    textureManager->recreateSamplers(magFilter, minFilter);
+
+    Debug::log(Debug::Category::RENDERING,
+               "Recreated texture samplers with filter mode: ",
+               magFilter == VK_FILTER_NEAREST ? "NEAREST" : "LINEAR");
   }
 
   void createParticlePipeline() {
@@ -1675,14 +1721,14 @@ class DomeDiorama {
     }
   }
 
-void createScene() {
+  void createScene() {
     Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
 
     cactiMaterialID = materialManager->loadFromMTL("./Models/Cacti/cacti2.mtl");
     MaterialID domeBaseMaterialID =
         materialManager->loadFromMTL("./Models/domebase.mtl");
 
-MaterialID sandMaterialID = materialManager->registerMaterial(
+    MaterialID sandMaterialID = materialManager->registerMaterial(
         MaterialBuilder()
             .name("Sand Material")
             .albedoMap("./Models/textures/gravelly_sand_diff_1k.jpg")

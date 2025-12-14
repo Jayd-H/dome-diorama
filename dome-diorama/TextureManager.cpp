@@ -582,6 +582,46 @@ VkSampler TextureManager::createSampler(TextureFilter filter, TextureWrap wrap,
   return sampler;
 }
 
+void TextureManager::recreateSamplers(VkFilter magFilter, VkFilter minFilter) {
+  Debug::log(Debug::Category::RENDERING,
+             "TextureManager: Recreating all samplers with new filter mode");
+
+  vkDeviceWaitIdle(device);
+
+  for (auto& texture : textures) {
+    if (texture.sampler != VK_NULL_HANDLE) {
+      vkDestroySampler(device, texture.sampler, nullptr);
+
+      VkSamplerCreateInfo samplerInfo{};
+      samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+      samplerInfo.magFilter = magFilter;
+      samplerInfo.minFilter = minFilter;
+      samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+      samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+      samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+      samplerInfo.anisotropyEnable = VK_TRUE;
+      samplerInfo.maxAnisotropy = 16.0f;
+      samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+      samplerInfo.unnormalizedCoordinates = VK_FALSE;
+      samplerInfo.compareEnable = VK_FALSE;
+      samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+      samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+      samplerInfo.minLod = 0.0f;
+      samplerInfo.maxLod = static_cast<float>(texture.mipLevels);
+      samplerInfo.mipLodBias = 0.0f;
+
+      if (vkCreateSampler(device, &samplerInfo, nullptr, &texture.sampler) !=
+          VK_SUCCESS) {
+        throw std::runtime_error("Failed to recreate texture sampler!");
+      }
+    }
+  }
+
+  Debug::log(Debug::Category::RENDERING,
+             "TextureManager: Successfully recreated ", textures.size(),
+             " samplers");
+}
+
 VkCommandBuffer TextureManager::beginSingleTimeCommands() {
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
