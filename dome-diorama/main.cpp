@@ -1690,7 +1690,7 @@ MaterialID sandMaterialID = materialManager->registerMaterial(
             .roughnessMap("./Models/textures/gravelly_sand_rough_1k.png")
             .heightMap("./Models/textures/gravelly_sand_disp_1k.png")
             .heightScale(0.02f)
-            .textureScale(10.0f));
+            .textureScale(40.0f));
 
     MeshID cactiMesh = meshManager->loadFromOBJ("./Models/Cacti/cacti2.obj");
     MeshID domeBaseMesh = meshManager->loadFromOBJ("./Models/domebase.obj");
