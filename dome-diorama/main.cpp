@@ -1267,10 +1267,6 @@ class DomeDiorama {
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float>(currentTime - startTime).count();
 
-    if (!sceneObjects.empty() && sceneObjects.size() > 1) {
-      sceneObjects[1].setRotationEuler(0.0f, time * glm::degrees(90.0f), 0.0f);
-    }
-
     float deltaTime = time - (time - 0.016f);
     particleManager->update(deltaTime);
 
@@ -1278,7 +1274,7 @@ class DomeDiorama {
     ubo.view = camera.getViewMatrix();
     ubo.proj = glm::perspective(
         glm::radians(45.0f),
-        swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
+        swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 50000.0f);
     ubo.proj[1][1] *= -1;
 
     glm::vec3 camPos = glm::vec3(0.0f);
@@ -1449,7 +1445,7 @@ class DomeDiorama {
     return requiredExtensions.empty();
   }
 
-  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
+  QueueFamilyIndices const findQueueFamilies(VkPhysicalDevice device) {
     QueueFamilyIndices indices;
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
@@ -1475,7 +1471,7 @@ class DomeDiorama {
     return indices;
   }
 
-  SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
+  SwapChainSupportDetails const querySwapChainSupport(VkPhysicalDevice device) {
     SwapChainSupportDetails details;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
                                               &details.capabilities);
@@ -1623,7 +1619,7 @@ class DomeDiorama {
     }
   }
 
-  VkShaderModule createShaderModule(const std::vector<char>& code) {
+  VkShaderModule const createShaderModule(const std::vector<char>& code) {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
@@ -1716,42 +1712,21 @@ class DomeDiorama {
     MaterialID redMaterialID = materialManager->registerMaterial(redMat);
 
     cactiMaterialID = materialManager->loadFromMTL("./Models/Cacti/cacti2.mtl");
+    MaterialID domeBaseMaterialID =
+        materialManager->loadFromMTL("./Models/domebase.mtl");
 
     MeshID cubeMesh = meshManager->getDefaultCube();
     MeshID sphereMesh = meshManager->createSphere(1.0f, 32);
     MeshID cylinderMesh = meshManager->createCylinder(0.5f, 2.0f, 32);
     MeshID cactiMesh = meshManager->loadFromOBJ("./Models/Cacti/cacti2.obj");
+    MeshID domeBaseMesh = meshManager->loadFromOBJ("./Models/domebase.obj");
 
-    Object cube1 = ObjectBuilder()
-                       .name("Orange Spinning Cube")
-                       .position(-4.0f, 0.5f, 2.0f)
-                       .scale(1.0f)
-                       .mesh(cubeMesh)
-                       .material(testMaterialID)
-                       .build();
-
-    Object sphere = ObjectBuilder()
-                        .name("Blue Sphere")
-                        .position(-1.0f, 1.0f, 2.0f)
-                        .mesh(sphereMesh)
-                        .material(blueMaterialID)
-                        .build();
-
-    Object cylinder = ObjectBuilder()
-                          .name("Green Cylinder")
-                          .position(2.0f, 1.0f, 2.0f)
-                          .rotationEuler(0.0f, 0.0f, 0.0f)
-                          .mesh(cylinderMesh)
-                          .material(greenMaterialID)
+    Object domeBase = ObjectBuilder()
+                          .name("Dome Base")
+                          .position(0.0f, 0.0f, 0.0f)
+                          .mesh(domeBaseMesh)
+                          .material(domeBaseMaterialID)
                           .build();
-
-    Object cube2 = ObjectBuilder()
-                       .name("Red Metallic Cube")
-                       .position(5.0f, 0.5f, 2.0f)
-                       .rotationEuler(0.0f, 45.0f, 0.0f)
-                       .mesh(cubeMesh)
-                       .material(redMaterialID)
-                       .build();
 
     Object cacti = ObjectBuilder()
                        .name("Cacti")
@@ -1760,25 +1735,22 @@ class DomeDiorama {
                        .material(cactiMaterialID)
                        .build();
 
-    sceneObjects.push_back(cube1);
-    sceneObjects.push_back(sphere);
-    sceneObjects.push_back(cylinder);
-    sceneObjects.push_back(cube2);
+    sceneObjects.push_back(domeBase);
     sceneObjects.push_back(cacti);
 
     Light mainLight = LightBuilder()
                           .type(LightType::Point)
                           .name("Main Light")
-                          .position(3.0f, 5.0f, 3.0f)
+                          .position(0.0f, 5.0f, 0.0f)
                           .color(1.0f, 1.0f, 1.0f)
-                          .intensity(1.5f)
+                          .intensity(2.0f)
                           .build();
 
     Light accentLight = LightBuilder()
                             .type(LightType::Point)
                             .name("Accent Light")
-                            .position(-3.0f, 2.0f, -2.0f)
-                            .color(0.3f, 0.5f, 1.0f)
+                            .position(-3.0f, 2.0f, 3.0f)
+                            .color(1.0f, 0.8f, 0.6f)
                             .intensity(1.0f)
                             .build();
 
@@ -1797,7 +1769,7 @@ class DomeDiorama {
 
     FireEmitter* fireEmitter = FireEmitterBuilder()
                                    .name("Fire Emitter")
-                                   .position(0.0f, 0.5f, 5.0f)
+                                   .position(0.0f, 0.5f, 0.0f)
                                    .maxParticles(500)
                                    .particleLifetime(2.0f)
                                    .material(particleMaterialID)
@@ -1813,7 +1785,6 @@ class DomeDiorama {
     particleManager->registerEmitter(fireEmitter);
 
     Debug::log(Debug::Category::MAIN, "Created particle emitter");
-
     Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
                " scene objects and ", lightManager->getLightCount(), " lights");
   }

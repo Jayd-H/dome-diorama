@@ -10,7 +10,7 @@
 
 Camera::Camera()
     : mode(CameraMode::ORBIT),
-      orbitRadius(35.0f),
+      orbitRadius(350.0f),
       orbitTheta(0.0f),
       orbitPhi(0.5f),
       orbitPivot(0.0f, 0.0f, 0.0f),
@@ -55,7 +55,6 @@ void Camera::updateOrbitMode(const Input& input, float deltaTime) {
     Debug::log(Debug::Category::CAMERA, "Scroll: ", scroll,
                ", radius: ", orbitRadius);
     orbitRadius -= static_cast<float>(scroll) * ZOOM_SENSITIVITY;
-    orbitRadius = std::clamp(orbitRadius, MIN_RADIUS, MAX_RADIUS);
     Debug::log(Debug::Category::CAMERA, "New radius: ", orbitRadius);
   }
 
