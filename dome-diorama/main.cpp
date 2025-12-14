@@ -25,6 +25,7 @@
 #include "PostProcessing.h"
 #include "RenderDevice.h"
 #include "TextureManager.h"
+#include "WorldState.h"
 
 #define GLM_FORCE_RADIANS
 #include <algorithm>
@@ -256,6 +257,11 @@ class DomeDiorama {
 
   // Options and stuff
   VkPolygonMode currentPolygonMode = VK_POLYGON_MODE_FILL;
+
+  // World State stuff
+  WorldState worldState;
+  LightID sunLightID = INVALID_LIGHT_ID;
+  LightID moonLightID = INVALID_LIGHT_ID;
 
   void initWindow() {
     glfwInit();
@@ -1315,13 +1321,86 @@ class DomeDiorama {
     }
   }
 
-  void updateUniformBuffer(uint32_t currentImage) {
+ void updateUniformBuffer(uint32_t currentImage) {
     static auto startTime = std::chrono::high_resolution_clock::now();
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float>(currentTime - startTime).count();
 
     float deltaTime = time - (time - 0.016f);
+
+    worldState.update(deltaTime);
     particleManager->update(deltaTime);
+
+    const float sunOrbitRadius = 150.0f;
+    glm::vec3 sunDirection = worldState.getSunDirection();
+    glm::vec3 sunPosition = sunDirection * sunOrbitRadius;
+    sceneObjects[2].setPosition(sunPosition);
+
+    const float moonOrbitRadius = 130.0f;
+    glm::vec3 moonDirection = worldState.getMoonDirection();
+    glm::vec3 moonPosition = moonDirection * moonOrbitRadius;
+    sceneObjects[3].setPosition(moonPosition);
+
+    Light* sunLight = lightManager->getLight(sunLightID);
+    if (sunLight) {
+      sunLight->direction = -sunDirection;
+      float sunHeight = sunDirection.y;
+      float intensity = 0.0f;
+
+      if (sunHeight > 0.0f) {
+        intensity = glm::smoothstep(0.0f, 0.3f, sunHeight) * 8.0f;
+      }
+
+      sunLight->intensity = intensity * worldState.getSunIntensity();
+
+      glm::vec3 sunColor;
+      if (sunHeight < 0.0f) {
+        sunColor = glm::vec3(0.0f, 0.0f, 0.0f);
+      } else if (sunHeight < 0.2f) {
+        float t = sunHeight / 0.2f;
+        glm::vec3 sunriseColor = glm::vec3(1.0f, 0.4f, 0.1f);
+        glm::vec3 dayColor = glm::vec3(1.0f, 0.95f, 0.85f);
+        sunColor = glm::mix(sunriseColor, dayColor, t);
+      } else if (sunHeight > 0.8f) {
+        sunColor = glm::vec3(1.0f, 1.0f, 0.95f);
+      } else {
+        float t = (sunHeight - 0.2f) / 0.6f;
+        glm::vec3 dayColor = glm::vec3(1.0f, 0.95f, 0.85f);
+        glm::vec3 noonColor = glm::vec3(1.0f, 1.0f, 0.95f);
+        sunColor = glm::mix(dayColor, noonColor, t);
+      }
+
+      sunLight->color = sunColor;
+    }
+
+    Light* moonLight = lightManager->getLight(moonLightID);
+    if (moonLight) {
+      moonLight->direction = -moonDirection;
+      float moonHeight = moonDirection.y;
+      float intensity = 0.0f;
+
+      if (moonHeight > 0.0f) {
+        intensity = glm::smoothstep(0.0f, 0.3f, moonHeight) * 2.0f;
+      }
+
+      moonLight->intensity = intensity * worldState.getMoonIntensity();
+
+      glm::vec3 moonColor;
+      if (moonHeight < 0.0f) {
+        moonColor = glm::vec3(0.0f, 0.0f, 0.0f);
+      } else if (moonHeight < 0.15f) {
+        float t = moonHeight / 0.15f;
+        glm::vec3 horizonColor = glm::vec3(0.3f, 0.35f, 0.5f);
+        glm::vec3 nightColor = glm::vec3(0.4f, 0.5f, 0.7f);
+        moonColor = glm::mix(horizonColor, nightColor, t);
+      } else {
+        moonColor = glm::vec3(0.4f, 0.5f, 0.7f);
+      }
+
+      moonLight->color = moonColor;
+    }
+
+    lightManager->updateLightBuffer();
 
     UniformBufferObject ubo{};
     ubo.view = camera.getViewMatrix();
@@ -1745,10 +1824,28 @@ class DomeDiorama {
             .heightScale(0.02f)
             .textureScale(40.0f));
 
+    MaterialID sunMaterialID =
+        materialManager->registerMaterial(MaterialBuilder()
+                                              .name("Sun Material")
+                                              .albedoColor(1.0f, 0.9f, 0.6f)
+                                              .emissiveIntensity(1.0f)
+                                              .roughness(1.0f)
+                                              .metallic(0.0f));
+
+    MaterialID moonMaterialID =
+        materialManager->registerMaterial(MaterialBuilder()
+                                              .name("Moon Material")
+                                              .albedoColor(0.7f, 0.7f, 0.8f)
+                                              .emissiveIntensity(0.3f)
+                                              .roughness(0.8f)
+                                              .metallic(0.0f));
+
     MeshID cactiMesh = meshManager->loadFromOBJ("./Models/Cacti/cacti2.obj");
 
     MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
         100.0f, 100, 10.0f, 2.0f, 2, 0.6f, 42);
+
+    MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
 
     Object sandPlane = ObjectBuilder()
                            .name("Sand Terrain")
@@ -1764,15 +1861,41 @@ class DomeDiorama {
                        .material(cactiMaterialID)
                        .build();
 
+    Object sun = ObjectBuilder()
+                     .name("Sun")
+                     .position(0.0f, 0.0f, 0.0f)
+                     .mesh(sphereMesh)
+                     .material(sunMaterialID)
+                     .scale(1.0f)
+                     .build();
+
+    Object moon = ObjectBuilder()
+                      .name("Moon")
+                      .position(0.0f, 0.0f, 0.0f)
+                      .mesh(sphereMesh)
+                      .material(moonMaterialID)
+                      .scale(0.8f)
+                      .build();
+
     sceneObjects.push_back(sandPlane);
     sceneObjects.push_back(cacti);
+    sceneObjects.push_back(sun);
+    sceneObjects.push_back(moon);
 
-    Light mainLight = LightBuilder()
-                          .type(LightType::Point)
-                          .name("Main Light")
-                          .position(0.0f, 500.0f, 0.0f)
-                          .color(1.0f, 1.0f, 1.0f)
-                          .intensity(5000.0f)
+    Light sunLight = LightBuilder()
+                         .type(LightType::Directional)
+                         .name("Sun Light")
+                         .direction(0.0f, -1.0f, 0.0f)
+                         .color(1.0f, 0.95f, 0.8f)
+                         .intensity(5.0f)
+                         .build();
+
+    Light moonLight = LightBuilder()
+                          .type(LightType::Directional)
+                          .name("Moon Light")
+                          .direction(0.0f, -1.0f, 0.0f)
+                          .color(0.6f, 0.7f, 1.0f)
+                          .intensity(0.3f)
                           .build();
 
     Light accentLight = LightBuilder()
@@ -1783,7 +1906,8 @@ class DomeDiorama {
                             .intensity(2000.0f)
                             .build();
 
-    lightManager->addLight(mainLight);
+    sunLightID = lightManager->addLight(sunLight);
+    moonLightID = lightManager->addLight(moonLight);
     lightManager->addLight(accentLight);
 
     MaterialID particleMaterialID =

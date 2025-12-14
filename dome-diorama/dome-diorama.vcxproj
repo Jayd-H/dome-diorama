@@ -155,6 +155,7 @@
     <ClCompile Include="PostProcessing.cpp" />
     <ClCompile Include="RenderDevice.cpp" />
     <ClCompile Include="TextureManager.cpp" />
+    <ClCompile Include="WorldState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SHADERS\shader.frag">
@@ -199,6 +200,7 @@
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />
+    <ClInclude Include="WorldState.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SHADERS\postprocess.frag">
