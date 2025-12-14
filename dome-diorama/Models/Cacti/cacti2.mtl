@@ -9,8 +9,6 @@ Ni 1.500000
 d 1.000000
 illum 2
 map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_bark_01_Carnegiea_gigantea_b.png
-map_Ks textures/Carnegiea_gigantea_HD_Carnegiea_bark_01_Carnegiea_gigantea_b.png
-map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_bark_01_Carnegiea_gigantea_b.png
 
 newmtl Carnegiea_bark_03.004
 Ns 40.551991
@@ -20,8 +18,6 @@ Ni 1.500000
 d 1.000000
 illum 2
 map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_bark_03_Carnegiea_gigantea_b.png
-map_Ks textures/Carnegiea_gigantea_HD_Carnegiea_bark_03_Carnegiea_gigantea_b.png
-map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_bark_03_Carnegiea_gigantea_b.png
 
 newmtl Carnegiea_flower_stalk.003
 Ns 40.551991
@@ -32,7 +28,6 @@ Ni 1.500000
 d 1.000000
 illum 2
 map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_flower_stalk_Cactus_flower_s.png
-map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_flower_stalk_Cactus_flower_s.png
 
 newmtl Carnegiea_petal_01.003
 Ns 40.551991
@@ -42,8 +37,6 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 illum 2
 map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_.png
-map_d textures/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_.png
-map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_petal_01_Carnegiea_petal_04_.png
 
 newmtl Carnegiea_petal_02.003
 Ns 40.551991
@@ -53,8 +46,6 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 illum 2
 map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_petal_02_Carnegiea_petal_05_.png
-map_d textures/Carnegiea_gigantea_HD_Carnegiea_petal_02_Carnegiea_petal_05_.png
-map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_petal_02_Carnegiea_petal_05_.png
 
 newmtl Carnegiea_petal_03.003
 Ns 40.551991
@@ -64,5 +55,3 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 illum 2
 map_Kd textures/Carnegiea_gigantea_HD_Carnegiea_petal_03_Carnegiea_petal_06_.png
-map_d textures/Carnegiea_gigantea_HD_Carnegiea_petal_03_Carnegiea_petal_06_.png
-map_Bump textures/Carnegiea_gigantea_HD_Carnegiea_petal_03_Carnegiea_petal_06_.png

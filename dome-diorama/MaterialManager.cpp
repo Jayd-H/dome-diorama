@@ -316,12 +316,33 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
 
     if (prefix == "newmtl") {
       if (currentMaterial) {
-        MaterialID id = registerMaterial(currentMaterial);
-        loadedMaterials.push_back(id);
-        mtlFilepathToID[mtlFilepath + "::" + currentMaterialName] = id;
+        auto nameIt = materialNameToID.find(currentMaterialName);
+        if (nameIt != materialNameToID.end()) {
+          Debug::log(Debug::Category::RENDERING, "  - Material '",
+                     currentMaterialName,
+                     "' already exists with ID: ", nameIt->second, ", reusing");
+          loadedMaterials.push_back(nameIt->second);
+          delete currentMaterial;
+        } else {
+          MaterialID id = registerMaterial(currentMaterial);
+          loadedMaterials.push_back(id);
+          materialNameToID[currentMaterialName] = id;
+          mtlFilepathToID[mtlFilepath + "::" + currentMaterialName] = id;
+        }
       }
 
       iss >> currentMaterialName;
+
+      auto nameIt = materialNameToID.find(currentMaterialName);
+      if (nameIt != materialNameToID.end()) {
+        Debug::log(Debug::Category::RENDERING, "  - Material '",
+                   currentMaterialName,
+                   "' already exists, will reuse ID: ", nameIt->second);
+        loadedMaterials.push_back(nameIt->second);
+        currentMaterial = nullptr;
+        continue;
+      }
+
       currentMaterial = new Material();
       currentMaterial->name = currentMaterialName;
 
@@ -414,9 +435,19 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
   }
 
   if (currentMaterial) {
-    MaterialID id = registerMaterial(currentMaterial);
-    loadedMaterials.push_back(id);
-    mtlFilepathToID[mtlFilepath + "::" + currentMaterialName] = id;
+    auto nameIt = materialNameToID.find(currentMaterialName);
+    if (nameIt != materialNameToID.end()) {
+      Debug::log(Debug::Category::RENDERING, "  - Material '",
+                 currentMaterialName,
+                 "' already exists with ID: ", nameIt->second, ", reusing");
+      loadedMaterials.push_back(nameIt->second);
+      delete currentMaterial;
+    } else {
+      MaterialID id = registerMaterial(currentMaterial);
+      loadedMaterials.push_back(id);
+      materialNameToID[currentMaterialName] = id;
+      mtlFilepathToID[mtlFilepath + "::" + currentMaterialName] = id;
+    }
   }
 
   file.close();

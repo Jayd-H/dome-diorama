@@ -2161,7 +2161,16 @@ void createScene() {
     sceneObjects.push_back(sandPlane);
 
     const Mesh* terrainMesh = meshManager->getMesh(sandTerrainMesh);
-    plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, 15, 10);
+
+    PlantSpawnConfig plantConfig;
+    plantConfig.numCacti = 150;
+    plantConfig.numTrees = 100;
+    plantConfig.minRadius = 10.0f;
+    plantConfig.maxRadius = 90.0f;
+    plantConfig.seed = 42;
+    plantConfig.randomGrowthStages = true;
+
+    plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
 
     Light sunLight = LightBuilder()
                          .type(LightType::Directional)

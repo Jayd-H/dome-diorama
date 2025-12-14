@@ -40,6 +40,8 @@ class MaterialManager {
   std::vector<std::unique_ptr<Material>> materials;
   MaterialID defaultMaterialID;
 
+  std::unordered_map<std::string, MaterialID> materialNameToID;
+
   void createDescriptorSet(Material* material);
   void updateDescriptorSet(Material* material);
   void createDefaultMaterial();

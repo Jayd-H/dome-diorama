@@ -11,9 +11,6 @@ PlantManager::PlantManager(MeshManager* meshManager,
                            MaterialManager* materialManager)
     : meshManager(meshManager), materialManager(materialManager) {
   Debug::log(Debug::Category::RENDERING, "PlantManager: Constructor called");
-
-  std::random_device rd;
-  rng.seed(rd());
 }
 
 PlantManager::~PlantManager() {
@@ -33,30 +30,33 @@ void PlantManager::init() {
 void PlantManager::loadCactiModels() {
   Debug::log(Debug::Category::RENDERING, "PlantManager: Loading cactus models");
 
-  MeshID mesh1 = meshManager->loadFromOBJ("./Models/Cacti/cacti2.obj");
-  MaterialID mat1 = materialManager->loadFromMTL("./Models/Cacti/cacti2.mtl");
-  cactusMeshes[0].push_back(mesh1);
-  cactusMaterials[0].push_back(mat1);
+  struct CactusModelPair {
+    std::string objPath;
+    std::string mtlPath;
+  };
 
-  MeshID mesh2 = meshManager->loadFromOBJ("./Models/Cacti/cacti2v2.obj");
-  MaterialID mat2 = materialManager->loadFromMTL("./Models/Cacti/cacti2v2.mtl");
-  cactusMeshes[0].push_back(mesh2);
-  cactusMaterials[0].push_back(mat2);
+  std::vector<CactusModelPair> stage0Models = {
+      {"./Models/Cacti/cacti2.obj", "./Models/Cacti/cacti2.mtl"},
+      {"./Models/Cacti/cacti2v2.obj", "./Models/Cacti/cacti2v2.mtl"}};
 
-  MeshID mesh3 = meshManager->loadFromOBJ("./Models/Cacti/cacti3v1.obj");
-  MaterialID mat3 = materialManager->loadFromMTL("./Models/Cacti/cacti3v1.mtl");
-  cactusMeshes[1].push_back(mesh3);
-  cactusMaterials[1].push_back(mat3);
+  std::vector<CactusModelPair> stage1Models = {
+      {"./Models/Cacti/cacti3v1.obj", "./Models/Cacti/cacti3v1.mtl"},
+      {"./Models/Cacti/cacti3v2.obj", "./Models/Cacti/cacti3v2.mtl"},
+      {"./Models/Cacti/cacti3v3.obj", "./Models/Cacti/cacti3v3.mtl"}};
 
-  MeshID mesh4 = meshManager->loadFromOBJ("./Models/Cacti/cacti3v2.obj");
-  MaterialID mat4 = materialManager->loadFromMTL("./Models/Cacti/cacti3v2.mtl");
-  cactusMeshes[1].push_back(mesh4);
-  cactusMaterials[1].push_back(mat4);
+  for (const auto& model : stage0Models) {
+    MeshID meshID = meshManager->loadFromOBJ(model.objPath);
+    MaterialID matID = materialManager->loadFromMTL(model.mtlPath);
+    cactusMeshes[0].push_back(meshID);
+    cactusMaterials[0].push_back(matID);
+  }
 
-  MeshID mesh5 = meshManager->loadFromOBJ("./Models/Cacti/cacti3v3.obj");
-  MaterialID mat5 = materialManager->loadFromMTL("./Models/Cacti/cacti3v3.mtl");
-  cactusMeshes[1].push_back(mesh5);
-  cactusMaterials[1].push_back(mat5);
+  for (const auto& model : stage1Models) {
+    MeshID meshID = meshManager->loadFromOBJ(model.objPath);
+    MaterialID matID = materialManager->loadFromMTL(model.mtlPath);
+    cactusMeshes[1].push_back(meshID);
+    cactusMaterials[1].push_back(matID);
+  }
 
   cactusMeshes[2] = cactusMeshes[1];
   cactusMaterials[2] = cactusMaterials[1];
@@ -106,16 +106,20 @@ float PlantManager::getTerrainHeightAt(const Mesh* terrainMesh, float x,
 }
 
 void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
-                                        const Mesh* terrainMesh, int numCacti,
-                                        int numTrees) {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Spawning ", numCacti,
-             " cacti and ", numTrees, " trees");
+                                        const Mesh* terrainMesh,
+                                        const PlantSpawnConfig& config) {
+  Debug::log(Debug::Category::RENDERING, "PlantManager: Spawning ",
+             config.numCacti, " cacti and ", config.numTrees,
+             " trees with seed ", config.seed);
 
-  std::uniform_real_distribution<float> radiusDist(10.0f, 90.0f);
+  rng.seed(config.seed);
+
+  std::uniform_real_distribution<float> radiusDist(config.minRadius,
+                                                   config.maxRadius);
   std::uniform_real_distribution<float> angleDist(0.0f, glm::two_pi<float>());
   std::uniform_real_distribution<float> rotationDist(0.0f, 360.0f);
 
-  for (int i = 0; i < numCacti; i++) {
+  for (int i = 0; i < config.numCacti; i++) {
     float radius = radiusDist(rng);
     float angle = angleDist(rng);
     float x = radius * std::cos(angle);
@@ -123,24 +127,30 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
 
     float y = getTerrainHeightAt(terrainMesh, x, z);
 
+    int stage = 0;
+    if (config.randomGrowthStages) {
+      std::uniform_int_distribution<int> stageDist(0, 2);
+      stage = stageDist(rng);
+    }
+
     std::uniform_int_distribution<int> variantDist(
-        0, static_cast<int>(cactusMeshes[0].size()) - 1);
+        0, static_cast<int>(cactusMeshes[stage].size()) - 1);
     int variant = variantDist(rng);
 
     Object cactusObj = ObjectBuilder()
                            .name("Cactus_" + std::to_string(i))
                            .position(x, y, z)
                            .rotationEuler(0.0f, rotationDist(rng), 0.0f)
-                           .mesh(cactusMeshes[0][variant])
-                           .material(cactusMaterials[0][variant])
+                           .mesh(cactusMeshes[stage][variant])
+                           .material(cactusMaterials[stage][variant])
                            .build();
 
     sceneObjects.push_back(cactusObj);
-
-    plants.emplace_back(sceneObjects.size() - 1, PlantType::Cactus, 0, variant);
+    plants.emplace_back(sceneObjects.size() - 1, PlantType::Cactus, stage,
+                        variant);
   }
 
-  for (int i = 0; i < numTrees; i++) {
+  for (int i = 0; i < config.numTrees; i++) {
     float radius = radiusDist(rng);
     float angle = angleDist(rng);
     float x = radius * std::cos(angle);
@@ -148,17 +158,22 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
 
     float y = getTerrainHeightAt(terrainMesh, x, z);
 
+    int stage = 0;
+    if (config.randomGrowthStages) {
+      std::uniform_int_distribution<int> stageDist(0, 7);
+      stage = stageDist(rng);
+    }
+
     Object treeObj = ObjectBuilder()
                          .name("Tree_" + std::to_string(i))
                          .position(x, y, z)
                          .rotationEuler(0.0f, rotationDist(rng), 0.0f)
-                         .mesh(treeMeshes[0])
-                         .material(treeMaterials[0])
+                         .mesh(treeMeshes[stage])
+                         .material(treeMaterials[stage])
                          .build();
 
     sceneObjects.push_back(treeObj);
-
-    plants.emplace_back(sceneObjects.size() - 1, PlantType::Tree, 0, 0);
+    plants.emplace_back(sceneObjects.size() - 1, PlantType::Tree, stage, 0);
   }
 
   Debug::log(Debug::Category::RENDERING, "PlantManager: Successfully spawned ",

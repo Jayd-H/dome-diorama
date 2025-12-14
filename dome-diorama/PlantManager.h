@@ -24,17 +24,24 @@ class Plant {
       : objectIndex(objIndex), type(t), stage(s), variant(v) {}
 };
 
+struct PlantSpawnConfig {
+  int numCacti = 150;
+  int numTrees = 100;
+  float minRadius = 10.0f;
+  float maxRadius = 90.0f;
+  unsigned int seed = 42;
+  bool randomGrowthStages = true;
+};
+
 class PlantManager {
  public:
   PlantManager(MeshManager* meshManager, MaterialManager* materialManager);
   ~PlantManager();
 
   void init();
-
   void spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
-                            const Mesh* terrainMesh, int numCacti,
-                            int numTrees);
-
+                            const Mesh* terrainMesh,
+                            const PlantSpawnConfig& config);
   void growPlant(std::vector<Object>& sceneObjects, size_t plantIndex);
 
   const std::vector<Plant>& getPlants() const { return plants; }
@@ -42,7 +49,6 @@ class PlantManager {
  private:
   MeshManager* meshManager;
   MaterialManager* materialManager;
-
   std::vector<Plant> plants;
 
   std::vector<MeshID> cactusMeshes[3];
@@ -55,6 +61,5 @@ class PlantManager {
 
   void loadCactiModels();
   void loadTreeModels();
-
   float getTerrainHeightAt(const Mesh* terrainMesh, float x, float z);
 };
