@@ -176,6 +176,11 @@ void main() {
     
     vec4 albedoSample = texture(albedoMap, scaledTexCoord) * material.albedoColor;
     vec3 albedo = albedoSample.rgb;
+    float alpha = albedoSample.a * material.opacity;
+    
+    if (alpha < 0.5) {
+        discard;
+    }
     
     vec3 normal = normalize(fragNormal);
     vec3 viewDir = normalize(ubo.eyePos - fragWorldPos);
@@ -198,5 +203,5 @@ void main() {
         }
     }
     
-    outColor = vec4(lighting, 1.0);
+    outColor = vec4(lighting, alpha);
 }

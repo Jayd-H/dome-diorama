@@ -105,6 +105,25 @@ float PlantManager::getTerrainHeightAt(const Mesh* terrainMesh, float x,
   return height;
 }
 
+glm::vec3 PlantManager::getTerrainNormalAt(const Mesh* terrainMesh, float x,
+                                           float z) {
+  float closestDistSq = std::numeric_limits<float>::max();
+  glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
+
+  for (const auto& vertex : terrainMesh->vertices) {
+    float dx = vertex.pos.x - x;
+    float dz = vertex.pos.z - z;
+    float distSq = dx * dx + dz * dz;
+
+    if (distSq < closestDistSq) {
+      closestDistSq = distSq;
+      normal = vertex.normal;
+    }
+  }
+
+  return glm::normalize(normal);
+}
+
 void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
                                         const Mesh* terrainMesh,
                                         const PlantSpawnConfig& config) {
@@ -118,6 +137,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
                                                    config.maxRadius);
   std::uniform_real_distribution<float> angleDist(0.0f, glm::two_pi<float>());
   std::uniform_real_distribution<float> rotationDist(0.0f, 360.0f);
+  std::uniform_real_distribution<float> varianceDist(-1.0f, 1.0f);
 
   for (int i = 0; i < config.numCacti; i++) {
     float radius = radiusDist(rng);
@@ -126,6 +146,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
     float z = radius * std::sin(angle);
 
     float y = getTerrainHeightAt(terrainMesh, x, z);
+    glm::vec3 terrainNormal = getTerrainNormalAt(terrainMesh, x, z);
 
     int stage = 0;
     if (config.randomGrowthStages) {
@@ -137,10 +158,30 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
         0, static_cast<int>(cactusMeshes[stage].size()) - 1);
     int variant = variantDist(rng);
 
+    float baseYaw = rotationDist(rng);
+    float rotationVariance =
+        varianceDist(rng) * config.rotationVariance * 15.0f;
+
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 rotationAxis = glm::normalize(glm::cross(up, terrainNormal));
+    float tiltAngle =
+        std::acos(glm::clamp(glm::dot(up, terrainNormal), -1.0f, 1.0f));
+
+    float pitch =
+        tiltAngle * config.rotationVariance * (180.0f / glm::pi<float>());
+    float roll = 0.0f;
+    float yaw = baseYaw + rotationVariance;
+
+    float baseScale = 1.0f;
+    float scaleX = baseScale + varianceDist(rng) * config.scaleVariance;
+    float scaleY = baseScale + varianceDist(rng) * config.scaleVariance;
+    float scaleZ = baseScale + varianceDist(rng) * config.scaleVariance;
+
     Object cactusObj = ObjectBuilder()
                            .name("Cactus_" + std::to_string(i))
                            .position(x, y, z)
-                           .rotationEuler(0.0f, rotationDist(rng), 0.0f)
+                           .rotationEuler(pitch, yaw, roll)
+                           .scale(scaleX, scaleY, scaleZ)
                            .mesh(cactusMeshes[stage][variant])
                            .material(cactusMaterials[stage][variant])
                            .build();
@@ -157,6 +198,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
     float z = radius * std::sin(angle);
 
     float y = getTerrainHeightAt(terrainMesh, x, z);
+    glm::vec3 terrainNormal = getTerrainNormalAt(terrainMesh, x, z);
 
     int stage = 0;
     if (config.randomGrowthStages) {
@@ -164,10 +206,30 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
       stage = stageDist(rng);
     }
 
+    float baseYaw = rotationDist(rng);
+    float rotationVariance =
+        varianceDist(rng) * config.rotationVariance * 15.0f;
+
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 rotationAxis = glm::normalize(glm::cross(up, terrainNormal));
+    float tiltAngle =
+        std::acos(glm::clamp(glm::dot(up, terrainNormal), -1.0f, 1.0f));
+
+    float pitch =
+        tiltAngle * config.rotationVariance * (180.0f / glm::pi<float>());
+    float roll = 0.0f;
+    float yaw = baseYaw + rotationVariance;
+
+    float baseScale = 1.0f;
+    float scaleX = baseScale + varianceDist(rng) * config.scaleVariance;
+    float scaleY = baseScale + varianceDist(rng) * config.scaleVariance;
+    float scaleZ = baseScale + varianceDist(rng) * config.scaleVariance;
+
     Object treeObj = ObjectBuilder()
                          .name("Tree_" + std::to_string(i))
                          .position(x, y, z)
-                         .rotationEuler(0.0f, rotationDist(rng), 0.0f)
+                         .rotationEuler(pitch, yaw, roll)
+                         .scale(scaleX, scaleY, scaleZ)
                          .mesh(treeMeshes[stage])
                          .material(treeMaterials[stage])
                          .build();

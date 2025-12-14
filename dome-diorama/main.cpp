@@ -2169,6 +2169,8 @@ void createScene() {
     plantConfig.maxRadius = 90.0f;
     plantConfig.seed = 42;
     plantConfig.randomGrowthStages = true;
+    plantConfig.scaleVariance = 0.3f;
+    plantConfig.rotationVariance = 0.2f;
 
     plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
 

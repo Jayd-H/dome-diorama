@@ -29,8 +29,10 @@ struct PlantSpawnConfig {
   int numTrees = 100;
   float minRadius = 10.0f;
   float maxRadius = 90.0f;
-  unsigned int seed = 42;
+  unsigned int seed = 67;
   bool randomGrowthStages = true;
+  float scaleVariance = 0.3f;
+  float rotationVariance = 0.2f;
 };
 
 class PlantManager {
@@ -62,4 +64,5 @@ class PlantManager {
   void loadCactiModels();
   void loadTreeModels();
   float getTerrainHeightAt(const Mesh* terrainMesh, float x, float z);
+  glm::vec3 getTerrainNormalAt(const Mesh* terrainMesh, float x, float z);
 };
