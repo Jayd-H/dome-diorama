@@ -1,30 +1,35 @@
 #include "PostProcessing.h"
 
+#include <array>
 #include <fstream>
 #include <stdexcept>
 
 #include "Debug.h"
 #include "RenderDevice.h"
 
-PostProcessing::PostProcessing(RenderDevice* renderDevice, VkDevice device,
-                               VkFormat swapchainFormat)
-    : renderDevice(renderDevice),
-      device(device),
-      swapchainFormat(swapchainFormat),
+PostProcessing::PostProcessing(RenderDevice* renderDeviceParam,
+                               VkDevice deviceParam,
+                               VkFormat swapchainFormatParam)
+    : renderDevice(renderDeviceParam),
+      device(deviceParam),
+      swapchainFormat(swapchainFormatParam),
       depthFormat(VK_FORMAT_D32_SFLOAT) {
   Debug::log(Debug::Category::RENDERING, "PostProcessing: Constructor called");
 }
 
-PostProcessing::~PostProcessing() {
-  Debug::log(Debug::Category::RENDERING, "PostProcessing: Destructor called");
+PostProcessing::~PostProcessing() noexcept {
+  try {
+    Debug::log(Debug::Category::RENDERING, "PostProcessing: Destructor called");
+  } catch (...) {
+  }
 }
 
-void PostProcessing::init(VkDescriptorPool descriptorPool, uint32_t width,
-                          uint32_t height) {
+void PostProcessing::init(VkDescriptorPool descriptorPool, uint32_t frameWidth,
+                          uint32_t frameHeight) {
   Debug::log(Debug::Category::RENDERING, "PostProcessing: Initializing");
 
-  this->width = width;
-  this->height = height;
+  this->width = frameWidth;
+  this->height = frameHeight;
 
   createOffscreenResources();
   createDepthResources();
@@ -65,13 +70,13 @@ void PostProcessing::cleanup() {
   Debug::log(Debug::Category::RENDERING, "PostProcessing: Cleanup complete");
 }
 
-void PostProcessing::resize(uint32_t width, uint32_t height,
-                            VkDescriptorPool descriptorPool) {
-  Debug::log(Debug::Category::RENDERING, "PostProcessing: Resizing to ", width,
-             "x", height);
+void PostProcessing::resize(uint32_t newWidth, uint32_t newHeight,
+                            VkDescriptorPool /*descriptorPool*/) {
+  Debug::log(Debug::Category::RENDERING, "PostProcessing: Resizing to ",
+             newWidth, "x", newHeight);
 
-  this->width = width;
-  this->height = height;
+  this->width = newWidth;
+  this->height = newHeight;
 
   cleanupOffscreenResources();
   cleanupDepthResources();
@@ -84,8 +89,8 @@ void PostProcessing::resize(uint32_t width, uint32_t height,
 }
 
 void PostProcessing::beginOffscreenPass(VkCommandBuffer commandBuffer,
-                                        VkImageView depthImageView,
-                                        VkExtent2D extent) {
+                                        VkImageView /*depthImageViewParam*/,
+                                        const VkExtent2D& extent) const {
   VkImageMemoryBarrier2 offscreenBarrier{};
   offscreenBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
   offscreenBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
@@ -113,12 +118,14 @@ void PostProcessing::beginOffscreenPass(VkCommandBuffer commandBuffer,
   depthBarrier.subresourceRange.baseArrayLayer = 0;
   depthBarrier.subresourceRange.layerCount = 1;
 
-  VkImageMemoryBarrier2 barriers[] = {offscreenBarrier, depthBarrier};
+  std::array<VkImageMemoryBarrier2, 2> barriers = {offscreenBarrier,
+                                                   depthBarrier};
 
   VkDependencyInfo dependencyInfo{};
   dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-  dependencyInfo.imageMemoryBarrierCount = 2;
-  dependencyInfo.pImageMemoryBarriers = barriers;
+  dependencyInfo.imageMemoryBarrierCount =
+      static_cast<uint32_t>(barriers.size());
+  dependencyInfo.pImageMemoryBarriers = barriers.data();
 
   vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
@@ -150,7 +157,7 @@ void PostProcessing::beginOffscreenPass(VkCommandBuffer commandBuffer,
   vkCmdBeginRendering(commandBuffer, &renderingInfo);
 }
 
-void PostProcessing::endOffscreenPass(VkCommandBuffer commandBuffer) {
+void PostProcessing::endOffscreenPass(VkCommandBuffer commandBuffer) const {
   vkCmdEndRendering(commandBuffer);
 
   VkImageMemoryBarrier2 barrier{};
@@ -173,8 +180,9 @@ void PostProcessing::endOffscreenPass(VkCommandBuffer commandBuffer) {
 }
 
 void PostProcessing::render(VkCommandBuffer commandBuffer,
-                            VkImageView targetImageView, VkExtent2D extent,
-                            uint32_t frameIndex) {
+                            VkImageView targetImageView,
+                            const VkExtent2D& extent,
+                            uint32_t frameIndex) const {
   VkRenderingAttachmentInfo colorAttachment{};
   colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
   colorAttachment.imageView = targetImageView;
@@ -380,11 +388,13 @@ void PostProcessing::createDescriptorSetLayout() {
 void PostProcessing::createPipeline() {
   Debug::log(Debug::Category::RENDERING, "PostProcessing: Creating pipeline");
 
-  auto vertShaderCode = readFile("shaders/postprocess_vert.spv");
-  auto fragShaderCode = readFile("shaders/postprocess_frag.spv");
+  const std::vector<char> vertShaderCode =
+      readFile("shaders/postprocess_vert.spv");
+  const std::vector<char> fragShaderCode =
+      readFile("shaders/postprocess_frag.spv");
 
-  VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-  VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+  const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+  const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 
   VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
   vertShaderStageInfo.sType =
@@ -400,8 +410,8 @@ void PostProcessing::createPipeline() {
   fragShaderStageInfo.module = fragShaderModule;
   fragShaderStageInfo.pName = "main";
 
-  VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo,
-                                                    fragShaderStageInfo};
+  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
+      vertShaderStageInfo, fragShaderStageInfo};
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
   vertexInputInfo.sType =
@@ -455,8 +465,8 @@ void PostProcessing::createPipeline() {
   colorBlending.attachmentCount = 1;
   colorBlending.pAttachments = &colorBlendAttachment;
 
-  std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
-                                               VK_DYNAMIC_STATE_SCISSOR};
+  std::array<VkDynamicState, 2> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
+                                                 VK_DYNAMIC_STATE_SCISSOR};
   VkPipelineDynamicStateCreateInfo dynamicState{};
   dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
   dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
@@ -480,8 +490,8 @@ void PostProcessing::createPipeline() {
   VkGraphicsPipelineCreateInfo pipelineInfo{};
   pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   pipelineInfo.pNext = &renderingCreateInfo;
-  pipelineInfo.stageCount = 2;
-  pipelineInfo.pStages = shaderStages;
+  pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
+  pipelineInfo.pStages = shaderStages.data();
   pipelineInfo.pVertexInputState = &vertexInputInfo;
   pipelineInfo.pInputAssemblyState = &inputAssembly;
   pipelineInfo.pViewportState = &viewportState;
@@ -585,7 +595,7 @@ void PostProcessing::cleanupDepthResources() {
 }
 
 VkShaderModule PostProcessing::createShaderModule(
-    const std::vector<char>& code) {
+    const std::vector<char>& code) const {
   VkShaderModuleCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   createInfo.codeSize = code.size();
@@ -606,11 +616,11 @@ std::vector<char> PostProcessing::readFile(const std::string& filename) {
     throw std::runtime_error("failed to open file: " + filename);
   }
 
-  size_t fileSize = static_cast<size_t>(file.tellg());
+  const size_t fileSize = static_cast<size_t>(file.tellg());
   std::vector<char> buffer(fileSize);
 
   file.seekg(0);
-  file.read(buffer.data(), fileSize);
+  file.read(buffer.data(), static_cast<std::streamsize>(fileSize));
   file.close();
 
   return buffer;

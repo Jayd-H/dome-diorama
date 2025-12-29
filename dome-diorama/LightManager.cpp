@@ -5,8 +5,8 @@
 
 #include "Debug.h"
 
-LightManager::LightManager(RenderDevice* renderDevice)
-    : renderDevice(renderDevice),
+LightManager::LightManager(RenderDevice* device)
+    : renderDevice(device),
       lightBuffer(VK_NULL_HANDLE),
       lightBufferMemory(VK_NULL_HANDLE),
       lightBufferMapped(nullptr),
@@ -17,8 +17,11 @@ LightManager::LightManager(RenderDevice* renderDevice)
 }
 
 LightManager::~LightManager() {
-  Debug::log(Debug::Category::RENDERING, "LightManager: Destructor called");
-  cleanup();
+  try {
+    Debug::log(Debug::Category::RENDERING, "LightManager: Destructor called");
+    cleanup();
+  } catch (...) {
+  }
 }
 
 void LightManager::init() {
@@ -90,7 +93,7 @@ void LightManager::removeLight(LightID id) {
   Debug::log(Debug::Category::RENDERING,
              "LightManager: Removing light ID: ", id);
 
-  Light* light = lights[id - 1].get();
+  const Light* light = lights[id - 1].get();
   if (light->castsShadows) {
     cleanupShadowResources();
   }
@@ -163,7 +166,7 @@ void LightManager::cleanup() {
 void LightManager::createLightBuffer() {
   Debug::log(Debug::Category::RENDERING, "LightManager: Creating light buffer");
 
-  VkDeviceSize bufferSize = sizeof(LightBufferObject);
+  const VkDeviceSize bufferSize = sizeof(LightBufferObject);
 
   renderDevice->createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -220,6 +223,32 @@ void LightManager::createShadowMapForLight(Light* light) {
   vkBindImageMemory(renderDevice->getDevice(), light->shadowMap,
                     light->shadowMapMemory, 0);
 
+  const VkCommandBuffer commandBuffer = renderDevice->beginSingleTimeCommands();
+
+  VkImageMemoryBarrier2 barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+  barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+  barrier.srcAccessMask = 0;
+  barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+  barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+  barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+  barrier.image = light->shadowMap;
+  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+
+  VkDependencyInfo dependencyInfo{};
+  dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  dependencyInfo.imageMemoryBarrierCount = 1;
+  dependencyInfo.pImageMemoryBarriers = &barrier;
+
+  vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+
+  renderDevice->endSingleTimeCommands(commandBuffer);
+
   VkImageViewCreateInfo viewInfo{};
   viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image = light->shadowMap;
@@ -240,14 +269,14 @@ void LightManager::createShadowMapForLight(Light* light) {
   samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
   samplerInfo.magFilter = VK_FILTER_LINEAR;
   samplerInfo.minFilter = VK_FILTER_LINEAR;
-  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
   samplerInfo.anisotropyEnable = VK_FALSE;
   samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
   samplerInfo.unnormalizedCoordinates = VK_FALSE;
   samplerInfo.compareEnable = VK_TRUE;
-  samplerInfo.compareOp = VK_COMPARE_OP_LESS;
+  samplerInfo.compareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
   samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
   if (vkCreateSampler(renderDevice->getDevice(), &samplerInfo, nullptr,

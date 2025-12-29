@@ -1,11 +1,12 @@
 #pragma once
 #include <GLFW/glfw3.h>
 
-#include <cstring>
+#include <algorithm>
+#include <array>
 
 #include "Debug.h"
 
-class Input {
+class Input final {
  public:
   Input()
       : mouseX(0.0),
@@ -16,10 +17,10 @@ class Input {
         mouseDeltaY(0.0),
         scrollDelta(0.0),
         firstMouse(true) {
-    std::memset(currentKeys, 0, sizeof(currentKeys));
-    std::memset(previousKeys, 0, sizeof(previousKeys));
-    std::memset(currentMouseButtons, 0, sizeof(currentMouseButtons));
-    std::memset(previousMouseButtons, 0, sizeof(previousMouseButtons));
+    currentKeys.fill(false);
+    previousKeys.fill(false);
+    currentMouseButtons.fill(false);
+    previousMouseButtons.fill(false);
   }
 
   inline void update() {
@@ -27,7 +28,6 @@ class Input {
     mouseDeltaY = mouseY - lastMouseY;
     lastMouseX = mouseX;
     lastMouseY = mouseY;
-
     if (firstMouse) {
       mouseDeltaX = 0.0;
       mouseDeltaY = 0.0;
@@ -36,9 +36,8 @@ class Input {
   }
 
   inline void endFrame() {
-    std::memcpy(previousKeys, currentKeys, sizeof(currentKeys));
-    std::memcpy(previousMouseButtons, currentMouseButtons,
-                sizeof(currentMouseButtons));
+    previousKeys = currentKeys;
+    previousMouseButtons = currentMouseButtons;
     scrollDelta = 0.0;
   }
 
@@ -71,17 +70,14 @@ class Input {
   inline double getScrollDelta() const { return scrollDelta; }
 
   inline void onKey(int key, int scancode, int action, int mods) {
-    (void)scancode;
-    (void)mods;
-
+    static_cast<void>(scancode);
+    static_cast<void>(mods);
     if ((key < 0) || (key > GLFW_KEY_LAST)) {
       return;
     }
-
     if (key == GLFW_KEY_ENTER) {
       Debug::log(Debug::Category::INPUT, "Enter key, action: ", action);
     }
-
     if (action == GLFW_PRESS) {
       currentKeys[key] = true;
     } else if (action == GLFW_RELEASE) {
@@ -95,12 +91,10 @@ class Input {
   }
 
   inline void onMouseButton(int button, int action, int mods) {
-    (void)mods;
-
+    static_cast<void>(mods);
     if ((button < 0) || (button > GLFW_MOUSE_BUTTON_LAST)) {
       return;
     }
-
     if (action == GLFW_PRESS) {
       currentMouseButtons[button] = true;
     } else if (action == GLFW_RELEASE) {
@@ -109,16 +103,16 @@ class Input {
   }
 
   inline void onScroll(double xoffset, double yoffset) {
-    (void)xoffset;
+    static_cast<void>(xoffset);
     Debug::log(Debug::Category::INPUT, "Scroll received: ", yoffset);
     scrollDelta = yoffset;
   }
 
  private:
-  bool currentKeys[GLFW_KEY_LAST + 1];
-  bool previousKeys[GLFW_KEY_LAST + 1];
-  bool currentMouseButtons[GLFW_MOUSE_BUTTON_LAST + 1];
-  bool previousMouseButtons[GLFW_MOUSE_BUTTON_LAST + 1];
+  std::array<bool, GLFW_KEY_LAST + 1> currentKeys;
+  std::array<bool, GLFW_KEY_LAST + 1> previousKeys;
+  std::array<bool, GLFW_MOUSE_BUTTON_LAST + 1> currentMouseButtons;
+  std::array<bool, GLFW_MOUSE_BUTTON_LAST + 1> previousMouseButtons;
   double mouseX;
   double mouseY;
   double lastMouseX;

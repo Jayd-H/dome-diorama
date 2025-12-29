@@ -45,7 +45,7 @@ EmitterID ParticleManager::registerEmitter(ParticleEmitter* emitter) {
   }
 
   Debug::log(Debug::Category::RENDERING,
-             "ParticleManager: Registering emitter '", emitter->name, "'");
+             "ParticleManager: Registering emitter '", emitter->getName(), "'");
 
   EmitterID id = static_cast<EmitterID>(emitters.size());
   emitters.push_back(std::unique_ptr<ParticleEmitter>(emitter));
@@ -106,7 +106,7 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
 
   for (size_t i = 0; i < emitters.size(); ++i) {
     const auto& emitter = emitters[i];
-    if (!emitter || !emitter->active) continue;
+    if (!emitter || !emitter->isActive()) continue;
 
     if (i >= particleDescriptorSets.size()) {
       Debug::log(Debug::Category::RENDERING,
@@ -225,7 +225,7 @@ void ParticleManager::createShaderParamsBuffers(size_t frameCount) {
 
   VkDeviceSize bufferSize = sizeof(ParticleShaderParams);
 
-  size_t totalBuffersNeeded = frameCount * emitters.size();
+  size_t totalBuffersNeeded = frameCount;
 
   shaderParamsBuffers.resize(totalBuffersNeeded);
   shaderParamsMemory.resize(totalBuffersNeeded);

@@ -4,25 +4,26 @@
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <limits>
 
 #include "Debug.h"
 #include "Input.h"
 
 enum class CameraMode { ORBIT, FPS };
 
-class Camera {
+class Camera final {
  public:
   Camera()
-      : mode(CameraMode::ORBIT),
+      : orbitPivot(0.0f, 0.0f, 0.0f),
+        fpsPosition(2.0f, 2.0f, 2.0f),
+        lastOrbitPosition(0.0f),
         orbitRadius(350.0f),
         orbitTheta(0.0f),
         orbitPhi(0.5f),
-        orbitPivot(0.0f, 0.0f, 0.0f),
-        fpsPosition(2.0f, 2.0f, 2.0f),
         fpsYaw(-135.0f),
         fpsPitch(-35.0f),
         fpsSpeed(10.0f),
-        lastOrbitPosition(0.0f) {}
+        mode(CameraMode::ORBIT) {}
 
   inline void update(const Input& input, float deltaTime) {
     if (input.wasKeyJustPressed(GLFW_KEY_ENTER)) {
@@ -69,7 +70,7 @@ class Camera {
 
  private:
   inline void updateOrbitMode(const Input& input, float deltaTime) {
-    (void)deltaTime;
+    static_cast<void>(deltaTime);
 
     double dx = 0.0;
     double dy = 0.0;
@@ -82,7 +83,7 @@ class Camera {
     }
 
     const double scroll = input.getScrollDelta();
-    if (scroll != 0.0) {
+    if (std::abs(scroll) > std::numeric_limits<double>::epsilon()) {
       Debug::log(Debug::Category::CAMERA, "Scroll: ", scroll,
                  ", radius: ", orbitRadius);
       orbitRadius -= static_cast<float>(scroll) * ZOOM_SENSITIVITY;
@@ -96,7 +97,7 @@ class Camera {
     lastOrbitPosition = orbitPivot + glm::vec3(x, y, z);
   }
 
- inline void updateFPSMode(const Input& input, float deltaTime) {
+  inline void updateFPSMode(const Input& input, float deltaTime) {
     double dx = 0.0;
     double dy = 0.0;
     input.getMouseDelta(dx, dy);
@@ -106,7 +107,7 @@ class Camera {
     fpsPitch = std::clamp(fpsPitch, -89.0f, 89.0f);
 
     const double scroll = input.getScrollDelta();
-    if (scroll != 0.0) {
+    if (std::abs(scroll) > std::numeric_limits<double>::epsilon()) {
       fpsSpeed += static_cast<float>(scroll) * SPEED_CHANGE_RATE;
       fpsSpeed = std::max(1.0f, fpsSpeed);
       Debug::log(Debug::Category::CAMERA, "FPS speed: ", fpsSpeed);
@@ -169,16 +170,16 @@ class Camera {
     Debug::log(Debug::Category::CAMERA, "Switched to ORBIT mode");
   }
 
-  CameraMode mode;
+  glm::vec3 orbitPivot;
+  glm::vec3 fpsPosition;
+  glm::vec3 lastOrbitPosition;
   float orbitRadius;
   float orbitTheta;
   float orbitPhi;
-  glm::vec3 orbitPivot;
-  glm::vec3 fpsPosition;
   float fpsYaw;
   float fpsPitch;
   float fpsSpeed;
-  glm::vec3 lastOrbitPosition;
+  CameraMode mode;
 
   static constexpr float ORBIT_SENSITIVITY = 0.005f;
   static constexpr float ZOOM_SENSITIVITY = 2.0f;

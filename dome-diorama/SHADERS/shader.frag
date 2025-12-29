@@ -73,21 +73,24 @@ float calculateShadow(int lightIndex, vec3 fragPos, vec3 normal, vec3 lightDir) 
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords = projCoords * 0.5 + 0.5;
     
-    if (projCoords.z > 1.0) {
+    if (projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || 
+        projCoords.y < 0.0 || projCoords.y > 1.0) {
         return 1.0;
     }
     
-    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
+    float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
+    float bias = 0.0005 * tan(acos(cosTheta));
+    bias = clamp(bias, 0.0, 0.001);
     
     float shadow = 0.0;
     vec2 texelSize = 1.0 / textureSize(shadowMaps[shadowMapIndex], 0);
-    for(int x = -1; x <= 1; ++x) {
-        for(int y = -1; y <= 1; ++y) {
+    for(int x = -2; x <= 2; ++x) {
+        for(int y = -2; y <= 2; ++y) {
             float pcfDepth = texture(shadowMaps[shadowMapIndex], projCoords.xy + vec2(x, y) * texelSize).r;
             shadow += (projCoords.z - bias) > pcfDepth ? 0.0 : 1.0;
         }
     }
-    shadow /= 9.0;
+    shadow /= 25.0;
     
     return shadow;
 }

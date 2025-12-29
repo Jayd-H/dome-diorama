@@ -29,11 +29,11 @@ void WorldState::update(float deltaTime) {
 void WorldState::updateTime(float deltaTime) {
   time.totalSeconds += deltaTime;
 
-  float dayProgress =
+  const float dayProgress =
       fmod(time.totalSeconds, dayLengthInSeconds) / dayLengthInSeconds;
   time.normalizedTime = dayProgress;
 
-  float totalSecondsInDay = dayProgress * 86400.0f;
+  const float totalSecondsInDay = dayProgress * 86400.0f;
   time.hours = static_cast<int>(totalSecondsInDay / 3600.0f) % 24;
   time.minutes = static_cast<int>((totalSecondsInDay / 60.0f)) % 60;
   time.seconds = static_cast<int>(totalSecondsInDay) % 60;
@@ -60,7 +60,7 @@ void WorldState::updateWeather(float deltaTime) {
     weatherTimer = 0.0f;
     nextWeatherChangeIn = randomFloat(20.0f, 60.0f);
 
-    WeatherState newWeather = chooseNextWeather();
+    const WeatherState newWeather = chooseNextWeather();
     if (newWeather != currentWeather) {
       transitionToWeather(newWeather);
     }
@@ -70,10 +70,10 @@ void WorldState::updateWeather(float deltaTime) {
       currentWeather == WeatherState::HeavyRain ||
       currentWeather == WeatherState::LightSnow ||
       currentWeather == WeatherState::HeavySnow) {
-    float targetIntensity = (currentWeather == WeatherState::HeavyRain ||
-                             currentWeather == WeatherState::HeavySnow)
-                                ? 1.0f
-                                : 0.5f;
+    const float targetIntensity = (currentWeather == WeatherState::HeavyRain ||
+                                   currentWeather == WeatherState::HeavySnow)
+                                      ? 1.0f
+                                      : 0.5f;
     precipitationIntensity +=
         (targetIntensity - precipitationIntensity) * deltaTime * 2.0f;
     humidity = glm::clamp(humidity + deltaTime * 0.1f, 0.0f, 1.0f);
@@ -84,8 +84,8 @@ void WorldState::updateWeather(float deltaTime) {
 }
 
 void WorldState::updateTemperature(float deltaTime) {
-  float dayNightTemp = calculateDayNightTemperature();
-  float seasonalTemp = calculateSeasonalTemperature();
+  const float dayNightTemp = calculateDayNightTemperature();
+  const float seasonalTemp = calculateSeasonalTemperature();
 
   float targetTemp = baseTemperature + dayNightTemp + seasonalTemp;
 
@@ -106,10 +106,9 @@ void WorldState::updateWind(float deltaTime) {
   if (windGustTimer >= 5.0f) {
     windGustTimer = 0.0f;
 
-    float gustStrength = randomFloat(0.5f, 2.0f);
     baseWindSpeed = randomFloat(1.0f, 4.0f);
 
-    float angle = randomFloat(0.0f, glm::two_pi<float>());
+    const float angle = randomFloat(0.0f, glm::two_pi<float>());
     windDirection = glm::normalize(
         glm::vec3(cos(angle), randomFloat(-0.2f, 0.2f), sin(angle)));
   }
@@ -127,7 +126,7 @@ void WorldState::updateWind(float deltaTime) {
 }
 
 float WorldState::calculateDayNightTemperature() const {
-  float dayNightCycle = sin(time.normalizedTime * glm::two_pi<float>());
+  const float dayNightCycle = sin(time.normalizedTime * glm::two_pi<float>());
   return dayNightCycle * 15.0f;
 }
 
@@ -148,7 +147,7 @@ void WorldState::transitionToWeather(WeatherState newWeather) {
 }
 
 WeatherState WorldState::chooseNextWeather() const {
-  float roll = randomFloat(0.0f, 1.0f);
+  const float roll = randomFloat(0.0f, 1.0f);
 
   if (currentSeason == Season::DryHot) {
     if (roll < 0.6f) return WeatherState::Clear;
@@ -168,13 +167,13 @@ WeatherState WorldState::chooseNextWeather() const {
 }
 
 glm::vec3 WorldState::getSunDirection() const {
-  float angle = time.normalizedTime * glm::two_pi<float>();
+  const float angle = time.normalizedTime * glm::two_pi<float>();
 
   return glm::normalize(glm::vec3(cos(angle), sin(angle), 0.2f));
 }
 
 glm::vec3 WorldState::getMoonDirection() const {
-  float angle = (time.normalizedTime + 0.5f) * glm::two_pi<float>();
+  const float angle = (time.normalizedTime + 0.5f) * glm::two_pi<float>();
 
   return glm::normalize(glm::vec3(cos(angle), sin(angle), 0.2f));
 }

@@ -1,15 +1,29 @@
 #pragma once
 #include <iostream>
 
-class Debug {
+class Debug final {
  public:
   enum class Category { MAIN, CAMERA, INPUT, RENDERING, VULKAN };
 
-  static bool enableMain;
-  static bool enableCamera;
-  static bool enableInput;
-  static bool enableRendering;
-  static bool enableVulkan;
+  static void setEnabled(Category category, bool enabled) {
+    switch (category) {
+      case Category::MAIN:
+        enableMain = enabled;
+        break;
+      case Category::CAMERA:
+        enableCamera = enabled;
+        break;
+      case Category::INPUT:
+        enableInput = enabled;
+        break;
+      case Category::RENDERING:
+        enableRendering = enabled;
+        break;
+      case Category::VULKAN:
+        enableVulkan = enabled;
+        break;
+    }
+  }
 
   static bool isEnabled(Category category) {
     switch (category) {
@@ -36,7 +50,7 @@ class Debug {
     }
   }
 
- private:
+private:
   static const char* categoryName(Category cat) {
     switch (cat) {
       case Category::MAIN:
@@ -53,7 +67,15 @@ class Debug {
         return "UNKNOWN";
     }
   }
+
+  static bool enableMain;
+  static bool enableCamera;
+  static bool enableInput;
+  static bool enableRendering;
+  static bool enableVulkan;
 };
+
+
 
 inline bool Debug::enableMain = false;
 inline bool Debug::enableCamera = false;

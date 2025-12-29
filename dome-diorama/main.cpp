@@ -1389,7 +1389,7 @@ class DomeDiorama {
     vkDestroySwapchainKHR(device, swapChain, nullptr);
   }
 
-  void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
@@ -1402,12 +1402,15 @@ class DomeDiorama {
 
       VkImageMemoryBarrier2 shadowBarrier{};
       shadowBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-      shadowBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-      shadowBarrier.srcAccessMask = 0;
-      shadowBarrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
+      shadowBarrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+      shadowBarrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+      shadowBarrier.dstStageMask =
+          VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+          VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
       shadowBarrier.dstAccessMask =
+          VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
           VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-      shadowBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+      shadowBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
       shadowBarrier.newLayout =
           VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
       shadowBarrier.image = light->shadowMap;
@@ -1445,16 +1448,20 @@ class DomeDiorama {
                         shadowPipeline);
 
       VkViewport viewport{};
+      viewport.x = 0.0f;
+      viewport.y = 0.0f;
       viewport.width = static_cast<float>(SHADOW_MAP_SIZE);
       viewport.height = static_cast<float>(SHADOW_MAP_SIZE);
+      viewport.minDepth = 0.0f;
       viewport.maxDepth = 1.0f;
       vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
       VkRect2D scissor{};
+      scissor.offset = {0, 0};
       scissor.extent = {SHADOW_MAP_SIZE, SHADOW_MAP_SIZE};
       vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-      vkCmdSetDepthBias(commandBuffer, 1.25f, 0.0f, 1.75f);
+      vkCmdSetDepthBias(commandBuffer, 1.0f, 0.0f, 1.5f);
 
       struct ShadowPushConstants {
         glm::mat4 lightSpaceMatrix;
@@ -1506,12 +1513,16 @@ class DomeDiorama {
                       graphicsPipeline);
 
     VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
     viewport.width = static_cast<float>(swapChainExtent.width);
     viewport.height = static_cast<float>(swapChainExtent.height);
+    viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
+    scissor.offset = {0, 0};
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
@@ -1612,7 +1623,7 @@ class DomeDiorama {
 
     Light* sunLight = lightManager->getLight(sunLightID);
     if (sunLight) {
-      sunLight->direction = -sunDirection;
+      sunLight->direction = glm::normalize(-sunDirection);
       float sunHeight = sunDirection.y;
       float intensity = 0.0f;
 
@@ -1641,13 +1652,13 @@ class DomeDiorama {
 
       sunLight->color = sunColor;
 
-      glm::vec3 lightTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-      glm::vec3 lightPos = sunPosition;
+      glm::vec3 lightEye = sunPosition;
+      glm::vec3 lightCenter = glm::vec3(0.0f, 0.0f, 0.0f);
+      glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
+      glm::mat4 lightView = glm::lookAt(lightEye, lightCenter, lightUp);
       glm::mat4 lightProjection =
-          glm::ortho(-150.0f, 150.0f, -150.0f, 150.0f, 1.0f, 400.0f);
-      glm::mat4 lightView =
-          glm::lookAt(lightPos, lightTarget, glm::vec3(0.0f, 1.0f, 0.0f));
+          glm::ortho(-150.0f, 150.0f, -150.0f, 150.0f, 1.0f, 500.0f);
       glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
       lightManager->updateLightSpaceMatrix(sunLightID, lightSpaceMatrix);
@@ -1655,7 +1666,7 @@ class DomeDiorama {
 
     Light* moonLight = lightManager->getLight(moonLightID);
     if (moonLight) {
-      moonLight->direction = -moonDirection;
+      moonLight->direction = glm::normalize(-moonDirection);
       float moonHeight = moonDirection.y;
       float intensity = 0.0f;
 
@@ -1679,13 +1690,13 @@ class DomeDiorama {
 
       moonLight->color = moonColor;
 
-      glm::vec3 lightTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-      glm::vec3 lightPos = moonPosition;
+      glm::vec3 lightEye = moonPosition;
+      glm::vec3 lightCenter = glm::vec3(0.0f, 0.0f, 0.0f);
+      glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
+      glm::mat4 lightView = glm::lookAt(lightEye, lightCenter, lightUp);
       glm::mat4 lightProjection =
-          glm::ortho(-150.0f, 150.0f, -150.0f, 150.0f, 1.0f, 400.0f);
-      glm::mat4 lightView =
-          glm::lookAt(lightPos, lightTarget, glm::vec3(0.0f, 1.0f, 0.0f));
+          glm::ortho(-150.0f, 150.0f, -150.0f, 150.0f, 1.0f, 500.0f);
       glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
       lightManager->updateLightSpaceMatrix(moonLightID, lightSpaceMatrix);
@@ -2202,7 +2213,7 @@ void createScene() {
 
     sunLightID = lightManager->addLight(sunLight);
     moonLightID = lightManager->addLight(moonLight);
-    lightManager->addLight(accentLight);
+    static_cast<void>(lightManager->addLight(accentLight));
 
     MaterialID particleMaterialID =
         materialManager->registerMaterial(MaterialBuilder()
@@ -2242,11 +2253,11 @@ int main() {
   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
-  Debug::enableMain = DEBUG_MAIN;
-  Debug::enableCamera = DEBUG_CAMERA;
-  Debug::enableInput = DEBUG_INPUT;
-  Debug::enableRendering = DEBUG_RENDERING;
-  Debug::enableVulkan = DEBUG_VULKAN;
+  Debug::setEnabled(Debug::Category::MAIN, DEBUG_MAIN);
+  Debug::setEnabled(Debug::Category::CAMERA, DEBUG_CAMERA);
+  Debug::setEnabled(Debug::Category::INPUT, DEBUG_INPUT);
+  Debug::setEnabled(Debug::Category::RENDERING, DEBUG_RENDERING);
+  Debug::setEnabled(Debug::Category::VULKAN, DEBUG_VULKAN);
 
   DomeDiorama app;
   try {

@@ -6,33 +6,36 @@
 #include "Debug.h"
 #include "stb_image.h"
 
-TextureManager::TextureManager(VkDevice device, VkPhysicalDevice physicalDevice,
-                               VkCommandPool commandPool, VkQueue graphicsQueue)
-    : device(device),
-      physicalDevice(physicalDevice),
-      commandPool(commandPool),
-      graphicsQueue(graphicsQueue) {
+TextureManager::TextureManager(VkDevice dev, VkPhysicalDevice physDev,
+                               VkCommandPool cmdPool, VkQueue gfxQueue)
+    : device(dev),
+      physicalDevice(physDev),
+      commandPool(cmdPool),
+      graphicsQueue(gfxQueue),
+      defaultWhiteTexture(0),
+      defaultNormalTexture(0),
+      defaultBlackTexture(0) {
   Debug::log(Debug::Category::RENDERING, "TextureManager: Constructor called");
 
   textures.push_back(TextureData{});
 
-  unsigned char whitePixel[] = {255, 255, 255, 255};
+  const std::array<unsigned char, 4> whitePixel = {255, 255, 255, 255};
   defaultWhiteTexture =
-      createDefaultTexture(whitePixel, 1, 1, TextureType::sRGB);
+      createDefaultTexture(whitePixel.data(), 1, 1, TextureType::sRGB);
   Debug::log(Debug::Category::RENDERING,
              "TextureManager: Created default white texture (ID: ",
              defaultWhiteTexture, ")");
 
-  unsigned char normalPixel[] = {128, 128, 255, 255};
+  const std::array<unsigned char, 4> normalPixel = {128, 128, 255, 255};
   defaultNormalTexture =
-      createDefaultTexture(normalPixel, 1, 1, TextureType::Linear);
+      createDefaultTexture(normalPixel.data(), 1, 1, TextureType::Linear);
   Debug::log(Debug::Category::RENDERING,
              "TextureManager: Created default normal texture (ID: ",
              defaultNormalTexture, ")");
 
-  unsigned char blackPixel[] = {0, 0, 0, 255};
+  const std::array<unsigned char, 4> blackPixel = {0, 0, 0, 255};
   defaultBlackTexture =
-      createDefaultTexture(blackPixel, 1, 1, TextureType::sRGB);
+      createDefaultTexture(blackPixel.data(), 1, 1, TextureType::sRGB);
   Debug::log(Debug::Category::RENDERING,
              "TextureManager: Created default black texture (ID: ",
              defaultBlackTexture, ")");
@@ -41,9 +44,12 @@ TextureManager::TextureManager(VkDevice device, VkPhysicalDevice physicalDevice,
              "TextureManager: Initialization complete");
 }
 
-TextureManager::~TextureManager() {
-  Debug::log(Debug::Category::RENDERING, "TextureManager: Destructor called");
-  cleanup();
+TextureManager::~TextureManager() noexcept {
+  try {
+    Debug::log(Debug::Category::RENDERING, "TextureManager: Destructor called");
+    cleanup();
+  } catch (...) {
+  }
 }
 
 TextureID TextureManager::load(const TextureCreateInfo& createInfo) {
@@ -111,41 +117,12 @@ void TextureManager::cleanup() {
   Debug::log(Debug::Category::RENDERING, "TextureManager: Cleanup complete");
 }
 
-TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
-  Debug::log(
-      Debug::Category::RENDERING,
-      "TextureManager: Creating texture from file: ", createInfo.filepath);
-
-  int texWidth, texHeight, texChannels;
-  stbi_uc* pixels = stbi_load(createInfo.filepath.c_str(), &texWidth,
-                              &texHeight, &texChannels, STBI_rgb_alpha);
-
-  if (!pixels) {
-    Debug::log(Debug::Category::RENDERING,
-               "TextureManager: Failed to load texture file: ",
-               createInfo.filepath, ", returning default white");
-    return defaultWhiteTexture;
-  }
-
-  Debug::log(Debug::Category::RENDERING, "  - Dimensions: ", texWidth, "x",
-             texHeight, ", channels: ", texChannels);
-
-  VkDeviceSize imageSize = static_cast<VkDeviceSize>(texWidth) *
-                           static_cast<VkDeviceSize>(texHeight) * 4;
-  uint32_t mipLevels = createInfo.generateMipmaps
-                           ? static_cast<uint32_t>(std::floor(
-                                 std::log2(std::max(texWidth, texHeight)))) +
-                                 1
-                           : 1;
-
-  Debug::log(Debug::Category::RENDERING, "  - Mip levels: ", mipLevels);
-
-  VkBuffer stagingBuffer;
-  VkDeviceMemory stagingBufferMemory;
-
+void TextureManager::createStagingBuffer(
+    VkDeviceSize size, VkBuffer& stagingBuffer,
+    VkDeviceMemory& stagingBufferMemory) const {
   VkBufferCreateInfo bufferInfo{};
   bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  bufferInfo.size = imageSize;
+  bufferInfo.size = size;
   bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -163,6 +140,42 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
 
   vkAllocateMemory(device, &allocInfo, nullptr, &stagingBufferMemory);
   vkBindBufferMemory(device, stagingBuffer, stagingBufferMemory, 0);
+}
+
+TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
+  Debug::log(
+      Debug::Category::RENDERING,
+      "TextureManager: Creating texture from file: ", createInfo.filepath);
+
+  int texWidth, texHeight, texChannels;
+  stbi_uc* const pixels = stbi_load(createInfo.filepath.c_str(), &texWidth,
+                                    &texHeight, &texChannels, STBI_rgb_alpha);
+
+  if (!pixels) {
+    Debug::log(Debug::Category::RENDERING,
+               "TextureManager: Failed to load texture file: ",
+               createInfo.filepath, ", returning default white");
+    return defaultWhiteTexture;
+  }
+
+  Debug::log(Debug::Category::RENDERING, "  - Dimensions: ", texWidth, "x",
+             texHeight, ", channels: ", texChannels);
+
+  const VkDeviceSize imageSize = static_cast<VkDeviceSize>(texWidth) *
+                                 static_cast<VkDeviceSize>(texHeight) * 4;
+  const uint32_t mipLevels =
+      createInfo.generateMipmaps
+          ? static_cast<uint32_t>(
+                std::floor(std::log2(std::max(texWidth, texHeight)))) +
+                1
+          : 1;
+
+  Debug::log(Debug::Category::RENDERING, "  - Mip levels: ", mipLevels);
+
+  VkBuffer stagingBuffer;
+  VkDeviceMemory stagingBufferMemory;
+
+  createStagingBuffer(imageSize, stagingBuffer, stagingBufferMemory);
 
   void* data;
   vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
@@ -171,9 +184,9 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
 
   stbi_image_free(pixels);
 
-  VkFormat format = (createInfo.type == TextureType::sRGB)
-                        ? VK_FORMAT_R8G8B8A8_SRGB
-                        : VK_FORMAT_R8G8B8A8_UNORM;
+  const VkFormat format = (createInfo.type == TextureType::sRGB)
+                              ? VK_FORMAT_R8G8B8A8_SRGB
+                              : VK_FORMAT_R8G8B8A8_UNORM;
 
   TextureData textureData;
   createImage(texWidth, texHeight, mipLevels, format, VK_IMAGE_TILING_OPTIMAL,
@@ -182,15 +195,15 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureData.image,
               textureData.memory);
 
-  transitionImageLayout(textureData.image, format, VK_IMAGE_LAYOUT_UNDEFINED,
+  transitionImageLayout(textureData.image, VK_IMAGE_LAYOUT_UNDEFINED,
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
   copyBufferToImage(stagingBuffer, textureData.image, texWidth, texHeight);
 
   if (createInfo.generateMipmaps) {
     Debug::log(Debug::Category::RENDERING, "  - Generating mipmaps");
-    generateMipmaps(textureData.image, format, texWidth, texHeight, mipLevels);
+    generateMipmaps(textureData.image, texWidth, texHeight, mipLevels);
   } else {
-    transitionImageLayout(textureData.image, format,
+    transitionImageLayout(textureData.image,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                           VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
   }
@@ -222,7 +235,7 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
   textureData.format = format;
 
   TextureID id = static_cast<TextureID>(textures.size());
-  textures.push_back(textureData);
+  textures.push_back(std::move(textureData));
   filepathToID[createInfo.filepath] = id;
 
   Debug::log(Debug::Category::RENDERING,
@@ -237,40 +250,22 @@ TextureID TextureManager::createDefaultTexture(const unsigned char* pixelData,
   Debug::log(Debug::Category::RENDERING,
              "TextureManager: Creating default texture ", width, "x", height);
 
-  VkDeviceSize imageSize =
+  const VkDeviceSize imageSize =
       static_cast<VkDeviceSize>(width) * static_cast<VkDeviceSize>(height) * 4;
 
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
 
-  VkBufferCreateInfo bufferInfo{};
-  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  bufferInfo.size = imageSize;
-  bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-  vkCreateBuffer(device, &bufferInfo, nullptr, &stagingBuffer);
-
-  VkMemoryRequirements memRequirements;
-  vkGetBufferMemoryRequirements(device, stagingBuffer, &memRequirements);
-
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = findMemoryType(
-      memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-  vkAllocateMemory(device, &allocInfo, nullptr, &stagingBufferMemory);
-  vkBindBufferMemory(device, stagingBuffer, stagingBufferMemory, 0);
+  createStagingBuffer(imageSize, stagingBuffer, stagingBufferMemory);
 
   void* data;
   vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
   memcpy(data, pixelData, static_cast<size_t>(imageSize));
   vkUnmapMemory(device, stagingBufferMemory);
 
-  VkFormat format = (type == TextureType::sRGB) ? VK_FORMAT_R8G8B8A8_SRGB
-                                                : VK_FORMAT_R8G8B8A8_UNORM;
+  const VkFormat format = (type == TextureType::sRGB)
+                              ? VK_FORMAT_R8G8B8A8_SRGB
+                              : VK_FORMAT_R8G8B8A8_UNORM;
 
   TextureData textureData;
   createImage(width, height, 1, format, VK_IMAGE_TILING_OPTIMAL,
@@ -278,11 +273,10 @@ TextureID TextureManager::createDefaultTexture(const unsigned char* pixelData,
               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureData.image,
               textureData.memory);
 
-  transitionImageLayout(textureData.image, format, VK_IMAGE_LAYOUT_UNDEFINED,
+  transitionImageLayout(textureData.image, VK_IMAGE_LAYOUT_UNDEFINED,
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
   copyBufferToImage(stagingBuffer, textureData.image, width, height);
-  transitionImageLayout(textureData.image, format,
-                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+  transitionImageLayout(textureData.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
 
   vkDestroyBuffer(device, stagingBuffer, nullptr);
@@ -309,7 +303,7 @@ TextureID TextureManager::createDefaultTexture(const unsigned char* pixelData,
   textureData.format = format;
 
   TextureID id = static_cast<TextureID>(textures.size());
-  textures.push_back(textureData);
+  textures.push_back(std::move(textureData));
 
   Debug::log(Debug::Category::RENDERING,
              "TextureManager: Default texture created (ID: ", id, ")");
@@ -321,7 +315,8 @@ void TextureManager::createImage(uint32_t width, uint32_t height,
                                  uint32_t mipLevels, VkFormat format,
                                  VkImageTiling tiling, VkImageUsageFlags usage,
                                  VkMemoryPropertyFlags properties,
-                                 VkImage& image, VkDeviceMemory& imageMemory) {
+                                 VkImage& image,
+                                 VkDeviceMemory& imageMemory) const {
   VkImageCreateInfo imageInfo{};
   imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -373,11 +368,11 @@ uint32_t TextureManager::findMemoryType(
   throw std::runtime_error("Failed to find suitable memory type!");
 }
 
-void TextureManager::transitionImageLayout(VkImage image, VkFormat format,
+void TextureManager::transitionImageLayout(VkImage image,
                                            VkImageLayout oldLayout,
                                            VkImageLayout newLayout,
-                                           uint32_t mipLevels) {
-  VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+                                           uint32_t mipLevels) const {
+  VkCommandBuffer const commandBuffer = beginSingleTimeCommands();
 
   VkImageMemoryBarrier2 barrier{};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -425,8 +420,8 @@ void TextureManager::transitionImageLayout(VkImage image, VkFormat format,
 }
 
 void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image,
-                                       uint32_t width, uint32_t height) {
-  VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+                                       uint32_t width, uint32_t height) const {
+  VkCommandBuffer const commandBuffer = beginSingleTimeCommands();
 
   VkBufferImageCopy region{};
   region.bufferOffset = 0;
@@ -445,10 +440,10 @@ void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image,
   endSingleTimeCommands(commandBuffer);
 }
 
-void TextureManager::generateMipmaps(VkImage image, VkFormat format,
-                                     uint32_t width, uint32_t height,
-                                     uint32_t mipLevels) {
-  VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+void TextureManager::generateMipmaps(VkImage image, uint32_t width,
+                                     uint32_t height,
+                                     uint32_t mipLevels) const {
+  VkCommandBuffer const commandBuffer = beginSingleTimeCommands();
 
   int32_t mipWidth = width;
   int32_t mipHeight = height;
@@ -643,7 +638,8 @@ VkCommandBuffer TextureManager::beginSingleTimeCommands() const {
   return commandBuffer;
 }
 
-void TextureManager::endSingleTimeCommands(VkCommandBuffer commandBuffer) const {
+void TextureManager::endSingleTimeCommands(
+    VkCommandBuffer commandBuffer) const {
   vkEndCommandBuffer(commandBuffer);
 
   VkSubmitInfo submitInfo{};

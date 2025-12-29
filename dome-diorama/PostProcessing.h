@@ -6,23 +6,29 @@
 
 class RenderDevice;
 
-class PostProcessing {
+class PostProcessing final {
  public:
   PostProcessing(RenderDevice* renderDevice, VkDevice device,
                  VkFormat swapchainFormat);
   ~PostProcessing();
 
-  void init(VkDescriptorPool descriptorPool, uint32_t width, uint32_t height);
-  void cleanup();
+  PostProcessing(const PostProcessing&) = delete;
+  PostProcessing& operator=(const PostProcessing&) = delete;
+  PostProcessing(PostProcessing&&) = delete;
+  PostProcessing& operator=(PostProcessing&&) = delete;
 
-  void resize(uint32_t width, uint32_t height, VkDescriptorPool descriptorPool);
+  void init(VkDescriptorPool descriptorPool, uint32_t frameWidth,
+            uint32_t frameHeight);
+  void cleanup();
+  void resize(uint32_t newWidth, uint32_t newHeight,
+              VkDescriptorPool descriptorPool);
 
   void beginOffscreenPass(VkCommandBuffer commandBuffer,
-                          VkImageView depthImageView, VkExtent2D extent);
-  void endOffscreenPass(VkCommandBuffer commandBuffer);
-
+                          VkImageView depthImageViewParam,
+                          const VkExtent2D& extent) const;
+  void endOffscreenPass(VkCommandBuffer commandBuffer) const;
   void render(VkCommandBuffer commandBuffer, VkImageView targetImageView,
-              VkExtent2D extent, uint32_t frameIndex);
+              const VkExtent2D& extent, uint32_t frameIndex) const;
 
   VkImageView getOffscreenImageView() const { return offscreenImageView; }
 
@@ -30,6 +36,10 @@ class PostProcessing {
   RenderDevice* renderDevice;
   VkDevice device;
   VkFormat swapchainFormat;
+  VkFormat depthFormat;
+
+  uint32_t width = 0;
+  uint32_t height = 0;
 
   VkImage offscreenImage = VK_NULL_HANDLE;
   VkDeviceMemory offscreenImageMemory = VK_NULL_HANDLE;
@@ -39,15 +49,11 @@ class PostProcessing {
   VkImage depthImage = VK_NULL_HANDLE;
   VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
   VkImageView depthImageView = VK_NULL_HANDLE;
-  VkFormat depthFormat;
 
   VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
   VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
   VkPipeline pipeline = VK_NULL_HANDLE;
   std::vector<VkDescriptorSet> descriptorSets;
-
-  uint32_t width = 0;
-  uint32_t height = 0;
 
   void createOffscreenResources();
   void createDepthResources();
@@ -55,10 +61,9 @@ class PostProcessing {
   void createPipeline();
   void createDescriptorSets(VkDescriptorPool descriptorPool);
   void updateDescriptorSets();
-
   void cleanupOffscreenResources();
   void cleanupDepthResources();
 
-  VkShaderModule createShaderModule(const std::vector<char>& code);
+  VkShaderModule createShaderModule(const std::vector<char>& code) const;
   static std::vector<char> readFile(const std::string& filename);
 };

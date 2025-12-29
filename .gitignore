@@ -34,3 +34,4 @@ x64/Release/*.pdb
 
 # Parasoft
 .parasoft.dat/
+/dome-diorama/.cpptest
