@@ -1,7 +1,8 @@
-﻿  ParticleManager.cpp
+﻿  main.cpp
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\main.cpp(1402,47): warning C4267: 'argument': conversion from 'size_t' to 'LightID', possible loss of data
   Generating code
-  6 of 3511 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
-    3 functions were new in current compilation
-    57 functions had inline decision re-evaluated but remain unchanged
+  1 of 3511 functions (<0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    12 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   dome-diorama.vcxproj -> D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\x64\Release\dome-diorama.exe
