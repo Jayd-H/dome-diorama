@@ -6,7 +6,6 @@
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
-#define new new (_NORMAL_BLOCK, __FILE__, __LINE__)
 #endif
 
 #define GLFW_INCLUDE_VULKAN
@@ -97,8 +96,8 @@ VkResult CreateDebugUtilsMessengerEXT(
     VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
     VkDebugUtilsMessengerEXT* pDebugMessenger) {
-  auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-      instance, "vkCreateDebugUtilsMessengerEXT");
+  auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+      vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
   if (func != nullptr) {
     return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
   } else {
@@ -109,15 +108,20 @@ VkResult CreateDebugUtilsMessengerEXT(
 void DestroyDebugUtilsMessengerEXT(VkInstance instance,
                                    VkDebugUtilsMessengerEXT debugMessenger,
                                    const VkAllocationCallbacks* pAllocator) {
-  auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-      instance, "vkDestroyDebugUtilsMessengerEXT");
+  auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+      vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
   if (func != nullptr) {
     func(instance, debugMessenger, pAllocator);
   }
 }
 
-class DomeDiorama {
+class DomeDiorama final {
  public:
+  DomeDiorama() = default;
+  ~DomeDiorama() = default;
+  DomeDiorama(const DomeDiorama&) = delete;
+  DomeDiorama& operator=(const DomeDiorama&) = delete;
+
   void run() {
     initWindow();
     initVulkan();
@@ -190,54 +194,57 @@ class DomeDiorama {
 
   // Callbacks for Inputs!
 
-  static void keyCallback(GLFWwindow* window, int key, int scancode, int action,
+  static void keyCallback(GLFWwindow* win, int key, int scancode, int action,
                           int mods) {
-    if (window == nullptr) return;
-    auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
+    if (win == nullptr) return;
+    auto* const app =
+        reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(win));
     app->input.onKey(key, scancode, action, mods);
 
     if (action == GLFW_PRESS) {
       if (key == GLFW_KEY_1) {
         app->currentPolygonMode = VK_POLYGON_MODE_FILL;
         app->recreateGraphicsPipeline();
-        glfwSetWindowTitle(window, "Dome Diorama - FILL MODE");
+        glfwSetWindowTitle(win, "Dome Diorama - FILL MODE");
         Debug::log(Debug::Category::INPUT, "Switched to FILL mode");
       } else if (key == GLFW_KEY_2) {
         app->currentPolygonMode = VK_POLYGON_MODE_LINE;
         app->recreateGraphicsPipeline();
-        glfwSetWindowTitle(window, "Dome Diorama - WIREFRAME MODE");
+        glfwSetWindowTitle(win, "Dome Diorama - WIREFRAME MODE");
         Debug::log(Debug::Category::INPUT, "Switched to WIREFRAME mode");
       } else if (key == GLFW_KEY_3) {
         app->currentPolygonMode = VK_POLYGON_MODE_POINT;
         app->recreateGraphicsPipeline();
-        glfwSetWindowTitle(window, "Dome Diorama - POINT MODE");
+        glfwSetWindowTitle(win, "Dome Diorama - POINT MODE");
         Debug::log(Debug::Category::INPUT, "Switched to POINT mode");
       } else if (key == GLFW_KEY_4) {
         app->recreateTextureSamplers(VK_FILTER_NEAREST, VK_FILTER_NEAREST);
-        glfwSetWindowTitle(window, "Dome Diorama - NEAREST FILTERING");
+        glfwSetWindowTitle(win, "Dome Diorama - NEAREST FILTERING");
         Debug::log(Debug::Category::INPUT, "Switched to NEAREST filtering");
       } else if (key == GLFW_KEY_5) {
         app->recreateTextureSamplers(VK_FILTER_LINEAR, VK_FILTER_LINEAR);
-        glfwSetWindowTitle(window, "Dome Diorama - LINEAR FILTERING");
+        glfwSetWindowTitle(win, "Dome Diorama - LINEAR FILTERING");
         Debug::log(Debug::Category::INPUT, "Switched to LINEAR filtering");
       }
     }
   }
 
-  static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
-    auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
+  static void cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
+    auto* const app =
+        reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(win));
     app->input.onMouseMove(xpos, ypos);
   }
 
-  static void mouseButtonCallback(GLFWwindow* window, int button, int action,
+  static void mouseButtonCallback(GLFWwindow* win, int button, int action,
                                   int mods) {
-    auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
+    auto* const app =
+        reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(win));
     app->input.onMouseButton(button, action, mods);
   }
 
-  static void scrollCallback(GLFWwindow* window, double xoffset,
-                             double yoffset) {
-    auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
+  static void scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
+    auto* const app =
+        reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(win));
     app->input.onScroll(xoffset, yoffset);
   }
 
@@ -516,13 +523,15 @@ class DomeDiorama {
   }
 
   void createLogicalDevice() {
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    const QueueFamilyIndices queueFamilyIndicesResult =
+        findQueueFamilies(physicalDevice);
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(),
-                                              indices.presentFamily.value()};
+    std::set<uint32_t> uniqueQueueFamilies = {
+        queueFamilyIndicesResult.graphicsFamily.value(),
+        queueFamilyIndicesResult.presentFamily.value()};
 
     float queuePriority = 1.0f;
-    for (uint32_t queueFamily : uniqueQueueFamilies) {
+    for (const uint32_t queueFamily : uniqueQueueFamilies) {
       VkDeviceQueueCreateInfo queueCreateInfo{};
       queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
       queueCreateInfo.queueFamilyIndex = queueFamily;
@@ -574,18 +583,20 @@ class DomeDiorama {
       throw std::runtime_error("Failed to create logical device!");
     }
 
-    vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
-    vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+    vkGetDeviceQueue(device, queueFamilyIndicesResult.graphicsFamily.value(), 0,
+                     &graphicsQueue);
+    vkGetDeviceQueue(device, queueFamilyIndicesResult.presentFamily.value(), 0,
+                     &presentQueue);
   }
 
   void createSwapChain() {
-    SwapChainSupportDetails swapChainSupport =
+    const SwapChainSupportDetails swapChainSupport =
         querySwapChainSupport(physicalDevice);
-    VkSurfaceFormatKHR surfaceFormat =
+    const VkSurfaceFormatKHR surfaceFormat =
         chooseSwapSurfaceFormat(swapChainSupport.formats);
-    VkPresentModeKHR presentMode =
+    const VkPresentModeKHR presentMode =
         chooseSwapPresentMode(swapChainSupport.presentModes);
-    VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
+    const VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
     if (swapChainSupport.capabilities.maxImageCount > 0 &&
@@ -603,14 +614,15 @@ class DomeDiorama {
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-    uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(),
-                                     indices.presentFamily.value()};
+    const QueueFamilyIndices queueIndices = findQueueFamilies(physicalDevice);
 
-    if (indices.graphicsFamily != indices.presentFamily) {
+    if (queueIndices.graphicsFamily != queueIndices.presentFamily) {
+      const std::array<uint32_t, 2> queueFamilyIndicesArr = {
+          queueIndices.graphicsFamily.value(),
+          queueIndices.presentFamily.value()};
       createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
       createInfo.queueFamilyIndexCount = 2;
-      createInfo.pQueueFamilyIndices = queueFamilyIndices;
+      createInfo.pQueueFamilyIndices = queueFamilyIndicesArr.data();
     } else {
       createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
@@ -685,11 +697,11 @@ class DomeDiorama {
   }
 
   void createGraphicsPipeline() {
-    auto vertShaderCode = readFile("shaders/vert.spv");
-    auto fragShaderCode = readFile("shaders/frag.spv");
+    const auto vertShaderCode = readFile("shaders/vert.spv");
+    const auto fragShaderCode = readFile("shaders/frag.spv");
 
-    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+    const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+    const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType =
@@ -705,11 +717,11 @@ class DomeDiorama {
     fragShaderStageInfo.module = fragShaderModule;
     fragShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo,
-                                                      fragShaderStageInfo};
+    const std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
+        vertShaderStageInfo, fragShaderStageInfo};
 
-    auto bindingDescription = Vertex::getBindingDescription();
-    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+    const auto bindingDescription = Vertex::getBindingDescription();
+    const auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType =
@@ -810,7 +822,7 @@ class DomeDiorama {
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.pNext = &renderingCreateInfo;
     pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pStages = shaderStages.data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
@@ -851,11 +863,11 @@ class DomeDiorama {
   void createParticlePipeline() {
     Debug::log(Debug::Category::VULKAN, "Creating particle pipeline...");
 
-    auto vertShaderCode = readFile("shaders/particle_vert.spv");
-    auto fragShaderCode = readFile("shaders/particle_frag.spv");
+    const auto vertShaderCode = readFile("shaders/particle_vert.spv");
+    const auto fragShaderCode = readFile("shaders/particle_frag.spv");
 
-    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+    const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+    const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType =
@@ -871,18 +883,17 @@ class DomeDiorama {
     fragShaderStageInfo.module = fragShaderModule;
     fragShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo,
-                                                      fragShaderStageInfo};
+    const std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
+        vertShaderStageInfo, fragShaderStageInfo};
 
-    auto bindingDescription = Vertex::getBindingDescription();
-    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+    const auto bindingDescription = Vertex::getBindingDescription();
 
     VkVertexInputBindingDescription instanceBinding{};
     instanceBinding.binding = 1;
     instanceBinding.stride = sizeof(ParticleInstanceData);
     instanceBinding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
-    std::array<VkVertexInputBindingDescription, 2> bindings = {
+    const std::array<VkVertexInputBindingDescription, 2> bindings = {
         bindingDescription, instanceBinding};
 
     std::array<VkVertexInputAttributeDescription, 5> attributes{};
@@ -994,7 +1005,7 @@ class DomeDiorama {
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.pNext = &renderingCreateInfo;
     pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pStages = shaderStages.data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
@@ -1021,11 +1032,11 @@ class DomeDiorama {
   void createShadowPipeline() {
     Debug::log(Debug::Category::VULKAN, "Creating shadow pipeline...");
 
-    auto vertShaderCode = readFile("shaders/shadow_vert.spv");
-    auto fragShaderCode = readFile("shaders/shadow_frag.spv");
+    const auto vertShaderCode = readFile("shaders/shadow_vert.spv");
+    const auto fragShaderCode = readFile("shaders/shadow_frag.spv");
 
-    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+    const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+    const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType =
@@ -1041,11 +1052,11 @@ class DomeDiorama {
     fragShaderStageInfo.module = fragShaderModule;
     fragShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo,
-                                                      fragShaderStageInfo};
+    const std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
+        vertShaderStageInfo, fragShaderStageInfo};
 
-    auto bindingDescription = Vertex::getBindingDescription();
-    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+    const auto bindingDescription = Vertex::getBindingDescription();
+    const auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType =
@@ -1126,18 +1137,18 @@ class DomeDiorama {
       throw std::runtime_error("Failed to create shadow pipeline layout!");
     }
 
-    VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
+    const VkFormat shadowDepthFormat = VK_FORMAT_D32_SFLOAT;
 
     VkPipelineRenderingCreateInfo renderingCreateInfo{};
     renderingCreateInfo.sType =
         VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-    renderingCreateInfo.depthAttachmentFormat = depthFormat;
+    renderingCreateInfo.depthAttachmentFormat = shadowDepthFormat;
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.pNext = &renderingCreateInfo;
     pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pStages = shaderStages.data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
@@ -1161,11 +1172,12 @@ class DomeDiorama {
   }
 
   void createCommandPool() {
-    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
+    const QueueFamilyIndices queueFamilyIndicesResult =
+        findQueueFamilies(physicalDevice);
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+    poolInfo.queueFamilyIndex = queueFamilyIndicesResult.graphicsFamily.value();
     if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) !=
         VK_SUCCESS) {
       throw std::runtime_error("Failed to create command pool!");
@@ -1173,7 +1185,7 @@ class DomeDiorama {
   }
 
   void createUniformBuffers() {
-    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+    const VkDeviceSize bufferSize = sizeof(UniformBufferObject);
     uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
     uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
     uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1263,7 +1275,7 @@ class DomeDiorama {
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
+    allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
     if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) !=
         VK_SUCCESS) {
       throw std::runtime_error("Failed to allocate command buffers!");
@@ -1321,19 +1333,21 @@ class DomeDiorama {
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
-    VkPipelineStageFlags waitStages[] = {
+    const std::array<VkSemaphore, 1> waitSemaphores = {
+        imageAvailableSemaphores[currentFrame]};
+    const std::array<VkPipelineStageFlags, 1> waitStages = {
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.pWaitSemaphores = waitSemaphores.data();
+    submitInfo.pWaitDstStageMask = waitStages.data();
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
-    VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+    const std::array<VkSemaphore, 1> signalSemaphores = {
+        renderFinishedSemaphores[currentFrame]};
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+    submitInfo.pSignalSemaphores = signalSemaphores.data();
 
     result = vkQueueSubmit(graphicsQueue, 1, &submitInfo,
                            inFlightFences[currentFrame]);
@@ -1360,11 +1374,11 @@ class DomeDiorama {
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.pWaitSemaphores = signalSemaphores.data();
 
-    VkSwapchainKHR swapChains[] = {swapChain};
+    const std::array<VkSwapchainKHR, 1> swapChains = {swapChain};
     presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
+    presentInfo.pSwapchains = swapChains.data();
     presentInfo.pImageIndices = &imageIndex;
 
     result = vkQueuePresentKHR(presentQueue, &presentInfo);
@@ -1400,7 +1414,7 @@ class DomeDiorama {
   }
 
   void cleanupSwapChain() {
-    for (auto imageView : swapChainImageViews) {
+    for (const auto imageView : swapChainImageViews) {
       vkDestroyImageView(device, imageView, nullptr);
     }
     vkDestroySwapchainKHR(device, swapChain, nullptr);
@@ -1419,7 +1433,7 @@ class DomeDiorama {
 
     for (size_t smIdx = 0; smIdx < shadowMaps.size(); smIdx++) {
       const auto& shadowMap = shadowMaps[smIdx];
-      Light* light = shadowMap.light;
+      Light* const light = shadowMap.light;
 
       VkImageMemoryBarrier2 shadowBarrier{};
       shadowBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -1500,7 +1514,7 @@ class DomeDiorama {
         if (!object.visible) continue;
         if (object.meshID == INVALID_MESH_ID) continue;
 
-        Mesh* mesh = meshManager->getMesh(object.meshID);
+        const Mesh* const mesh = meshManager->getMesh(object.meshID);
         if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
 
         shadowPush.model = object.getModelMatrix();
@@ -1509,9 +1523,10 @@ class DomeDiorama {
                            VK_SHADER_STAGE_VERTEX_BIT, 0,
                            sizeof(ShadowPushConstants), &shadowPush);
 
-        VkBuffer vertexBuffers[] = {mesh->vertexBuffer};
-        VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        const std::array<VkBuffer, 1> vertexBuffersArr = {mesh->vertexBuffer};
+        const std::array<VkDeviceSize, 1> offsetsArr = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersArr.data(),
+                               offsetsArr.data());
         vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer, 0,
                              VK_INDEX_TYPE_UINT16);
 
@@ -1559,20 +1574,22 @@ class DomeDiorama {
       if (object.meshID == INVALID_MESH_ID) continue;
       if (object.materialID == INVALID_MATERIAL_ID) continue;
 
-      Mesh* mesh = meshManager->getMesh(object.meshID);
-      Material* material = materialManager->getMaterial(object.materialID);
+      const Mesh* const mesh = meshManager->getMesh(object.meshID);
+      const Material* const material =
+          materialManager->getMaterial(object.materialID);
 
       if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
       if (!material || material->descriptorSet == VK_NULL_HANDLE) continue;
 
-      glm::mat4 modelMatrix = object.getModelMatrix();
+      const glm::mat4 modelMatrix = object.getModelMatrix();
       vkCmdPushConstants(commandBuffer, pipelineLayout,
                          VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4),
                          &modelMatrix);
 
-      VkBuffer vertexBuffers[] = {mesh->vertexBuffer};
-      VkDeviceSize offsets[] = {0};
-      vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+      const std::array<VkBuffer, 1> vertexBuffersArr = {mesh->vertexBuffer};
+      const std::array<VkDeviceSize, 1> offsetsArr = {0};
+      vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersArr.data(),
+                             offsetsArr.data());
       vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer, 0,
                            VK_INDEX_TYPE_UINT16);
 
@@ -1634,30 +1651,31 @@ class DomeDiorama {
     }
   }
 
-  void updateUniformBuffer(uint32_t currentImage) {
-    static auto startTime = std::chrono::high_resolution_clock::now();
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float>(currentTime - startTime).count();
+ void updateUniformBuffer(uint32_t currentImage) {
+    static const auto startTime = std::chrono::high_resolution_clock::now();
+    const auto currentTime = std::chrono::high_resolution_clock::now();
+    const float time =
+        std::chrono::duration<float>(currentTime - startTime).count();
 
-    float deltaTime = time - (time - 0.016f);
+    const float deltaTime = time - (time - 0.016f);
 
     worldState.update(deltaTime);
     particleManager->update(deltaTime);
 
     const float sunOrbitRadius = 150.0f;
-    glm::vec3 sunDirection = worldState.getSunDirection();
-    glm::vec3 sunPosition = sunDirection * sunOrbitRadius;
+    const glm::vec3 sunDirection = worldState.getSunDirection();
+    const glm::vec3 sunPosition = sunDirection * sunOrbitRadius;
     sceneObjects[0].setPosition(sunPosition);
 
     const float moonOrbitRadius = 130.0f;
-    glm::vec3 moonDirection = worldState.getMoonDirection();
-    glm::vec3 moonPosition = moonDirection * moonOrbitRadius;
+    const glm::vec3 moonDirection = worldState.getMoonDirection();
+    const glm::vec3 moonPosition = moonDirection * moonOrbitRadius;
     sceneObjects[1].setPosition(moonPosition);
 
-    Light* sunLight = lightManager->getLight(sunLightID);
+    Light* const sunLight = lightManager->getLight(sunLightID);
     if (sunLight) {
       sunLight->direction = glm::normalize(-sunDirection);
-      float sunHeight = sunDirection.y;
+      const float sunHeight = sunDirection.y;
       float intensity = 0.0f;
 
       if (sunHeight > 0.0f) {
@@ -1670,37 +1688,37 @@ class DomeDiorama {
       if (sunHeight < 0.0f) {
         sunColor = glm::vec3(0.0f, 0.0f, 0.0f);
       } else if (sunHeight < 0.2f) {
-        float t = sunHeight / 0.2f;
-        glm::vec3 sunriseColor = glm::vec3(1.0f, 0.4f, 0.1f);
-        glm::vec3 dayColor = glm::vec3(1.0f, 0.95f, 0.85f);
+        const float t = sunHeight / 0.2f;
+        const glm::vec3 sunriseColor = glm::vec3(1.0f, 0.4f, 0.1f);
+        const glm::vec3 dayColor = glm::vec3(1.0f, 0.95f, 0.85f);
         sunColor = glm::mix(sunriseColor, dayColor, t);
       } else if (sunHeight > 0.8f) {
         sunColor = glm::vec3(1.0f, 1.0f, 0.95f);
       } else {
-        float t = (sunHeight - 0.2f) / 0.6f;
-        glm::vec3 dayColor = glm::vec3(1.0f, 0.95f, 0.85f);
-        glm::vec3 noonColor = glm::vec3(1.0f, 1.0f, 0.95f);
+        const float t = (sunHeight - 0.2f) / 0.6f;
+        const glm::vec3 dayColor = glm::vec3(1.0f, 0.95f, 0.85f);
+        const glm::vec3 noonColor = glm::vec3(1.0f, 1.0f, 0.95f);
         sunColor = glm::mix(dayColor, noonColor, t);
       }
 
       sunLight->color = sunColor;
 
-      glm::vec3 lightEye = sunPosition;
-      glm::vec3 lightCenter = glm::vec3(0.0f, 0.0f, 0.0f);
-      glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
+      const glm::vec3 lightEye = sunPosition;
+      const glm::vec3 lightCenter = glm::vec3(0.0f, 0.0f, 0.0f);
+      const glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-      glm::mat4 lightView = glm::lookAt(lightEye, lightCenter, lightUp);
-      glm::mat4 lightProjection =
+      const glm::mat4 lightView = glm::lookAt(lightEye, lightCenter, lightUp);
+      const glm::mat4 lightProjection =
           glm::ortho(-150.0f, 150.0f, -150.0f, 150.0f, 1.0f, 500.0f);
-      glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+      const glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
       lightManager->updateLightSpaceMatrix(sunLightID, lightSpaceMatrix);
     }
 
-    Light* moonLight = lightManager->getLight(moonLightID);
+    Light* const moonLight = lightManager->getLight(moonLightID);
     if (moonLight) {
       moonLight->direction = glm::normalize(-moonDirection);
-      float moonHeight = moonDirection.y;
+      const float moonHeight = moonDirection.y;
       float intensity = 0.0f;
 
       if (moonHeight > 0.0f) {
@@ -1713,9 +1731,9 @@ class DomeDiorama {
       if (moonHeight < 0.0f) {
         moonColor = glm::vec3(0.0f, 0.0f, 0.0f);
       } else if (moonHeight < 0.15f) {
-        float t = moonHeight / 0.15f;
-        glm::vec3 horizonColor = glm::vec3(0.3f, 0.35f, 0.5f);
-        glm::vec3 nightColor = glm::vec3(0.4f, 0.5f, 0.7f);
+        const float t = moonHeight / 0.15f;
+        const glm::vec3 horizonColor = glm::vec3(0.3f, 0.35f, 0.5f);
+        const glm::vec3 nightColor = glm::vec3(0.4f, 0.5f, 0.7f);
         moonColor = glm::mix(horizonColor, nightColor, t);
       } else {
         moonColor = glm::vec3(0.4f, 0.5f, 0.7f);
@@ -1723,14 +1741,14 @@ class DomeDiorama {
 
       moonLight->color = moonColor;
 
-      glm::vec3 lightEye = moonPosition;
-      glm::vec3 lightCenter = glm::vec3(0.0f, 0.0f, 0.0f);
-      glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
+      const glm::vec3 lightEye = moonPosition;
+      const glm::vec3 lightCenter = glm::vec3(0.0f, 0.0f, 0.0f);
+      const glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-      glm::mat4 lightView = glm::lookAt(lightEye, lightCenter, lightUp);
-      glm::mat4 lightProjection =
+      const glm::mat4 lightView = glm::lookAt(lightEye, lightCenter, lightUp);
+      const glm::mat4 lightProjection =
           glm::ortho(-150.0f, 150.0f, -150.0f, 150.0f, 1.0f, 500.0f);
-      glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+      const glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
       lightManager->updateLightSpaceMatrix(moonLightID, lightSpaceMatrix);
     }
@@ -1741,14 +1759,15 @@ class DomeDiorama {
     ubo.view = camera.getViewMatrix();
     ubo.proj = glm::perspective(
         glm::radians(45.0f),
-        swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 50000.0f);
+        swapChainExtent.width / static_cast<float>(swapChainExtent.height),
+        0.1f, 50000.0f);
     ubo.proj[1][1] *= -1;
 
     glm::vec3 camPos = glm::vec3(0.0f);
     if (camera.getMode() == CameraMode::ORBIT) {
-      float camX = 35.0f * sin(0.5f) * cos(0.0f);
-      float camY = 35.0f * cos(0.5f);
-      float camZ = 35.0f * sin(0.5f) * sin(0.0f);
+      const float camX = 35.0f * sin(0.5f) * cos(0.0f);
+      const float camY = 35.0f * cos(0.5f);
+      const float camZ = 35.0f * sin(0.5f) * sin(0.0f);
       camPos = glm::vec3(camX, camY, camZ);
     }
     ubo.eyePos = camPos;
@@ -1757,7 +1776,7 @@ class DomeDiorama {
   }
 
   void populateDebugMessengerCreateInfo(
-      VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+      VkDebugUtilsMessengerCreateInfoEXT& createInfo) const {
     createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     createInfo.messageSeverity =
@@ -1875,12 +1894,13 @@ class DomeDiorama {
                "Depth image view created successfully");
   }
 
-  bool isDeviceSuitable(VkPhysicalDevice device) {
-    QueueFamilyIndices indices = findQueueFamilies(device);
-    bool extensionsSupported = checkDeviceExtensionSupport(device);
+  bool isDeviceSuitable(VkPhysicalDevice dev) const {
+    const QueueFamilyIndices queueIndices = findQueueFamilies(dev);
+    const bool extensionsSupported = checkDeviceExtensionSupport(dev);
     bool swapChainAdequate = false;
     if (extensionsSupported) {
-      SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+      const SwapChainSupportDetails swapChainSupport =
+          querySwapChainSupport(dev);
       swapChainAdequate = !swapChainSupport.formats.empty() &&
                           !swapChainSupport.presentModes.empty();
     }
@@ -1891,18 +1911,18 @@ class DomeDiorama {
     VkPhysicalDeviceFeatures2 features2{};
     features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     features2.pNext = &dynamicRenderingFeatures;
-    vkGetPhysicalDeviceFeatures2(device, &features2);
+    vkGetPhysicalDeviceFeatures2(dev, &features2);
 
-    return indices.isComplete() && extensionsSupported && swapChainAdequate &&
-           dynamicRenderingFeatures.dynamicRendering;
+    return queueIndices.isComplete() && extensionsSupported &&
+           swapChainAdequate && dynamicRenderingFeatures.dynamicRendering;
   }
 
-  bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
+  bool checkDeviceExtensionSupport(VkPhysicalDevice dev) const {
     uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+    vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount,
                                          nullptr);
     std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+    vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount,
                                          availableExtensions.data());
     std::set<std::string> requiredExtensions(deviceExtensions.begin(),
                                              deviceExtensions.end());
@@ -1912,57 +1932,55 @@ class DomeDiorama {
     return requiredExtensions.empty();
   }
 
-  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const {
-    QueueFamilyIndices indices;
+  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice dev) const {
+    QueueFamilyIndices queueIndices;
     uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
-                                             nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(dev, &queueFamilyCount, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
+    vkGetPhysicalDeviceQueueFamilyProperties(dev, &queueFamilyCount,
                                              queueFamilies.data());
     int i = 0;
     for (const auto& queueFamily : queueFamilies) {
       if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-        indices.graphicsFamily = i;
+        queueIndices.graphicsFamily = i;
       }
       VkBool32 presentSupport = false;
-      vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+      vkGetPhysicalDeviceSurfaceSupportKHR(dev, i, surface, &presentSupport);
       if (presentSupport) {
-        indices.presentFamily = i;
+        queueIndices.presentFamily = i;
       }
-      if (indices.isComplete()) {
+      if (queueIndices.isComplete()) {
         break;
       }
       i++;
     }
-    return indices;
+    return queueIndices;
   }
 
-  SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) const {
+  SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice dev) const {
     SwapChainSupportDetails details;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(dev, surface,
                                               &details.capabilities);
     uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
-                                         nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(dev, surface, &formatCount, nullptr);
     if (formatCount != 0) {
       details.formats.resize(formatCount);
-      vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+      vkGetPhysicalDeviceSurfaceFormatsKHR(dev, surface, &formatCount,
                                            details.formats.data());
     }
     uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
-                                              &presentModeCount, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(dev, surface, &presentModeCount,
+                                              nullptr);
     if (presentModeCount != 0) {
       details.presentModes.resize(presentModeCount);
-      vkGetPhysicalDeviceSurfacePresentModesKHR(
-          device, surface, &presentModeCount, details.presentModes.data());
+      vkGetPhysicalDeviceSurfacePresentModesKHR(dev, surface, &presentModeCount,
+                                                details.presentModes.data());
     }
     return details;
   }
 
   VkSurfaceFormatKHR chooseSwapSurfaceFormat(
-      const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+      const std::vector<VkSurfaceFormatKHR>& availableFormats) const {
     for (const auto& availableFormat : availableFormats) {
       if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
           availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -1973,7 +1991,7 @@ class DomeDiorama {
   }
 
   VkPresentModeKHR chooseSwapPresentMode(
-      const std::vector<VkPresentModeKHR>& availablePresentModes) {
+      const std::vector<VkPresentModeKHR>& availablePresentModes) const {
     for (const auto& availablePresentMode : availablePresentModes) {
       if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
         return availablePresentMode;
@@ -1982,7 +2000,8 @@ class DomeDiorama {
     return VK_PRESENT_MODE_FIFO_KHR;
   }
 
-  VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+  VkExtent2D chooseSwapExtent(
+      const VkSurfaceCapabilitiesKHR& capabilities) const {
     if (capabilities.currentExtent.width !=
         std::numeric_limits<uint32_t>::max()) {
       return capabilities.currentExtent;
@@ -2001,7 +2020,7 @@ class DomeDiorama {
     }
   }
 
-  std::vector<const char*> getRequiredExtensions() {
+  std::vector<const char*> getRequiredExtensions() const {
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions;
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -2013,12 +2032,12 @@ class DomeDiorama {
     return extensions;
   }
 
-  bool checkValidationLayerSupport() {
+  bool checkValidationLayerSupport() const {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
     std::vector<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-    for (const char* layerName : validationLayers) {
+    for (const char* const layerName : validationLayers) {
       bool layerFound = false;
       for (const auto& layerProperties : availableLayers) {
         if (strcmp(layerName, layerProperties.layerName) == 0) {
@@ -2038,10 +2057,10 @@ class DomeDiorama {
     if (!file.is_open()) {
       throw std::runtime_error("failed to open file!");
     }
-    size_t fileSize = (size_t)file.tellg();
+    const size_t fileSize = static_cast<size_t>(file.tellg());
     std::vector<char> buffer(fileSize);
     file.seekg(0);
-    file.read(buffer.data(), fileSize);
+    file.read(buffer.data(), static_cast<std::streamsize>(fileSize));
     file.close();
     return buffer;
   }
@@ -2066,25 +2085,29 @@ class DomeDiorama {
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
 
-    auto extensions = getRequiredExtensions();
+    const auto extensions = getRequiredExtensions();
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
 
-    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
     if (enableValidationLayers) {
       createInfo.enabledLayerCount =
           static_cast<uint32_t>(validationLayers.size());
       createInfo.ppEnabledLayerNames = validationLayers.data();
 
+      VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
       populateDebugMessengerCreateInfo(debugCreateInfo);
-      createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+      createInfo.pNext = &debugCreateInfo;
+
+      if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create instance!");
+      }
     } else {
       createInfo.enabledLayerCount = 0;
       createInfo.pNext = nullptr;
-    }
 
-    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create instance!");
+      if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create instance!");
+      }
     }
   }
 
@@ -2101,9 +2124,10 @@ class DomeDiorama {
     return shaderModule;
   }
 
-  static void framebufferResizeCallback(GLFWwindow* window, int width,
+  static void framebufferResizeCallback(GLFWwindow* win, int width,
                                         int height) {
-    auto app = reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(window));
+    auto* const app =
+        reinterpret_cast<DomeDiorama*>(glfwGetWindowUserPointer(win));
     app->framebufferResized = true;
   }
 
@@ -2111,7 +2135,7 @@ class DomeDiorama {
   debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                 VkDebugUtilsMessageTypeFlagsEXT messageType,
                 const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                void* pUserData) {
+                void* /*pUserData*/) {
     std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
     return VK_FALSE;
   }
@@ -2144,10 +2168,10 @@ class DomeDiorama {
     }
   }
 
-  void createScene() {
+ void createScene() {
     Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
 
-    MaterialID sunMaterialID =
+    const MaterialID sunMaterialID =
         materialManager->registerMaterial(MaterialBuilder()
                                               .name("Sun Material")
                                               .albedoColor(1.0f, 0.9f, 0.6f)
@@ -2155,7 +2179,7 @@ class DomeDiorama {
                                               .roughness(1.0f)
                                               .metallic(0.0f));
 
-    MaterialID moonMaterialID =
+    const MaterialID moonMaterialID =
         materialManager->registerMaterial(MaterialBuilder()
                                               .name("Moon Material")
                                               .albedoColor(0.7f, 0.7f, 0.8f)
@@ -2163,7 +2187,7 @@ class DomeDiorama {
                                               .roughness(0.8f)
                                               .metallic(0.0f));
 
-    MaterialID sandMaterialID = materialManager->registerMaterial(
+    const MaterialID sandMaterialID = materialManager->registerMaterial(
         MaterialBuilder()
             .name("Sand Material")
             .albedoMap("./Models/textures/gravelly_sand_diff_1k.jpg")
@@ -2173,38 +2197,38 @@ class DomeDiorama {
             .heightScale(0.02f)
             .textureScale(40.0f));
 
-    MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
-    MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
+    const MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
+    const MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
         100.0f, 100, 10.0f, 2.0f, 2, 0.6f, 42);
 
-    Object sun = ObjectBuilder()
-                     .name("Sun")
-                     .position(0.0f, 0.0f, 0.0f)
-                     .mesh(sphereMesh)
-                     .material(sunMaterialID)
-                     .scale(1.0f)
-                     .build();
-
-    Object moon = ObjectBuilder()
-                      .name("Moon")
-                      .position(0.0f, 0.0f, 0.0f)
-                      .mesh(sphereMesh)
-                      .material(moonMaterialID)
-                      .scale(0.8f)
-                      .build();
-
-    Object sandPlane = ObjectBuilder()
-                           .name("Sand Terrain")
+    const Object sun = ObjectBuilder()
+                           .name("Sun")
                            .position(0.0f, 0.0f, 0.0f)
-                           .mesh(sandTerrainMesh)
-                           .material(sandMaterialID)
+                           .mesh(sphereMesh)
+                           .material(sunMaterialID)
+                           .scale(1.0f)
                            .build();
+
+    const Object moon = ObjectBuilder()
+                            .name("Moon")
+                            .position(0.0f, 0.0f, 0.0f)
+                            .mesh(sphereMesh)
+                            .material(moonMaterialID)
+                            .scale(0.8f)
+                            .build();
+
+    const Object sandPlane = ObjectBuilder()
+                                 .name("Sand Terrain")
+                                 .position(0.0f, 0.0f, 0.0f)
+                                 .mesh(sandTerrainMesh)
+                                 .material(sandMaterialID)
+                                 .build();
 
     sceneObjects.push_back(sun);
     sceneObjects.push_back(moon);
     sceneObjects.push_back(sandPlane);
 
-    const Mesh* terrainMesh = meshManager->getMesh(sandTerrainMesh);
+    const Mesh* const terrainMesh = meshManager->getMesh(sandTerrainMesh);
 
     PlantSpawnConfig plantConfig;
     plantConfig.numCacti = 150;
@@ -2218,37 +2242,37 @@ class DomeDiorama {
 
     plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
 
-    Light sunLight = LightBuilder()
-                         .type(LightType::Directional)
-                         .name("Sun Light")
-                         .direction(0.0f, -1.0f, 0.0f)
-                         .color(1.0f, 0.95f, 0.8f)
-                         .intensity(5.0f)
-                         .castsShadows(true)
-                         .build();
+    const Light sunLight = LightBuilder()
+                               .type(LightType::Directional)
+                               .name("Sun Light")
+                               .direction(0.0f, -1.0f, 0.0f)
+                               .color(1.0f, 0.95f, 0.8f)
+                               .intensity(5.0f)
+                               .castsShadows(true)
+                               .build();
 
-    Light moonLight = LightBuilder()
-                          .type(LightType::Directional)
-                          .name("Moon Light")
-                          .direction(0.0f, -1.0f, 0.0f)
-                          .color(0.6f, 0.7f, 1.0f)
-                          .intensity(0.3f)
-                          .castsShadows(true)
-                          .build();
+    const Light moonLight = LightBuilder()
+                                .type(LightType::Directional)
+                                .name("Moon Light")
+                                .direction(0.0f, -1.0f, 0.0f)
+                                .color(0.6f, 0.7f, 1.0f)
+                                .intensity(0.3f)
+                                .castsShadows(true)
+                                .build();
 
-    Light accentLight = LightBuilder()
-                            .type(LightType::Point)
-                            .name("Accent Light")
-                            .position(-300.0f, 200.0f, 300.0f)
-                            .color(1.0f, 0.8f, 0.6f)
-                            .intensity(2000.0f)
-                            .build();
+    const Light accentLight = LightBuilder()
+                                  .type(LightType::Point)
+                                  .name("Accent Light")
+                                  .position(-300.0f, 200.0f, 300.0f)
+                                  .color(1.0f, 0.8f, 0.6f)
+                                  .intensity(2000.0f)
+                                  .build();
 
     sunLightID = lightManager->addLight(sunLight);
     moonLightID = lightManager->addLight(moonLight);
     static_cast<void>(lightManager->addLight(accentLight));
 
-    MaterialID particleMaterialID =
+    const MaterialID particleMaterialID =
         materialManager->registerMaterial(MaterialBuilder()
                                               .name("Particle Material")
                                               .albedoColor(1.0f, 1.0f, 1.0f)
@@ -2256,20 +2280,20 @@ class DomeDiorama {
                                               .metallic(0.0f)
                                               .transparent(true));
 
-    FireEmitter* fireEmitter = FireEmitterBuilder()
-                                   .name("Fire Emitter")
-                                   .position(0.0f, 0.5f, 0.0f)
-                                   .maxParticles(500)
-                                   .particleLifetime(2.0f)
-                                   .material(particleMaterialID)
-                                   .waveFrequency(2.0f)
-                                   .waveAmplitude(0.5f)
-                                   .baseColor(1.0f, 0.9f, 0.1f)
-                                   .tipColor(1.0f, 0.3f, 0.0f)
-                                   .upwardSpeed(2.0f)
-                                   .spawnRadius(0.2f)
-                                   .particleScale(0.5f)
-                                   .build();
+    FireEmitter* const fireEmitter = FireEmitterBuilder()
+                                         .name("Fire Emitter")
+                                         .position(0.0f, 0.5f, 0.0f)
+                                         .maxParticles(500)
+                                         .particleLifetime(2.0f)
+                                         .material(particleMaterialID)
+                                         .waveFrequency(2.0f)
+                                         .waveAmplitude(0.5f)
+                                         .baseColor(1.0f, 0.9f, 0.1f)
+                                         .tipColor(1.0f, 0.3f, 0.0f)
+                                         .upwardSpeed(2.0f)
+                                         .spawnRadius(0.2f)
+                                         .particleScale(0.5f)
+                                         .build();
 
     particleManager->registerEmitter(fireEmitter);
 
@@ -2292,9 +2316,9 @@ int main() {
   Debug::setEnabled(Debug::Category::RENDERING, DEBUG_RENDERING);
   Debug::setEnabled(Debug::Category::VULKAN, DEBUG_VULKAN);
 
-  DomeDiorama app;
   try {
-    app.run();
+    DomeDiorama application;
+    application.run();
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;

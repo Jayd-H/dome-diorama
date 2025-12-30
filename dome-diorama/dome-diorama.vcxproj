@@ -147,7 +147,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MaterialManager.cpp" />
     <ClCompile Include="MeshManager.cpp" />
-    <ClCompile Include="Object.cpp" />
     <ClCompile Include="ParticleManager.cpp" />
     <ClCompile Include="PlantManager.cpp" />
     <ClCompile Include="PostProcessing.cpp" />
