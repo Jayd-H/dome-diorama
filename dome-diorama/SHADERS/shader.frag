@@ -1,4 +1,5 @@
 #version 450
+#extension GL_EXT_nonuniform_qualifier : require
 
 layout(binding = 0, set = 0) uniform UniformBufferObject {
     mat4 view;
@@ -7,6 +8,7 @@ layout(binding = 0, set = 0) uniform UniformBufferObject {
 } ubo;
 
 struct LightData {
+    mat4 lightSpaceMatrix;
     vec3 position;
     int type;
     vec3 direction;
@@ -19,12 +21,14 @@ struct LightData {
     float outerCutOff;
     int castsShadows;
     int shadowMapIndex;
-    mat4 lightSpaceMatrix;
+    float padding;
 };
 
 layout(binding = 1, set = 0) uniform LightBuffer {
     LightData lights[8];
     int numLights;
+    int numShadowMaps;
+    float padding[2];
 } lightBuffer;
 
 layout(binding = 0, set = 1) uniform MaterialProperties {
@@ -47,7 +51,7 @@ layout(binding = 5, set = 1) uniform sampler2D emissiveMap;
 layout(binding = 6, set = 1) uniform sampler2D heightMap;
 layout(binding = 7, set = 1) uniform sampler2D aoMap;
 
-layout(binding = 0, set = 2) uniform sampler2D shadowMaps[8];
+layout(binding = 0, set = 2) uniform sampler2DShadow shadowMaps[4];
 
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
@@ -58,20 +62,40 @@ layout(location = 0) out vec4 outColor;
 
 const float PI = 3.14159265359;
 
+float sampleShadowMap(int index, vec3 shadowCoord) {
+    switch (index) {
+        case 0: return texture(shadowMaps[0], shadowCoord);
+        case 1: return texture(shadowMaps[1], shadowCoord);
+        case 2: return texture(shadowMaps[2], shadowCoord);
+        case 3: return texture(shadowMaps[3], shadowCoord);
+        default: return 1.0;
+    }
+}
+
+vec2 getShadowMapTexelSize(int index) {
+    switch (index) {
+        case 0: return 1.0 / textureSize(shadowMaps[0], 0);
+        case 1: return 1.0 / textureSize(shadowMaps[1], 0);
+        case 2: return 1.0 / textureSize(shadowMaps[2], 0);
+        case 3: return 1.0 / textureSize(shadowMaps[3], 0);
+        default: return vec2(1.0 / 2048.0);
+    }
+}
+
 float calculateShadow(int lightIndex, vec3 fragPos, vec3 normal, vec3 lightDir) {
     if (lightBuffer.lights[lightIndex].castsShadows == 0) {
         return 1.0;
     }
     
     int shadowMapIndex = lightBuffer.lights[lightIndex].shadowMapIndex;
-    if (shadowMapIndex < 0) {
+    if (shadowMapIndex < 0 || shadowMapIndex >= 4) {
         return 1.0;
     }
     
     vec4 fragPosLightSpace = lightBuffer.lights[lightIndex].lightSpaceMatrix * vec4(fragPos, 1.0);
     
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    projCoords = projCoords * 0.5 + 0.5;
+    projCoords.xy = projCoords.xy * 0.5 + 0.5;
     
     if (projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || 
         projCoords.y < 0.0 || projCoords.y > 1.0) {
@@ -82,12 +106,15 @@ float calculateShadow(int lightIndex, vec3 fragPos, vec3 normal, vec3 lightDir) 
     float bias = 0.0005 * tan(acos(cosTheta));
     bias = clamp(bias, 0.0, 0.001);
     
+    float currentDepth = projCoords.z - bias;
+    
     float shadow = 0.0;
-    vec2 texelSize = 1.0 / textureSize(shadowMaps[shadowMapIndex], 0);
-    for(int x = -2; x <= 2; ++x) {
-        for(int y = -2; y <= 2; ++y) {
-            float pcfDepth = texture(shadowMaps[shadowMapIndex], projCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += (projCoords.z - bias) > pcfDepth ? 0.0 : 1.0;
+    vec2 texelSize = getShadowMapTexelSize(shadowMapIndex);
+    
+    for (int x = -2; x <= 2; ++x) {
+        for (int y = -2; y <= 2; ++y) {
+            vec2 offset = vec2(x, y) * texelSize;
+            shadow += sampleShadowMap(shadowMapIndex, vec3(projCoords.xy + offset, currentDepth));
         }
     }
     shadow /= 25.0;

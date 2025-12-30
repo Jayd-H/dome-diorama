@@ -64,7 +64,7 @@ const bool DEBUG_INPUT = false;
 const bool DEBUG_RENDERING = false;
 const bool DEBUG_VULKAN = false;
 #else
-const bool enableValidationLayers = false;
+const bool enableValidationLayers = true;
 const bool DEBUG_MAIN = true;
 const bool DEBUG_CAMERA = false;
 const bool DEBUG_INPUT = false;
@@ -1295,7 +1295,7 @@ class DomeDiorama {
     }
   }
 
- void drawFrame() {
+  void drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE,
                     UINT64_MAX);
 
@@ -1335,8 +1335,25 @@ class DomeDiorama {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo,
-                      inFlightFences[currentFrame]) != VK_SUCCESS) {
+    result = vkQueueSubmit(graphicsQueue, 1, &submitInfo,
+                           inFlightFences[currentFrame]);
+    if (result != VK_SUCCESS) {
+      std::cerr << "vkQueueSubmit failed with error code: " << result
+                << std::endl;
+      switch (result) {
+        case VK_ERROR_OUT_OF_HOST_MEMORY:
+          std::cerr << "  VK_ERROR_OUT_OF_HOST_MEMORY" << std::endl;
+          break;
+        case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+          std::cerr << "  VK_ERROR_OUT_OF_DEVICE_MEMORY" << std::endl;
+          break;
+        case VK_ERROR_DEVICE_LOST:
+          std::cerr << "  VK_ERROR_DEVICE_LOST" << std::endl;
+          break;
+        default:
+          std::cerr << "  Unknown error" << std::endl;
+          break;
+      }
       throw std::runtime_error("Failed to submit draw command buffer!");
     }
 
@@ -1389,7 +1406,7 @@ class DomeDiorama {
     vkDestroySwapchainKHR(device, swapChain, nullptr);
   }
 
-void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+  void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -1398,9 +1415,11 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
       throw std::runtime_error("Failed to begin recording command buffer!");
     }
 
-    for (size_t i = 0; i < lightManager->getLightCount(); i++) {
-      Light* light = lightManager->getLight(i + 1);
-      if (!light || !light->castsShadows) continue;
+    const auto& shadowMaps = lightManager->getShadowMaps();
+
+    for (size_t smIdx = 0; smIdx < shadowMaps.size(); smIdx++) {
+      const auto& shadowMap = shadowMaps[smIdx];
+      Light* light = shadowMap.light;
 
       VkImageMemoryBarrier2 shadowBarrier{};
       shadowBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -1415,7 +1434,9 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
       shadowBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
       shadowBarrier.newLayout =
           VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-      shadowBarrier.image = light->shadowMap;
+      shadowBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      shadowBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      shadowBarrier.image = shadowMap.image;
       shadowBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
       shadowBarrier.subresourceRange.baseMipLevel = 0;
       shadowBarrier.subresourceRange.levelCount = 1;
@@ -1431,7 +1452,7 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
 
       VkRenderingAttachmentInfo depthAttachment{};
       depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-      depthAttachment.imageView = light->shadowMapView;
+      depthAttachment.imageView = shadowMap.imageView;
       depthAttachment.imageLayout =
           VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
       depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1442,7 +1463,10 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
       renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
       renderingInfo.renderArea = {{0, 0}, {SHADOW_MAP_SIZE, SHADOW_MAP_SIZE}};
       renderingInfo.layerCount = 1;
+      renderingInfo.colorAttachmentCount = 0;
+      renderingInfo.pColorAttachments = nullptr;
       renderingInfo.pDepthAttachment = &depthAttachment;
+      renderingInfo.pStencilAttachment = nullptr;
 
       vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
@@ -1463,7 +1487,7 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
       scissor.extent = {SHADOW_MAP_SIZE, SHADOW_MAP_SIZE};
       vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-      vkCmdSetDepthBias(commandBuffer, 1.0f, 0.0f, 1.5f);
+      vkCmdSetDepthBias(commandBuffer, 1.25f, 0.0f, 1.75f);
 
       struct ShadowPushConstants {
         glm::mat4 lightSpaceMatrix;
@@ -1474,14 +1498,16 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
 
       for (const auto& object : sceneObjects) {
         if (!object.visible) continue;
+        if (object.meshID == INVALID_MESH_ID) continue;
+
+        Mesh* mesh = meshManager->getMesh(object.meshID);
+        if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
 
         shadowPush.model = object.getModelMatrix();
 
         vkCmdPushConstants(commandBuffer, shadowPipelineLayout,
                            VK_SHADER_STAGE_VERTEX_BIT, 0,
                            sizeof(ShadowPushConstants), &shadowPush);
-
-        Mesh* mesh = meshManager->getMesh(object.meshID);
 
         VkBuffer vertexBuffers[] = {mesh->vertexBuffer};
         VkDeviceSize offsets[] = {0};
@@ -1530,14 +1556,19 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
 
     for (const auto& object : sceneObjects) {
       if (!object.visible) continue;
+      if (object.meshID == INVALID_MESH_ID) continue;
+      if (object.materialID == INVALID_MATERIAL_ID) continue;
+
+      Mesh* mesh = meshManager->getMesh(object.meshID);
+      Material* material = materialManager->getMaterial(object.materialID);
+
+      if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
+      if (!material || material->descriptorSet == VK_NULL_HANDLE) continue;
 
       glm::mat4 modelMatrix = object.getModelMatrix();
       vkCmdPushConstants(commandBuffer, pipelineLayout,
                          VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4),
                          &modelMatrix);
-
-      Mesh* mesh = meshManager->getMesh(object.meshID);
-      Material* material = materialManager->getMaterial(object.materialID);
 
       VkBuffer vertexBuffers[] = {mesh->vertexBuffer};
       VkDeviceSize offsets[] = {0};
@@ -1545,13 +1576,14 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
       vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer, 0,
                            VK_INDEX_TYPE_UINT16);
 
-      std::array<VkDescriptorSet, 3> setsToHind = {
+      std::array<VkDescriptorSet, 3> descriptorSetsToBind = {
           descriptorSets[currentFrame], material->descriptorSet,
           lightManager->getShadowDescriptorSet()};
-      vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              pipelineLayout, 0,
-                              static_cast<uint32_t>(setsToHind.size()),
-                              setsToHind.data(), 0, nullptr);
+
+      vkCmdBindDescriptorSets(
+          commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0,
+          static_cast<uint32_t>(descriptorSetsToBind.size()),
+          descriptorSetsToBind.data(), 0, nullptr);
 
       vkCmdDrawIndexed(commandBuffer,
                        static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
@@ -1572,6 +1604,8 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     swapchainBarrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
     swapchainBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     swapchainBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    swapchainBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    swapchainBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     swapchainBarrier.image = swapChainImages[imageIndex];
     swapchainBarrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
@@ -1592,9 +1626,6 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     swapchainBarrier.dstAccessMask = 0;
     swapchainBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     swapchainBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    dependencyInfo.imageMemoryBarrierCount = 1;
-    dependencyInfo.pImageMemoryBarriers = &swapchainBarrier;
 
     vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
@@ -2113,7 +2144,7 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     }
   }
 
-void createScene() {
+  void createScene() {
     Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
 
     MaterialID sunMaterialID =
