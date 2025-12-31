@@ -65,4 +65,5 @@ class PlantManager {
   void loadTreeModels();
   float getTerrainHeightAt(const Mesh* terrainMesh, float x, float z);
   glm::vec3 getTerrainNormalAt(const Mesh* terrainMesh, float x, float z);
+  float calculateMeshBottomOffset(const Mesh* mesh);
 };

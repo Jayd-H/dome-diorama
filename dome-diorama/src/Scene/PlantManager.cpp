@@ -138,6 +138,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
   std::uniform_real_distribution<float> angleDist(0.0f, glm::two_pi<float>());
   std::uniform_real_distribution<float> rotationDist(0.0f, 360.0f);
   std::uniform_real_distribution<float> varianceDist(-1.0f, 1.0f);
+  std::uniform_real_distribution<float> sinkDist(0.2f, 0.5f);
 
   for (int i = 0; i < config.numCacti; i++) {
     float radius = radiusDist(rng);
@@ -173,13 +174,22 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
     float yaw = baseYaw + rotationVariance;
 
     float baseScale = 1.0f;
-    float scaleX = baseScale + varianceDist(rng) * config.scaleVariance;
-    float scaleY = baseScale + varianceDist(rng) * config.scaleVariance;
-    float scaleZ = baseScale + varianceDist(rng) * config.scaleVariance;
+    float scaleVarianceX = varianceDist(rng) * config.scaleVariance;
+    float scaleVarianceY = varianceDist(rng) * config.scaleVariance;
+    float scaleVarianceZ = varianceDist(rng) * config.scaleVariance;
+
+    float scaleX = baseScale + scaleVarianceX;
+    float scaleY = baseScale + scaleVarianceY;
+    float scaleZ = baseScale + scaleVarianceZ;
+
+    const Mesh* mesh = meshManager->getMesh(cactusMeshes[stage][variant]);
+    float yOffset = calculateMeshBottomOffset(mesh);
+    float scaledYOffset = yOffset * scaleY;
+    float sinkAmount = sinkDist(rng);
 
     Object cactusObj = ObjectBuilder()
                            .name("Cactus_" + std::to_string(i))
-                           .position(x, y, z)
+                           .position(x, y - scaledYOffset - sinkAmount, z)
                            .rotationEuler(pitch, yaw, roll)
                            .scale(scaleX, scaleY, scaleZ)
                            .mesh(cactusMeshes[stage][variant])
@@ -221,13 +231,22 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
     float yaw = baseYaw + rotationVariance;
 
     float baseScale = 1.0f;
-    float scaleX = baseScale + varianceDist(rng) * config.scaleVariance;
-    float scaleY = baseScale + varianceDist(rng) * config.scaleVariance;
-    float scaleZ = baseScale + varianceDist(rng) * config.scaleVariance;
+    float scaleVarianceX = varianceDist(rng) * config.scaleVariance;
+    float scaleVarianceY = varianceDist(rng) * config.scaleVariance;
+    float scaleVarianceZ = varianceDist(rng) * config.scaleVariance;
+
+    float scaleX = baseScale + scaleVarianceX;
+    float scaleY = baseScale + scaleVarianceY;
+    float scaleZ = baseScale + scaleVarianceZ;
+
+    const Mesh* mesh = meshManager->getMesh(treeMeshes[stage]);
+    float yOffset = calculateMeshBottomOffset(mesh);
+    float scaledYOffset = yOffset * scaleY;
+    float sinkAmount = sinkDist(rng);
 
     Object treeObj = ObjectBuilder()
                          .name("Tree_" + std::to_string(i))
-                         .position(x, y, z)
+                         .position(x, y - scaledYOffset - sinkAmount, z)
                          .rotationEuler(pitch, yaw, roll)
                          .scale(scaleX, scaleY, scaleZ)
                          .mesh(treeMeshes[stage])
@@ -240,6 +259,20 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
 
   Debug::log(Debug::Category::RENDERING, "PlantManager: Successfully spawned ",
              plants.size(), " plants");
+}
+
+float PlantManager::calculateMeshBottomOffset(const Mesh* mesh) {
+  if (!mesh || mesh->vertices.empty()) {
+    return 0.0f;
+  }
+
+  float minY = std::numeric_limits<float>::max();
+
+  for (const auto& vertex : mesh->vertices) {
+    minY = std::min(minY, vertex.pos.y);
+  }
+
+  return minY;
 }
 
 void PlantManager::growPlant(std::vector<Object>& sceneObjects,
