@@ -1676,7 +1676,7 @@ class DomeDiorama final {
     }
   }
 
- void updateUniformBuffer(uint32_t currentImage) {
+void updateUniformBuffer(uint32_t currentImage) {
     static const auto startTime = std::chrono::high_resolution_clock::now();
     const auto currentTime = std::chrono::high_resolution_clock::now();
     const float time =
@@ -1687,95 +1687,27 @@ class DomeDiorama final {
     worldState.update(deltaTime);
     particleManager->update(deltaTime);
 
+    const glm::vec3 sunDirection = glm::normalize(glm::vec3(0.5f, -1.0f, 0.3f));
     const float sunOrbitRadius = 150.0f;
-    const glm::vec3 sunDirection = worldState.getSunDirection();
-    const glm::vec3 sunPosition = sunDirection * sunOrbitRadius;
+    const glm::vec3 sunPosition = -sunDirection * sunOrbitRadius;
     sceneObjects[0].setPosition(sunPosition);
 
-    const float moonOrbitRadius = 130.0f;
-    const glm::vec3 moonDirection = worldState.getMoonDirection();
-    const glm::vec3 moonPosition = moonDirection * moonOrbitRadius;
-    sceneObjects[1].setPosition(moonPosition);
-
-    Light* const sunLight = lightManager->getLight(sunLightID);
+   Light* const sunLight = lightManager->getLight(sunLightID);
     if (sunLight) {
-      sunLight->direction = glm::normalize(-sunDirection);
-      const float sunHeight = sunDirection.y;
-      float intensity = 0.0f;
+      sunLight->direction = sunDirection;
+      sunLight->intensity = 5.0f;
+      sunLight->color = glm::vec3(1.0f, 0.95f, 0.85f);
 
-      if (sunHeight > 0.0f) {
-        intensity = glm::smoothstep(0.0f, 0.3f, sunHeight) * 8.0f;
-      }
-
-      sunLight->intensity = intensity * worldState.getSunIntensity();
-
-      glm::vec3 sunColor;
-      if (sunHeight < 0.0f) {
-        sunColor = glm::vec3(0.0f, 0.0f, 0.0f);
-      } else if (sunHeight < 0.2f) {
-        const float t = sunHeight / 0.2f;
-        const glm::vec3 sunriseColor = glm::vec3(1.0f, 0.4f, 0.1f);
-        const glm::vec3 dayColor = glm::vec3(1.0f, 0.95f, 0.85f);
-        sunColor = glm::mix(sunriseColor, dayColor, t);
-      } else if (sunHeight > 0.8f) {
-        sunColor = glm::vec3(1.0f, 1.0f, 0.95f);
-      } else {
-        const float t = (sunHeight - 0.2f) / 0.6f;
-        const glm::vec3 dayColor = glm::vec3(1.0f, 0.95f, 0.85f);
-        const glm::vec3 noonColor = glm::vec3(1.0f, 1.0f, 0.95f);
-        sunColor = glm::mix(dayColor, noonColor, t);
-      }
-
-      sunLight->color = sunColor;
-
-      const glm::vec3 lightEye = sunPosition;
-      const glm::vec3 lightCenter = glm::vec3(0.0f, 0.0f, 0.0f);
+      const glm::vec3 sceneCenter = glm::vec3(0.0f, 5.0f, 0.0f);
+      const glm::vec3 lightEye = sceneCenter - sunDirection * 300.0f;
       const glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-      const glm::mat4 lightView = glm::lookAt(lightEye, lightCenter, lightUp);
+      const glm::mat4 lightView = glm::lookAt(lightEye, sceneCenter, lightUp);
       const glm::mat4 lightProjection =
-          glm::ortho(-150.0f, 150.0f, -150.0f, 150.0f, 1.0f, 500.0f);
+          glm::ortho(-200.0f, 200.0f, -200.0f, 200.0f, 0.1f, 600.0f);
       const glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
       lightManager->updateLightSpaceMatrix(sunLightID, lightSpaceMatrix);
-    }
-
-    Light* const moonLight = lightManager->getLight(moonLightID);
-    if (moonLight) {
-      moonLight->direction = glm::normalize(-moonDirection);
-      const float moonHeight = moonDirection.y;
-      float intensity = 0.0f;
-
-      if (moonHeight > 0.0f) {
-        intensity = glm::smoothstep(0.0f, 0.3f, moonHeight) * 2.0f;
-      }
-
-      moonLight->intensity = intensity * worldState.getMoonIntensity();
-
-      glm::vec3 moonColor;
-      if (moonHeight < 0.0f) {
-        moonColor = glm::vec3(0.0f, 0.0f, 0.0f);
-      } else if (moonHeight < 0.15f) {
-        const float t = moonHeight / 0.15f;
-        const glm::vec3 horizonColor = glm::vec3(0.3f, 0.35f, 0.5f);
-        const glm::vec3 nightColor = glm::vec3(0.4f, 0.5f, 0.7f);
-        moonColor = glm::mix(horizonColor, nightColor, t);
-      } else {
-        moonColor = glm::vec3(0.4f, 0.5f, 0.7f);
-      }
-
-      moonLight->color = moonColor;
-
-      const glm::vec3 lightEye = moonPosition;
-      const glm::vec3 lightCenter = glm::vec3(0.0f, 0.0f, 0.0f);
-      const glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-      const glm::mat4 lightView = glm::lookAt(lightEye, lightCenter, lightUp);
-      const glm::mat4 lightProjection =
-          glm::ortho(-150.0f, 150.0f, -150.0f, 150.0f, 1.0f, 500.0f);
-      const glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-      lightManager->updateLightSpaceMatrix(moonLightID, lightSpaceMatrix);
     }
 
     lightManager->updateLightBuffer();
@@ -2247,13 +2179,6 @@ class DomeDiorama final {
                            .scale(1.0f)
                            .build();
 
-    const Object moon = ObjectBuilder()
-                            .name("Moon")
-                            .position(0.0f, 0.0f, 0.0f)
-                            .mesh(sphereMesh)
-                            .material(moonMaterialID)
-                            .scale(0.8f)
-                            .build();
 
     const Object sandPlane = ObjectBuilder()
                                  .name("Sand Terrain")
@@ -2263,7 +2188,6 @@ class DomeDiorama final {
                                  .build();
 
     sceneObjects.push_back(sun);
-    sceneObjects.push_back(moon);
     sceneObjects.push_back(sandPlane);
 
     const Mesh* const terrainMesh = meshManager->getMesh(sandTerrainMesh);
@@ -2289,27 +2213,7 @@ class DomeDiorama final {
                                .castsShadows(true)
                                .build();
 
-    const Light moonLight = LightBuilder()
-                                .type(LightType::Directional)
-                                .name("Moon Light")
-                                .direction(0.0f, -1.0f, 0.0f)
-                                .color(0.6f, 0.7f, 1.0f)
-                                .intensity(0.3f)
-                                .castsShadows(true)
-                                .build();
-
-    const Light accentLight = LightBuilder()
-                                  .type(LightType::Point)
-                                  .name("Accent Light")
-                                  .position(-300.0f, 200.0f, 300.0f)
-                                  .color(1.0f, 0.8f, 0.6f)
-                                  .intensity(2000.0f)
-                                  .build();
-
     sunLightID = lightManager->addLight(sunLight);
-    moonLightID = lightManager->addLight(moonLight);
-    static_cast<void>(lightManager->addLight(accentLight));
-
     const MaterialID particleMaterialID =
         materialManager->registerMaterial(MaterialBuilder()
                                               .name("Particle Material")

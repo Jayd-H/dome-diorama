@@ -102,7 +102,7 @@ float calculateShadow(int lightIndex, vec3 fragPos, vec3 normal, vec3 lightDir) 
         return 1.0;
     }
     
-    float bias = max(0.0005 * (1.0 - dot(normal, lightDir)), 0.0001);
+    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
     float currentDepth = projCoords.z - bias;
     
     float shadow = 0.0;
