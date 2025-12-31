@@ -78,7 +78,7 @@ vec2 getShadowMapTexelSize(int index) {
         case 1: return 1.0 / textureSize(shadowMaps[1], 0);
         case 2: return 1.0 / textureSize(shadowMaps[2], 0);
         case 3: return 1.0 / textureSize(shadowMaps[3], 0);
-        default: return vec2(1.0 / 2048.0);
+        default: return vec2(1.0 / 4096.0);
     }
 }
 
@@ -102,22 +102,19 @@ float calculateShadow(int lightIndex, vec3 fragPos, vec3 normal, vec3 lightDir) 
         return 1.0;
     }
     
-    float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
-    float bias = 0.0005 * tan(acos(cosTheta));
-    bias = clamp(bias, 0.0, 0.001);
-    
+    float bias = max(0.0005 * (1.0 - dot(normal, lightDir)), 0.0001);
     float currentDepth = projCoords.z - bias;
     
     float shadow = 0.0;
     vec2 texelSize = getShadowMapTexelSize(shadowMapIndex);
     
-    for (int x = -2; x <= 2; ++x) {
-        for (int y = -2; y <= 2; ++y) {
+    for (int x = -1; x <= 1; ++x) {
+        for (int y = -1; y <= 1; ++y) {
             vec2 offset = vec2(x, y) * texelSize;
             shadow += sampleShadowMap(shadowMapIndex, vec3(projCoords.xy + offset, currentDepth));
         }
     }
-    shadow /= 25.0;
+    shadow /= 9.0;
     
     return shadow;
 }

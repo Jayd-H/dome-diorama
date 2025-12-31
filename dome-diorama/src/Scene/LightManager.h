@@ -8,7 +8,7 @@
 
 constexpr uint32_t MAX_LIGHTS = 8;
 constexpr uint32_t MAX_SHADOW_CASTING_LIGHTS = 4;
-constexpr uint32_t SHADOW_MAP_SIZE = 2048;
+constexpr uint32_t SHADOW_MAP_SIZE = 16384;
 
 struct LightData {
   alignas(16) glm::mat4 lightSpaceMatrix;

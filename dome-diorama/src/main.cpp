@@ -11,20 +11,20 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "Util/Camera.h"
-#include "Util/Debug.h"
 #include "Particles/FireEmitter.h"
-#include "Util/Input.h"
-#include "Scene/LightManager.h"
+#include "Particles/ParticleManager.h"
+#include "Rendering/PostProcessing.h"
+#include "Rendering/RenderDevice.h"
 #include "Resources/MaterialManager.h"
 #include "Resources/MeshManager.h"
 #include "Resources/Object.h"
-#include "Particles/ParticleManager.h"
-#include "Scene/PlantManager.h"
-#include "Rendering/PostProcessing.h"
-#include "Rendering/RenderDevice.h"
 #include "Resources/TextureManager.h"
+#include "Scene/LightManager.h"
+#include "Scene/PlantManager.h"
 #include "Scene/WorldState.h"
+#include "Util/Camera.h"
+#include "Util/Debug.h"
+#include "Util/Input.h"
 
 #define GLM_FORCE_RADIANS
 #include <algorithm>
@@ -89,6 +89,8 @@ struct UniformBufferObject {
   alignas(16) glm::mat4 view;
   alignas(16) glm::mat4 proj;
   alignas(16) glm::vec3 eyePos;
+  alignas(4) float time;
+  alignas(16) glm::mat4 lightSpaceMatrices[MAX_SHADOW_CASTING_LIGHTS];
 };
 
 VkResult CreateDebugUtilsMessengerEXT(
@@ -1282,8 +1284,10 @@ class DomeDiorama final {
   }
 
   void createSyncObjects() {
+    const size_t swapChainImageCount = swapChainImages.size();
+
     imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores.resize(swapChainImageCount);
     inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
@@ -1296,17 +1300,26 @@ class DomeDiorama final {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
       if (vkCreateSemaphore(device, &semaphoreInfo, nullptr,
                             &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-          vkCreateSemaphore(device, &semaphoreInfo, nullptr,
-                            &renderFinishedSemaphores[i]) != VK_SUCCESS ||
           vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) !=
               VK_SUCCESS) {
         throw std::runtime_error(
             "Failed to create synchronization objects for a frame!");
       }
     }
+
+    for (size_t i = 0; i < swapChainImageCount; i++) {
+      if (vkCreateSemaphore(device, &semaphoreInfo, nullptr,
+                            &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create render finished semaphore!");
+      }
+    }
+
+    Debug::log(Debug::Category::VULKAN, "Created ", MAX_FRAMES_IN_FLIGHT,
+               " frame semaphores and ", swapChainImageCount,
+               " swapchain semaphores");
   }
 
-  void drawFrame() {
+ void drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE,
                     UINT64_MAX);
 
@@ -1344,7 +1357,7 @@ class DomeDiorama final {
     submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
     const std::array<VkSemaphore, 1> signalSemaphores = {
-        renderFinishedSemaphores[currentFrame]};
+        renderFinishedSemaphores[imageIndex]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores.data();
 
@@ -1430,6 +1443,9 @@ class DomeDiorama final {
 
     const auto& shadowMaps = lightManager->getShadowMaps();
 
+    Debug::log(Debug::Category::RENDERING, "Recording shadow passes for ",
+               shadowMaps.size(), " shadow maps");
+
     for (size_t smIdx = 0; smIdx < shadowMaps.size(); smIdx++) {
       const auto& shadowMap = shadowMaps[smIdx];
       Light* const light = shadowMap.light;
@@ -1500,7 +1516,7 @@ class DomeDiorama final {
       scissor.extent = {SHADOW_MAP_SIZE, SHADOW_MAP_SIZE};
       vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-      vkCmdSetDepthBias(commandBuffer, 1.25f, 0.0f, 1.75f);
+      vkCmdSetDepthBias(commandBuffer, 0.5f, 0.0f, 0.5f);
 
       struct ShadowPushConstants {
         glm::mat4 lightSpaceMatrix;
@@ -1509,6 +1525,7 @@ class DomeDiorama final {
 
       shadowPush.lightSpaceMatrix = light->lightSpaceMatrix;
 
+      uint32_t shadowObjectCount = 0;
       for (const auto& object : sceneObjects) {
         if (!object.visible) continue;
         if (object.meshID == INVALID_MESH_ID) continue;
@@ -1532,7 +1549,11 @@ class DomeDiorama final {
         vkCmdDrawIndexed(commandBuffer,
                          static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0,
                          0);
+        shadowObjectCount++;
       }
+
+      Debug::log(Debug::Category::RENDERING, "Shadow map ", smIdx, " rendered ",
+                 shadowObjectCount, " objects");
 
       vkCmdEndRendering(commandBuffer);
 
@@ -1568,6 +1589,7 @@ class DomeDiorama final {
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+    uint32_t mainObjectCount = 0;
     for (const auto& object : sceneObjects) {
       if (!object.visible) continue;
       if (object.meshID == INVALID_MESH_ID) continue;
@@ -1603,7 +1625,11 @@ class DomeDiorama final {
 
       vkCmdDrawIndexed(commandBuffer,
                        static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
+      mainObjectCount++;
     }
+
+    Debug::log(Debug::Category::RENDERING, "Main pass rendered ",
+               mainObjectCount, " objects");
 
     particleManager->render(
         commandBuffer, descriptorSets[currentFrame], particlePipelineLayout,
@@ -1770,6 +1796,19 @@ class DomeDiorama final {
       camPos = glm::vec3(camX, camY, camZ);
     }
     ubo.eyePos = camPos;
+    ubo.time = time;
+
+    const auto& shadowMaps = lightManager->getShadowMaps();
+    for (size_t i = 0; i < shadowMaps.size() && i < MAX_SHADOW_CASTING_LIGHTS;
+         i++) {
+      ubo.lightSpaceMatrices[i] = shadowMaps[i].light->lightSpaceMatrix;
+    }
+    for (size_t i = shadowMaps.size(); i < MAX_SHADOW_CASTING_LIGHTS; i++) {
+      ubo.lightSpaceMatrices[i] = glm::mat4(1.0f);
+    }
+
+    Debug::log(Debug::Category::RENDERING, "Copied ", shadowMaps.size(),
+               " light space matrices to UBO");
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
   }
@@ -2167,7 +2206,7 @@ class DomeDiorama final {
     }
   }
 
- void createScene() {
+  void createScene() {
     Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
 
     const MaterialID sunMaterialID =
