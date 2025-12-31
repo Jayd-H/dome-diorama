@@ -112,7 +112,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(ProjectDir)GLFW\include;$(ProjectDir)stb_image.h;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(ProjectDir)GLFW\include;$(ProjectDir)stb_image.h;$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -143,16 +143,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="LightManager.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="MaterialManager.cpp" />
-    <ClCompile Include="MeshManager.cpp" />
-    <ClCompile Include="ParticleManager.cpp" />
-    <ClCompile Include="PlantManager.cpp" />
-    <ClCompile Include="PostProcessing.cpp" />
-    <ClCompile Include="RenderDevice.cpp" />
-    <ClCompile Include="TextureManager.cpp" />
-    <ClCompile Include="WorldState.cpp" />
+    <ClCompile Include="src\Scene\LightManager.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Resources\MaterialManager.cpp" />
+    <ClCompile Include="src\Resources\MeshManager.cpp" />
+    <ClCompile Include="src\Particles\ParticleManager.cpp" />
+    <ClCompile Include="src\Scene\PlantManager.cpp" />
+    <ClCompile Include="src\Rendering\PostProcessing.cpp" />
+    <ClCompile Include="src\Rendering\RenderDevice.cpp" />
+    <ClCompile Include="src\Resources\TextureManager.cpp" />
+    <ClCompile Include="src\Scene\WorldState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SHADERS\shader.frag">
@@ -179,26 +179,26 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Camera.h" />
-    <ClInclude Include="Debug.h" />
-    <ClInclude Include="FireEmitter.h" />
-    <ClInclude Include="Input.h" />
-    <ClInclude Include="Light.h" />
-    <ClInclude Include="LightManager.h" />
-    <ClInclude Include="Material.h" />
-    <ClInclude Include="MaterialManager.h" />
-    <ClInclude Include="MeshManager.h" />
-    <ClInclude Include="Object.h" />
-    <ClInclude Include="ParticleEmitter.h" />
-    <ClInclude Include="ParticleManager.h" />
-    <ClInclude Include="PerlinNoise.h" />
-    <ClInclude Include="PlantManager.h" />
-    <ClInclude Include="PostProcessing.h" />
-    <ClInclude Include="RenderDevice.h" />
+    <ClInclude Include="src\Util\Camera.h" />
+    <ClInclude Include="src\Util\Debug.h" />
+    <ClInclude Include="src\Particles\FireEmitter.h" />
+    <ClInclude Include="src\Util\Input.h" />
+    <ClInclude Include="src\Scene\Light.h" />
+    <ClInclude Include="src\Scene\LightManager.h" />
+    <ClInclude Include="src\Resources\Material.h" />
+    <ClInclude Include="src\Resources\MaterialManager.h" />
+    <ClInclude Include="src\Resources\MeshManager.h" />
+    <ClInclude Include="src\Resources\Object.h" />
+    <ClInclude Include="src\Particles\ParticleEmitter.h" />
+    <ClInclude Include="src\Particles\ParticleManager.h" />
+    <ClInclude Include="src\Util\PerlinNoise.h" />
+    <ClInclude Include="src\Scene\PlantManager.h" />
+    <ClInclude Include="src\Rendering\PostProcessing.h" />
+    <ClInclude Include="src\Rendering\RenderDevice.h" />
     <ClInclude Include="stb_image.h" />
-    <ClInclude Include="Texture.h" />
-    <ClInclude Include="TextureManager.h" />
-    <ClInclude Include="WorldState.h" />
+    <ClInclude Include="src\Resources\Texture.h" />
+    <ClInclude Include="src\Resources\TextureManager.h" />
+    <ClInclude Include="src\Scene\WorldState.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SHADERS\postprocess.frag">

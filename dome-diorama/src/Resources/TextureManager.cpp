@@ -3,8 +3,8 @@
 
 #include <stdexcept>
 
-#include "Debug.h"
-#include "stb_image.h"
+#include "Util/Debug.h"
+#include "../stb_image.h"
 
 TextureManager::TextureManager(VkDevice dev, VkPhysicalDevice physDev,
                                VkCommandPool cmdPool, VkQueue gfxQueue)

@@ -2,9 +2,9 @@
 #include <memory>
 #include <vector>
 
-#include "Material.h"
-#include "RenderDevice.h"
-#include "TextureManager.h"
+#include "Resources/Material.h"
+#include "Rendering/RenderDevice.h"
+#include "Resources/TextureManager.h"
 
 class MaterialManager {
  public:

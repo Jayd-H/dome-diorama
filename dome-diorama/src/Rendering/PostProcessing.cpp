@@ -4,8 +4,8 @@
 #include <fstream>
 #include <stdexcept>
 
-#include "Debug.h"
-#include "RenderDevice.h"
+#include "Util/Debug.h"
+#include "Rendering/RenderDevice.h"
 
 PostProcessing::PostProcessing(RenderDevice* renderDeviceParam,
                                VkDevice deviceParam,

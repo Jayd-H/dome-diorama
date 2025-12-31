@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "Material.h"
+#include "Resources/Material.h"
 
 using EmitterID = uint32_t;
 constexpr EmitterID INVALID_EMITTER_ID = 0;

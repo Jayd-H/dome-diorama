@@ -3,7 +3,7 @@
 #include <array>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Debug.h"
+#include "Util/Debug.h"
 
 LightManager::LightManager(RenderDevice* device)
     : renderDevice(device),

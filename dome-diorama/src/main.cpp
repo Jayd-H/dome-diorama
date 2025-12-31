@@ -11,21 +11,20 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-// I LOVE OBJECT ORIENTED PROGRAMMING AND (somewhat) MODULAR CODE STRUCTURE
-#include "Camera.h"
-#include "Debug.h"
-#include "FireEmitter.h"
-#include "Input.h"
-#include "LightManager.h"
-#include "MaterialManager.h"
-#include "MeshManager.h"
-#include "Object.h"
-#include "ParticleManager.h"
-#include "PlantManager.h"
-#include "PostProcessing.h"
-#include "RenderDevice.h"
-#include "TextureManager.h"
-#include "WorldState.h"
+#include "Util/Camera.h"
+#include "Util/Debug.h"
+#include "Particles/FireEmitter.h"
+#include "Util/Input.h"
+#include "Scene/LightManager.h"
+#include "Resources/MaterialManager.h"
+#include "Resources/MeshManager.h"
+#include "Resources/Object.h"
+#include "Particles/ParticleManager.h"
+#include "Scene/PlantManager.h"
+#include "Rendering/PostProcessing.h"
+#include "Rendering/RenderDevice.h"
+#include "Resources/TextureManager.h"
+#include "Scene/WorldState.h"
 
 #define GLM_FORCE_RADIANS
 #include <algorithm>

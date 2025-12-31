@@ -2,9 +2,9 @@
 #include <random>
 #include <vector>
 
-#include "MaterialManager.h"
-#include "MeshManager.h"
-#include "Object.h"
+#include "Resources/MaterialManager.h"
+#include "Resources/MeshManager.h"
+#include "Resources/Object.h"
 
 enum class PlantType { Cactus, Tree };
 

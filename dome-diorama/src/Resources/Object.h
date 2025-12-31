@@ -5,8 +5,8 @@
 #include <string>
 #include <utility>
 
-#include "Debug.h"
-#include "Material.h"
+#include "Util/Debug.h"
+#include "Resources/Material.h"
 
 using MeshID = uint32_t;
 constexpr MeshID INVALID_MESH_ID = 0;

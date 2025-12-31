@@ -1,9 +1,9 @@
 #include "ParticleManager.h"
 
-#include "Debug.h"
-#include "Material.h"
-#include "MaterialManager.h"
-#include "MeshManager.h"
+#include "Util/Debug.h"
+#include "Resources/Material.h"
+#include "Resources/MaterialManager.h"
+#include "Resources/MeshManager.h"
 
 ParticleManager::ParticleManager(RenderDevice* renderDevice,
                                  MaterialManager* materialManager)

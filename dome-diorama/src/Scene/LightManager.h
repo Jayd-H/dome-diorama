@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "Light.h"
-#include "RenderDevice.h"
+#include "Rendering/RenderDevice.h"
 
 constexpr uint32_t MAX_LIGHTS = 8;
 constexpr uint32_t MAX_SHADOW_CASTING_LIGHTS = 4;

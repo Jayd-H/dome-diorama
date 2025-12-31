@@ -4,8 +4,8 @@
 #include <fstream>
 #include <sstream>
 
-#include "Debug.h"
-#include "PerlinNoise.h"
+#include "Util/Debug.h"
+#include "Util/PerlinNoise.h"
 
 VkVertexInputBindingDescription Vertex::getBindingDescription() {
   VkVertexInputBindingDescription bindingDescription{};

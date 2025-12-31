@@ -4,7 +4,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "Debug.h"
+#include "Util/Debug.h"
 
 MaterialManager::MaterialManager(RenderDevice* renderDevice,
                                  TextureManager* textureManager)

@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 
-#include "Debug.h"
+#include "Util/Debug.h"
 
 PlantManager::PlantManager(MeshManager* meshManager,
                            MaterialManager* materialManager)

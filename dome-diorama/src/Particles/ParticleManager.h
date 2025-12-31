@@ -4,8 +4,8 @@
 #include <memory>
 #include <vector>
 
-#include "ParticleEmitter.h"
-#include "RenderDevice.h"
+#include "Particles/ParticleEmitter.h"
+#include "Rendering/RenderDevice.h"
 
 class MaterialManager;
 class Mesh;

@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Object.h"
-#include "RenderDevice.h"
+#include "Resources/Object.h"
+#include "Rendering/RenderDevice.h"
 
 struct Vertex {
   glm::vec3 pos;

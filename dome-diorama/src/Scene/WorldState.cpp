@@ -5,7 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <random>
 
-#include "Debug.h"
+#include "Util/Debug.h"
 
 WorldState::WorldState()
     : currentSeason(Season::DryHot), currentWeather(WeatherState::Clear) {
