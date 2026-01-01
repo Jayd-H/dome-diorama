@@ -67,8 +67,10 @@ class Skybox final {
   }
 
   void render(VkCommandBuffer commandBuffer,
-              VkDescriptorSet cameraDescriptorSet,
-              const VkExtent2D& extent) const {
+              VkDescriptorSet cameraDescriptorSet, const VkExtent2D& extent,
+              const Object* domeObject) const {
+    if (!domeObject || !domeObject->visible) return;
+
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     VkViewport viewport{};
@@ -86,6 +88,11 @@ class Skybox final {
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipelineLayout, 0, 2, descriptorSets.data(), 0,
                             nullptr);
+
+    const glm::mat4 modelMatrix = domeObject->getModelMatrix();
+    vkCmdPushConstants(commandBuffer, pipelineLayout,
+                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4),
+                       &modelMatrix);
 
     std::array<VkBuffer, 1> vertexBuffers = {vertexBuffer};
     std::array<VkDeviceSize, 1> offsets = {0};
@@ -596,10 +603,17 @@ class Skybox final {
     std::array<VkDescriptorSetLayout, 2> layouts = {cameraLayout,
                                                     descriptorSetLayout};
 
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(glm::mat4);
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
     pipelineLayoutInfo.pSetLayouts = layouts.data();
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
                                &pipelineLayout) != VK_SUCCESS) {
