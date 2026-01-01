@@ -21,6 +21,7 @@
 #include "Resources/TextureManager.h"
 #include "Scene/LightManager.h"
 #include "Scene/PlantManager.h"
+#include "Scene/Skybox.h"
 #include "Scene/WorldState.h"
 #include "Util/Camera.h"
 #include "Util/Debug.h"
@@ -53,7 +54,6 @@ const std::vector<const char*> validationLayers = {
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-// TODO: implement per-swapchain-image semaphores
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 const bool DEBUG_MAIN = false;
@@ -279,6 +279,9 @@ class DomeDiorama final {
   // Plant
   PlantManager* plantManager = nullptr;
 
+  // Skybox
+  Skybox* skybox = nullptr;
+
   void initWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -373,6 +376,11 @@ class DomeDiorama final {
     postProcessing->init(descriptorPool, swapChainExtent.width,
                          swapChainExtent.height);
 
+    Debug::log(Debug::Category::VULKAN, "Creating skybox...");
+    skybox = new Skybox(renderDevice, device, commandPool, graphicsQueue);
+    skybox->init("./Models/Skybox", descriptorSetLayout, swapChainImageFormat,
+                 depthFormat);
+
     createScene();
 
     Debug::log(Debug::Category::VULKAN, "Creating uniform buffers...");
@@ -402,10 +410,16 @@ class DomeDiorama final {
       drawFrame();
     }
   }
+
   void cleanup() {
     vkDeviceWaitIdle(device);
 
     cleanupSwapChain();
+
+    if (skybox) {
+      skybox->cleanup();
+      delete skybox;
+    }
 
     if (postProcessing) {
       postProcessing->cleanup();
@@ -1319,7 +1333,7 @@ class DomeDiorama final {
                " swapchain semaphores");
   }
 
- void drawFrame() {
+  void drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE,
                     UINT64_MAX);
 
@@ -1631,6 +1645,9 @@ class DomeDiorama final {
     Debug::log(Debug::Category::RENDERING, "Main pass rendered ",
                mainObjectCount, " objects");
 
+    skybox->render(commandBuffer, descriptorSets[currentFrame],
+                   swapChainExtent);
+
     particleManager->render(
         commandBuffer, descriptorSets[currentFrame], particlePipelineLayout,
         currentFrame, particlePipeline, meshManager->getMesh(particleQuadMesh));
@@ -1676,7 +1693,7 @@ class DomeDiorama final {
     }
   }
 
-void updateUniformBuffer(uint32_t currentImage) {
+  void updateUniformBuffer(uint32_t currentImage) {
     static const auto startTime = std::chrono::high_resolution_clock::now();
     const auto currentTime = std::chrono::high_resolution_clock::now();
     const float time =
@@ -1692,7 +1709,7 @@ void updateUniformBuffer(uint32_t currentImage) {
     const glm::vec3 sunPosition = -sunDirection * sunOrbitRadius;
     sceneObjects[0].setPosition(sunPosition);
 
-   Light* const sunLight = lightManager->getLight(sunLightID);
+    Light* const sunLight = lightManager->getLight(sunLightID);
     if (sunLight) {
       sunLight->direction = sunDirection;
       sunLight->intensity = 5.0f;
@@ -2178,7 +2195,6 @@ void updateUniformBuffer(uint32_t currentImage) {
                            .material(sunMaterialID)
                            .scale(1.0f)
                            .build();
-
 
     const Object sandPlane = ObjectBuilder()
                                  .name("Sand Terrain")
