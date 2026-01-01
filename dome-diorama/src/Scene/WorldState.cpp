@@ -1,312 +1,212 @@
-#include <algorithm>
-#include <cmath>
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
+#include "WorldState.h"
 
-#include "PlantManager.h"
+#include <cmath>
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <random>
+
 #include "Util/Debug.h"
 
-PlantManager::PlantManager(MeshManager* meshMgr, MaterialManager* materialMgr)
-    : meshManager(meshMgr),
-      materialManager(materialMgr),
-      cactusMeshes(3),
-      cactusMaterials(3) {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Constructor called");
+WorldState::WorldState()
+    : currentSeason(Season::DryHot), currentWeather(WeatherState::Clear) {
+  Debug::log(Debug::Category::MAIN, "WorldState: Initialized");
+  Debug::log(Debug::Category::MAIN, "  - Day length: ", dayLengthInSeconds,
+             "s");
+  Debug::log(Debug::Category::MAIN,
+             "  - Season length: ", seasonLengthInSeconds, "s");
+  Debug::log(Debug::Category::MAIN, "  - Starting season: DryHot");
+  Debug::log(Debug::Category::MAIN, "  - Starting weather: Clear");
 }
 
-PlantManager::~PlantManager() noexcept {
-  try {
-    Debug::log(Debug::Category::RENDERING, "PlantManager: Destructor called");
-  } catch (...) {
+void WorldState::update(float deltaTime) {
+  updateTime(deltaTime);
+  updateSeason(deltaTime);
+  updateWeather(deltaTime);
+  updateTemperature(deltaTime);
+  updateWind(deltaTime);
+}
+
+void WorldState::updateTime(float deltaTime) {
+  time.totalSeconds += deltaTime;
+
+  const float dayProgress =
+      fmod(time.totalSeconds, dayLengthInSeconds) / dayLengthInSeconds;
+  time.normalizedTime = dayProgress;
+
+  const float totalSecondsInDay = dayProgress * 86400.0f;
+  time.hours = static_cast<int>(totalSecondsInDay / 3600.0f) % 24;
+  time.minutes = static_cast<int>((totalSecondsInDay / 60.0f)) % 60;
+  time.seconds = static_cast<int>(totalSecondsInDay) % 60;
+}
+
+void WorldState::updateSeason(float deltaTime) {
+  seasonProgress += deltaTime;
+
+  if (seasonProgress >= seasonLengthInSeconds) {
+    seasonProgress = 0.0f;
+
+    currentSeason =
+        (currentSeason == Season::DryHot) ? Season::DryCold : Season::DryHot;
+
+    Debug::log(Debug::Category::MAIN, "WorldState: Season changed to ",
+               currentSeason == Season::DryHot ? "DryHot" : "DryCold");
   }
 }
 
-void PlantManager::init() {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Initializing");
+void WorldState::updateWeather(float deltaTime) {
+  weatherTimer += deltaTime;
 
-  loadCactiModels();
-  loadTreeModels();
+  if (weatherTimer >= nextWeatherChangeIn) {
+    weatherTimer = 0.0f;
+    nextWeatherChangeIn = randomFloat(20.0f, 60.0f);
 
-  Debug::log(Debug::Category::RENDERING,
-             "PlantManager: Initialization complete");
-}
-
-void PlantManager::loadCactiModels() {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Loading cactus models");
-
-  struct CactusModelPair {
-    std::string objPath;
-    std::string mtlPath;
-  };
-
-  const std::vector<CactusModelPair> stage0Models = {
-      {"./Models/Cacti/cacti2.obj", "./Models/Cacti/cacti2.mtl"},
-      {"./Models/Cacti/cacti2v2.obj", "./Models/Cacti/cacti2v2.mtl"}};
-
-  const std::vector<CactusModelPair> stage1Models = {
-      {"./Models/Cacti/cacti3v1.obj", "./Models/Cacti/cacti3v1.mtl"},
-      {"./Models/Cacti/cacti3v2.obj", "./Models/Cacti/cacti3v2.mtl"},
-      {"./Models/Cacti/cacti3v3.obj", "./Models/Cacti/cacti3v3.mtl"}};
-
-  for (const auto& model : stage0Models) {
-    const MeshID meshID = meshManager->loadFromOBJ(model.objPath);
-    const MaterialID matID = materialManager->loadFromMTL(model.mtlPath);
-    cactusMeshes[0].push_back(meshID);
-    cactusMaterials[0].push_back(matID);
-  }
-
-  for (const auto& model : stage1Models) {
-    const MeshID meshID = meshManager->loadFromOBJ(model.objPath);
-    const MaterialID matID = materialManager->loadFromMTL(model.mtlPath);
-    cactusMeshes[1].push_back(meshID);
-    cactusMaterials[1].push_back(matID);
-  }
-
-  cactusMeshes[2] = cactusMeshes[1];
-  cactusMaterials[2] = cactusMaterials[1];
-
-  Debug::log(
-      Debug::Category::RENDERING,
-      "PlantManager: Loaded cactus models - Stage 0: ", cactusMeshes[0].size(),
-      " variants, Stage 1: ", cactusMeshes[1].size(),
-      " variants, Stage 2: ", cactusMeshes[2].size(), " variants");
-}
-
-void PlantManager::loadTreeModels() {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Loading tree models");
-
-  for (int i = 1; i <= 8; i++) {
-    const std::string objPath =
-        "./Models/Trees/jt" + std::to_string(i) + ".obj";
-    const std::string mtlPath =
-        "./Models/Trees/jt" + std::to_string(i) + ".mtl";
-
-    const MeshID meshID = meshManager->loadFromOBJ(objPath);
-    const MaterialID matID = materialManager->loadFromMTL(mtlPath);
-
-    treeMeshes.push_back(meshID);
-    treeMaterials.push_back(matID);
-  }
-
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Loaded ",
-             treeMeshes.size(), " tree growth stages");
-}
-
-float PlantManager::getTerrainHeightAt(const Mesh* terrainMesh, float x,
-                                       float z) const {
-  float closestDistSq = std::numeric_limits<float>::max();
-  float height = 0.0f;
-
-  for (const auto& vertex : terrainMesh->vertices) {
-    const float dx = vertex.pos.x - x;
-    const float dz = vertex.pos.z - z;
-    const float distSq = dx * dx + dz * dz;
-
-    if (distSq < closestDistSq) {
-      closestDistSq = distSq;
-      height = vertex.pos.y;
+    const WeatherState newWeather = chooseNextWeather();
+    if (newWeather != currentWeather) {
+      transitionToWeather(newWeather);
     }
   }
 
-  return height;
+  if (currentWeather == WeatherState::LightRain ||
+      currentWeather == WeatherState::HeavyRain ||
+      currentWeather == WeatherState::LightSnow ||
+      currentWeather == WeatherState::HeavySnow) {
+    const float targetIntensity = (currentWeather == WeatherState::HeavyRain ||
+                                   currentWeather == WeatherState::HeavySnow)
+                                      ? 1.0f
+                                      : 0.5f;
+    precipitationIntensity +=
+        (targetIntensity - precipitationIntensity) * deltaTime * 2.0f;
+    humidity = glm::clamp(humidity + deltaTime * 0.1f, 0.0f, 1.0f);
+  } else {
+    precipitationIntensity -= precipitationIntensity * deltaTime * 3.0f;
+    humidity = glm::clamp(humidity - deltaTime * 0.05f, 0.3f, 1.0f);
+  }
 }
 
-glm::vec3 PlantManager::getTerrainNormalAt(const Mesh* terrainMesh, float x,
-                                           float z) const {
-  float closestDistSq = std::numeric_limits<float>::max();
-  glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
+void WorldState::updateTemperature(float deltaTime) {
+  const float dayNightTemp = calculateDayNightTemperature();
+  const float seasonalTemp = calculateSeasonalTemperature();
 
-  for (const auto& vertex : terrainMesh->vertices) {
-    const float dx = vertex.pos.x - x;
-    const float dz = vertex.pos.z - z;
-    const float distSq = dx * dx + dz * dz;
+  float targetTemp = baseTemperature + dayNightTemp + seasonalTemp;
 
-    if (distSq < closestDistSq) {
-      closestDistSq = distSq;
-      normal = vertex.normal;
-    }
+  if (currentWeather == WeatherState::LightRain ||
+      currentWeather == WeatherState::HeavyRain) {
+    targetTemp -= 5.0f;
+  } else if (currentWeather == WeatherState::LightSnow ||
+             currentWeather == WeatherState::HeavySnow) {
+    targetTemp -= 15.0f;
   }
 
-  return glm::normalize(normal);
+  currentTemperature += (targetTemp - currentTemperature) * deltaTime * 0.5f;
 }
 
-void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
-                                        const Mesh* terrainMesh,
-                                        const PlantSpawnConfig& config) {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Spawning ",
-             config.numCacti, " cacti and ", config.numTrees,
-             " trees with seed ", config.seed);
+void WorldState::updateWind(float deltaTime) {
+  windGustTimer += deltaTime;
 
-  rng.seed(config.seed);
+  if (windGustTimer >= 5.0f) {
+    windGustTimer = 0.0f;
 
-  std::uniform_real_distribution<float> radiusDist(config.minRadius,
-                                                   config.maxRadius);
-  std::uniform_real_distribution<float> angleDist(0.0f, glm::two_pi<float>());
-  std::uniform_real_distribution<float> rotationDist(0.0f, 360.0f);
-  std::uniform_real_distribution<float> varianceDist(-1.0f, 1.0f);
-  std::uniform_real_distribution<float> sinkDist(0.2f, 0.5f);
+    baseWindSpeed = randomFloat(1.0f, 4.0f);
 
-  for (int i = 0; i < config.numCacti; i++) {
-    const float radius = radiusDist(rng);
-    const float angle = angleDist(rng);
-    const float x = radius * std::cos(angle);
-    const float z = radius * std::sin(angle);
-
-    const float y = getTerrainHeightAt(terrainMesh, x, z);
-    const glm::vec3 terrainNormal = getTerrainNormalAt(terrainMesh, x, z);
-
-    int stage = 0;
-    if (config.randomGrowthStages) {
-      std::uniform_int_distribution<int> stageDist(0, 2);
-      stage = stageDist(rng);
-    }
-
-    std::uniform_int_distribution<int> variantDist(
-        0, static_cast<int>(cactusMeshes[stage].size()) - 1);
-    const int variant = variantDist(rng);
-
-    const float baseYaw = rotationDist(rng);
-    const float rotationVariance =
-        varianceDist(rng) * config.rotationVariance * 15.0f;
-    const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-    const glm::vec3 rotationAxis =
-        glm::normalize(glm::cross(up, terrainNormal));
-    const float tiltAngle =
-        std::acos(glm::clamp(glm::dot(up, terrainNormal), -1.0f, 1.0f));
-    const float pitch =
-        tiltAngle * config.rotationVariance * (180.0f / glm::pi<float>());
-    const float roll = 0.0f;
-    const float yaw = baseYaw + rotationVariance;
-
-    const float baseScale = 1.0f;
-    const float scaleVarianceX = varianceDist(rng) * config.scaleVariance;
-    const float scaleVarianceY = varianceDist(rng) * config.scaleVariance;
-    const float scaleVarianceZ = varianceDist(rng) * config.scaleVariance;
-    const float scaleX = baseScale + scaleVarianceX;
-    const float scaleY = baseScale + scaleVarianceY;
-    const float scaleZ = baseScale + scaleVarianceZ;
-
-    const Mesh* mesh = meshManager->getMesh(cactusMeshes[stage][variant]);
-    const float yOffset = calculateMeshBottomOffset(mesh);
-    const float scaledYOffset = yOffset * scaleY;
-    const float sinkAmount = sinkDist(rng);
-
-    const Object cactusObj = ObjectBuilder()
-                                 .name("Cactus_" + std::to_string(i))
-                                 .position(x, y - scaledYOffset - sinkAmount, z)
-                                 .rotationEuler(pitch, yaw, roll)
-                                 .scale(scaleX, scaleY, scaleZ)
-                                 .mesh(cactusMeshes[stage][variant])
-                                 .material(cactusMaterials[stage][variant])
-                                 .build();
-
-    sceneObjects.push_back(cactusObj);
-    plants.emplace_back(sceneObjects.size() - 1, PlantType::Cactus, stage,
-                        variant);
+    const float angle = randomFloat(0.0f, glm::two_pi<float>());
+    windDirection = glm::normalize(
+        glm::vec3(cos(angle), randomFloat(-0.2f, 0.2f), sin(angle)));
   }
 
-  for (int i = 0; i < config.numTrees; i++) {
-    const float radius = radiusDist(rng);
-    const float angle = angleDist(rng);
-    const float x = radius * std::cos(angle);
-    const float z = radius * std::sin(angle);
+  float targetWindSpeed = baseWindSpeed;
 
-    const float y = getTerrainHeightAt(terrainMesh, x, z);
-    const glm::vec3 terrainNormal = getTerrainNormalAt(terrainMesh, x, z);
-
-    int stage = 0;
-    if (config.randomGrowthStages) {
-      std::uniform_int_distribution<int> stageDist(0, 7);
-      stage = stageDist(rng);
-    }
-
-    const float baseYaw = rotationDist(rng);
-    const float rotationVariance =
-        varianceDist(rng) * config.rotationVariance * 15.0f;
-    const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-    const glm::vec3 rotationAxis =
-        glm::normalize(glm::cross(up, terrainNormal));
-    const float tiltAngle =
-        std::acos(glm::clamp(glm::dot(up, terrainNormal), -1.0f, 1.0f));
-    const float pitch =
-        tiltAngle * config.rotationVariance * (180.0f / glm::pi<float>());
-    const float roll = 0.0f;
-    const float yaw = baseYaw + rotationVariance;
-
-    const float baseScale = 1.0f;
-    const float scaleVarianceX = varianceDist(rng) * config.scaleVariance;
-    const float scaleVarianceY = varianceDist(rng) * config.scaleVariance;
-    const float scaleVarianceZ = varianceDist(rng) * config.scaleVariance;
-    const float scaleX = baseScale + scaleVarianceX;
-    const float scaleY = baseScale + scaleVarianceY;
-    const float scaleZ = baseScale + scaleVarianceZ;
-
-    const Mesh* mesh = meshManager->getMesh(treeMeshes[stage]);
-    const float yOffset = calculateMeshBottomOffset(mesh);
-    const float scaledYOffset = yOffset * scaleY;
-    const float sinkAmount = sinkDist(rng);
-
-    const Object treeObj = ObjectBuilder()
-                               .name("Tree_" + std::to_string(i))
-                               .position(x, y - scaledYOffset - sinkAmount, z)
-                               .rotationEuler(pitch, yaw, roll)
-                               .scale(scaleX, scaleY, scaleZ)
-                               .mesh(treeMeshes[stage])
-                               .material(treeMaterials[stage])
-                               .build();
-
-    sceneObjects.push_back(treeObj);
-    plants.emplace_back(sceneObjects.size() - 1, PlantType::Tree, stage, 0);
+  if (currentWeather == WeatherState::DustStorm) {
+    targetWindSpeed *= 4.0f;
+  } else if (currentWeather == WeatherState::HeavyRain ||
+             currentWeather == WeatherState::HeavySnow) {
+    targetWindSpeed *= 2.0f;
   }
 
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Successfully spawned ",
-             plants.size(), " plants");
+  windSpeed += (targetWindSpeed - windSpeed) * deltaTime * 1.5f;
 }
 
-float PlantManager::calculateMeshBottomOffset(const Mesh* mesh) const {
-  if (!mesh || mesh->vertices.empty()) {
-    return 0.0f;
-  }
-
-  float minY = std::numeric_limits<float>::max();
-
-  for (const auto& vertex : mesh->vertices) {
-    minY = std::min(minY, vertex.pos.y);
-  }
-
-  return minY;
+float WorldState::calculateDayNightTemperature() const {
+  const float dayNightCycle = sin(time.normalizedTime * glm::two_pi<float>());
+  return dayNightCycle * 15.0f;
 }
 
-void PlantManager::growPlant(std::vector<Object>& sceneObjects,
-                             size_t plantIndex) {
-  if (plantIndex >= plants.size()) {
-    Debug::log(Debug::Category::RENDERING,
-               "PlantManager: Invalid plant index: ", plantIndex);
-    return;
+float WorldState::calculateSeasonalTemperature() const {
+  if (currentSeason == Season::DryHot) {
+    return 20.0f;
+  } else {
+    return -10.0f;
+  }
+}
+
+void WorldState::transitionToWeather(WeatherState newWeather) {
+  Debug::log(Debug::Category::MAIN, "WorldState: Weather transitioning from ",
+             static_cast<int>(currentWeather), " to ",
+             static_cast<int>(newWeather));
+
+  currentWeather = newWeather;
+}
+
+WeatherState WorldState::chooseNextWeather() const {
+  const float roll = randomFloat(0.0f, 1.0f);
+
+  if (currentSeason == Season::DryHot) {
+    if (roll < 0.6f) return WeatherState::Clear;
+    if (roll < 0.75f) return WeatherState::Cloudy;
+    if (roll < 0.85f) return WeatherState::DustStorm;
+    if (roll < 0.95f) return WeatherState::LightRain;
+    return WeatherState::HeavyRain;
+
+  } else {
+    if (roll < 0.4f) return WeatherState::Clear;
+    if (roll < 0.6f) return WeatherState::Cloudy;
+    if (roll < 0.75f) return WeatherState::LightSnow;
+    if (roll < 0.85f) return WeatherState::HeavySnow;
+    if (roll < 0.92f) return WeatherState::LightRain;
+    return WeatherState::HeavyRain;
+  }
+}
+
+glm::vec3 WorldState::getSunDirection() const {
+  const float angle = time.normalizedTime * glm::two_pi<float>();
+
+  return glm::normalize(glm::vec3(cos(angle), sin(angle), 0.2f));
+}
+
+glm::vec3 WorldState::getMoonDirection() const {
+  const float angle = (time.normalizedTime + 0.5f) * glm::two_pi<float>();
+
+  return glm::normalize(glm::vec3(cos(angle), sin(angle), 0.2f));
+}
+
+float WorldState::getSunIntensity() const {
+  float intensity = glm::max(0.0f, getSunDirection().y);
+
+  if (currentWeather == WeatherState::Cloudy) {
+    intensity *= 0.6f;
+  } else if (currentWeather == WeatherState::HeavyRain ||
+             currentWeather == WeatherState::HeavySnow) {
+    intensity *= 0.3f;
   }
 
-  Plant& plant = plants[plantIndex];
-  Object& obj = sceneObjects[plant.getObjectIndex()];
+  return intensity;
+}
 
-  if (plant.getType() == PlantType::Cactus) {
-    if (plant.getStage() < 2) {
-      plant.setStage(plant.getStage() + 1);
+float WorldState::getMoonIntensity() const {
+  float intensity = glm::max(0.0f, getMoonDirection().y) * 0.2f;
 
-      obj.setMesh(cactusMeshes[plant.getStage()][plant.getVariant()]);
-      obj.setMaterial(cactusMaterials[plant.getStage()][plant.getVariant()]);
-
-      Debug::log(Debug::Category::RENDERING,
-                 "PlantManager: Cactus grew to stage ", plant.getStage());
-    }
-  } else if (plant.getType() == PlantType::Tree) {
-    if (plant.getStage() < 7) {
-      plant.setStage(plant.getStage() + 1);
-
-      obj.setMesh(treeMeshes[plant.getStage()]);
-      obj.setMaterial(treeMaterials[plant.getStage()]);
-
-      Debug::log(Debug::Category::RENDERING,
-                 "PlantManager: Tree grew to stage ", plant.getStage());
-    }
+  if (currentWeather == WeatherState::Cloudy) {
+    intensity *= 0.5f;
+  } else if (currentWeather == WeatherState::HeavyRain ||
+             currentWeather == WeatherState::HeavySnow) {
+    intensity *= 0.2f;
   }
+
+  return intensity;
+}
+
+float WorldState::randomFloat(float min, float max) const {
+  static std::random_device rd;
+  static std::mt19937 gen(rd());
+  std::uniform_real_distribution<float> dis(min, max);
+  return dis(gen);
 }
