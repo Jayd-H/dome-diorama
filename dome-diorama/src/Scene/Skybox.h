@@ -178,8 +178,8 @@ class Skybox final {
                folderPath);
 
     const std::array<std::string, 6> faceFiles = {
-        folderPath + "/px.png", folderPath + "/nx.png", folderPath + "/py.png",
-        folderPath + "/pz.png", folderPath + "/nz.png", folderPath + "/ny.png"};
+        folderPath + "/px.jpg", folderPath + "/nx.jpg", folderPath + "/py.jpg",
+        folderPath + "/pz.jpg", folderPath + "/nz.jpg", folderPath + "/ny.jpg"};
 
     int width = 0, height = 0, channels = 0;
     std::vector<unsigned char*> faceData(6);
@@ -369,7 +369,7 @@ class Skybox final {
   void createSkyboxGeometry() {
     const int segments = 64;
     const int rings = 32;
-    const float radius = 1.0f;
+    const float radius = 100.0f;
 
     vertices.clear();
     indices.clear();
@@ -394,12 +394,12 @@ class Skybox final {
         int next = current + segments + 1;
 
         indices.push_back(current);
-        indices.push_back(next);
         indices.push_back(current + 1);
+        indices.push_back(next);
 
         indices.push_back(current + 1);
-        indices.push_back(next);
         indices.push_back(next + 1);
+        indices.push_back(next);
       }
     }
 
@@ -553,7 +553,7 @@ class Skybox final {
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 

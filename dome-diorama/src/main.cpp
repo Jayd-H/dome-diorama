@@ -2206,6 +2206,28 @@ class DomeDiorama final {
     sceneObjects.push_back(sun);
     sceneObjects.push_back(sandPlane);
 
+    const MeshID domeGlassMesh =
+        meshManager->loadFromOBJ("./Models/DomeGlass.obj");
+    const MaterialID domeGlassMaterialID =
+        materialManager->loadFromMTL("./Models/DomeGlass.mtl");
+
+    Material* domeGlassMat = materialManager->getMaterial(domeGlassMaterialID);
+    if (domeGlassMat) {
+      domeGlassMat->properties.opacity = 0.3f;
+      domeGlassMat->isTransparent = true;
+      domeGlassMat->doubleSided = true;
+    }
+
+    const Object domeGlass = ObjectBuilder()
+                                 .name("Dome Glass")
+                                 .position(0.0f, 0.0f, 0.0f)
+                                 .mesh(domeGlassMesh)
+                                 .material(domeGlassMaterialID)
+                                 .scale(1.0f)
+                                 .build();
+
+    sceneObjects.push_back(domeGlass);
+
     const Mesh* const terrainMesh = meshManager->getMesh(sandTerrainMesh);
 
     PlantSpawnConfig plantConfig;
@@ -2230,6 +2252,7 @@ class DomeDiorama final {
                                .build();
 
     sunLightID = lightManager->addLight(sunLight);
+
     const MaterialID particleMaterialID =
         materialManager->registerMaterial(MaterialBuilder()
                                               .name("Particle Material")
