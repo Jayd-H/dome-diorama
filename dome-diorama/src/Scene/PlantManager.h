@@ -13,15 +13,24 @@ struct PlantTypeData {
   std::vector<MaterialID> stageMaterials;
 };
 
-class Plant {
+class Plant final {
  public:
-  size_t objectIndex;
-  PlantType type;
-  int stage;
-  int variant;
-
   Plant(size_t objIndex, PlantType t, int s, int v)
-      : objectIndex(objIndex), type(t), stage(s), variant(v) {}
+      : objectIndex_(objIndex), type_(t), stage_(s), variant_(v) {}
+
+  size_t getObjectIndex() const { return objectIndex_; }
+  PlantType getType() const { return type_; }
+  int getStage() const { return stage_; }
+  int getVariant() const { return variant_; }
+
+  void setStage(int s) { stage_ = s; }
+  void setVariant(int v) { variant_ = v; }
+
+ private:
+  size_t objectIndex_;
+  PlantType type_;
+  int stage_;
+  int variant_;
 };
 
 struct PlantSpawnConfig {
@@ -35,10 +44,13 @@ struct PlantSpawnConfig {
   float rotationVariance = 0.2f;
 };
 
-class PlantManager {
+class PlantManager final {
  public:
-  PlantManager(MeshManager* meshManager, MaterialManager* materialManager);
+  PlantManager(MeshManager* meshMgr, MaterialManager* materialMgr);
   ~PlantManager();
+
+  PlantManager(const PlantManager&) = delete;
+  PlantManager& operator=(const PlantManager&) = delete;
 
   void init();
   void spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
@@ -46,24 +58,21 @@ class PlantManager {
                             const PlantSpawnConfig& config);
   void growPlant(std::vector<Object>& sceneObjects, size_t plantIndex);
 
-  const std::vector<Plant>& getPlants() const { return plants; }
+  std::vector<Plant> getPlants() const { return plants; }
 
  private:
   MeshManager* meshManager;
   MaterialManager* materialManager;
+  std::mt19937 rng;
   std::vector<Plant> plants;
-
-  std::vector<MeshID> cactusMeshes[3];
-  std::vector<MaterialID> cactusMaterials[3];
-
+  std::vector<std::vector<MeshID>> cactusMeshes;
+  std::vector<std::vector<MaterialID>> cactusMaterials;
   std::vector<MeshID> treeMeshes;
   std::vector<MaterialID> treeMaterials;
 
-  std::mt19937 rng;
-
   void loadCactiModels();
   void loadTreeModels();
-  float getTerrainHeightAt(const Mesh* terrainMesh, float x, float z);
-  glm::vec3 getTerrainNormalAt(const Mesh* terrainMesh, float x, float z);
-  float calculateMeshBottomOffset(const Mesh* mesh);
+  float getTerrainHeightAt(const Mesh* terrainMesh, float x, float z) const;
+  glm::vec3 getTerrainNormalAt(const Mesh* terrainMesh, float x, float z) const;
+  float calculateMeshBottomOffset(const Mesh* mesh) const;
 };
