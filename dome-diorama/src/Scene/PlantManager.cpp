@@ -7,14 +7,19 @@
 
 #include "Util/Debug.h"
 
-PlantManager::PlantManager(MeshManager* meshManager,
-                           MaterialManager* materialManager)
-    : meshManager(meshManager), materialManager(materialManager) {
+PlantManager::PlantManager(MeshManager* meshMgr, MaterialManager* materialMgr)
+    : meshManager(meshMgr),
+      materialManager(materialMgr),
+      cactusMeshes(3),
+      cactusMaterials(3) {
   Debug::log(Debug::Category::RENDERING, "PlantManager: Constructor called");
 }
 
-PlantManager::~PlantManager() {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Destructor called");
+PlantManager::~PlantManager() noexcept {
+  try {
+    Debug::log(Debug::Category::RENDERING, "PlantManager: Destructor called");
+  } catch (...) {
+  }
 }
 
 void PlantManager::init() {
@@ -35,25 +40,25 @@ void PlantManager::loadCactiModels() {
     std::string mtlPath;
   };
 
-  std::vector<CactusModelPair> stage0Models = {
+  const std::vector<CactusModelPair> stage0Models = {
       {"./Models/Cacti/cacti2.obj", "./Models/Cacti/cacti2.mtl"},
       {"./Models/Cacti/cacti2v2.obj", "./Models/Cacti/cacti2v2.mtl"}};
 
-  std::vector<CactusModelPair> stage1Models = {
+  const std::vector<CactusModelPair> stage1Models = {
       {"./Models/Cacti/cacti3v1.obj", "./Models/Cacti/cacti3v1.mtl"},
       {"./Models/Cacti/cacti3v2.obj", "./Models/Cacti/cacti3v2.mtl"},
       {"./Models/Cacti/cacti3v3.obj", "./Models/Cacti/cacti3v3.mtl"}};
 
   for (const auto& model : stage0Models) {
-    MeshID meshID = meshManager->loadFromOBJ(model.objPath);
-    MaterialID matID = materialManager->loadFromMTL(model.mtlPath);
+    const MeshID meshID = meshManager->loadFromOBJ(model.objPath);
+    const MaterialID matID = materialManager->loadFromMTL(model.mtlPath);
     cactusMeshes[0].push_back(meshID);
     cactusMaterials[0].push_back(matID);
   }
 
   for (const auto& model : stage1Models) {
-    MeshID meshID = meshManager->loadFromOBJ(model.objPath);
-    MaterialID matID = materialManager->loadFromMTL(model.mtlPath);
+    const MeshID meshID = meshManager->loadFromOBJ(model.objPath);
+    const MaterialID matID = materialManager->loadFromMTL(model.mtlPath);
     cactusMeshes[1].push_back(meshID);
     cactusMaterials[1].push_back(matID);
   }
@@ -72,11 +77,13 @@ void PlantManager::loadTreeModels() {
   Debug::log(Debug::Category::RENDERING, "PlantManager: Loading tree models");
 
   for (int i = 1; i <= 8; i++) {
-    std::string objPath = "./Models/Trees/jt" + std::to_string(i) + ".obj";
-    std::string mtlPath = "./Models/Trees/jt" + std::to_string(i) + ".mtl";
+    const std::string objPath =
+        "./Models/Trees/jt" + std::to_string(i) + ".obj";
+    const std::string mtlPath =
+        "./Models/Trees/jt" + std::to_string(i) + ".mtl";
 
-    MeshID meshID = meshManager->loadFromOBJ(objPath);
-    MaterialID matID = materialManager->loadFromMTL(mtlPath);
+    const MeshID meshID = meshManager->loadFromOBJ(objPath);
+    const MaterialID matID = materialManager->loadFromMTL(mtlPath);
 
     treeMeshes.push_back(meshID);
     treeMaterials.push_back(matID);
@@ -87,14 +94,14 @@ void PlantManager::loadTreeModels() {
 }
 
 float PlantManager::getTerrainHeightAt(const Mesh* terrainMesh, float x,
-                                       float z) {
+                                       float z) const {
   float closestDistSq = std::numeric_limits<float>::max();
   float height = 0.0f;
 
   for (const auto& vertex : terrainMesh->vertices) {
-    float dx = vertex.pos.x - x;
-    float dz = vertex.pos.z - z;
-    float distSq = dx * dx + dz * dz;
+    const float dx = vertex.pos.x - x;
+    const float dz = vertex.pos.z - z;
+    const float distSq = dx * dx + dz * dz;
 
     if (distSq < closestDistSq) {
       closestDistSq = distSq;
@@ -106,14 +113,14 @@ float PlantManager::getTerrainHeightAt(const Mesh* terrainMesh, float x,
 }
 
 glm::vec3 PlantManager::getTerrainNormalAt(const Mesh* terrainMesh, float x,
-                                           float z) {
+                                           float z) const {
   float closestDistSq = std::numeric_limits<float>::max();
   glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
 
   for (const auto& vertex : terrainMesh->vertices) {
-    float dx = vertex.pos.x - x;
-    float dz = vertex.pos.z - z;
-    float distSq = dx * dx + dz * dz;
+    const float dx = vertex.pos.x - x;
+    const float dz = vertex.pos.z - z;
+    const float distSq = dx * dx + dz * dz;
 
     if (distSq < closestDistSq) {
       closestDistSq = distSq;
@@ -141,13 +148,13 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
   std::uniform_real_distribution<float> sinkDist(0.2f, 0.5f);
 
   for (int i = 0; i < config.numCacti; i++) {
-    float radius = radiusDist(rng);
-    float angle = angleDist(rng);
-    float x = radius * std::cos(angle);
-    float z = radius * std::sin(angle);
+    const float radius = radiusDist(rng);
+    const float angle = angleDist(rng);
+    const float x = radius * std::cos(angle);
+    const float z = radius * std::sin(angle);
 
-    float y = getTerrainHeightAt(terrainMesh, x, z);
-    glm::vec3 terrainNormal = getTerrainNormalAt(terrainMesh, x, z);
+    const float y = getTerrainHeightAt(terrainMesh, x, z);
+    const glm::vec3 terrainNormal = getTerrainNormalAt(terrainMesh, x, z);
 
     int stage = 0;
     if (config.randomGrowthStages) {
@@ -157,44 +164,42 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
 
     std::uniform_int_distribution<int> variantDist(
         0, static_cast<int>(cactusMeshes[stage].size()) - 1);
-    int variant = variantDist(rng);
+    const int variant = variantDist(rng);
 
-    float baseYaw = rotationDist(rng);
-    float rotationVariance =
+    const float baseYaw = rotationDist(rng);
+    const float rotationVariance =
         varianceDist(rng) * config.rotationVariance * 15.0f;
-
-    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-    glm::vec3 rotationAxis = glm::normalize(glm::cross(up, terrainNormal));
-    float tiltAngle =
+    const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 rotationAxis =
+        glm::normalize(glm::cross(up, terrainNormal));
+    const float tiltAngle =
         std::acos(glm::clamp(glm::dot(up, terrainNormal), -1.0f, 1.0f));
-
-    float pitch =
+    const float pitch =
         tiltAngle * config.rotationVariance * (180.0f / glm::pi<float>());
-    float roll = 0.0f;
-    float yaw = baseYaw + rotationVariance;
+    const float roll = 0.0f;
+    const float yaw = baseYaw + rotationVariance;
 
-    float baseScale = 1.0f;
-    float scaleVarianceX = varianceDist(rng) * config.scaleVariance;
-    float scaleVarianceY = varianceDist(rng) * config.scaleVariance;
-    float scaleVarianceZ = varianceDist(rng) * config.scaleVariance;
-
-    float scaleX = baseScale + scaleVarianceX;
-    float scaleY = baseScale + scaleVarianceY;
-    float scaleZ = baseScale + scaleVarianceZ;
+    const float baseScale = 1.0f;
+    const float scaleVarianceX = varianceDist(rng) * config.scaleVariance;
+    const float scaleVarianceY = varianceDist(rng) * config.scaleVariance;
+    const float scaleVarianceZ = varianceDist(rng) * config.scaleVariance;
+    const float scaleX = baseScale + scaleVarianceX;
+    const float scaleY = baseScale + scaleVarianceY;
+    const float scaleZ = baseScale + scaleVarianceZ;
 
     const Mesh* mesh = meshManager->getMesh(cactusMeshes[stage][variant]);
-    float yOffset = calculateMeshBottomOffset(mesh);
-    float scaledYOffset = yOffset * scaleY;
-    float sinkAmount = sinkDist(rng);
+    const float yOffset = calculateMeshBottomOffset(mesh);
+    const float scaledYOffset = yOffset * scaleY;
+    const float sinkAmount = sinkDist(rng);
 
-    Object cactusObj = ObjectBuilder()
-                           .name("Cactus_" + std::to_string(i))
-                           .position(x, y - scaledYOffset - sinkAmount, z)
-                           .rotationEuler(pitch, yaw, roll)
-                           .scale(scaleX, scaleY, scaleZ)
-                           .mesh(cactusMeshes[stage][variant])
-                           .material(cactusMaterials[stage][variant])
-                           .build();
+    const Object cactusObj = ObjectBuilder()
+                                 .name("Cactus_" + std::to_string(i))
+                                 .position(x, y - scaledYOffset - sinkAmount, z)
+                                 .rotationEuler(pitch, yaw, roll)
+                                 .scale(scaleX, scaleY, scaleZ)
+                                 .mesh(cactusMeshes[stage][variant])
+                                 .material(cactusMaterials[stage][variant])
+                                 .build();
 
     sceneObjects.push_back(cactusObj);
     plants.emplace_back(sceneObjects.size() - 1, PlantType::Cactus, stage,
@@ -202,13 +207,13 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
   }
 
   for (int i = 0; i < config.numTrees; i++) {
-    float radius = radiusDist(rng);
-    float angle = angleDist(rng);
-    float x = radius * std::cos(angle);
-    float z = radius * std::sin(angle);
+    const float radius = radiusDist(rng);
+    const float angle = angleDist(rng);
+    const float x = radius * std::cos(angle);
+    const float z = radius * std::sin(angle);
 
-    float y = getTerrainHeightAt(terrainMesh, x, z);
-    glm::vec3 terrainNormal = getTerrainNormalAt(terrainMesh, x, z);
+    const float y = getTerrainHeightAt(terrainMesh, x, z);
+    const glm::vec3 terrainNormal = getTerrainNormalAt(terrainMesh, x, z);
 
     int stage = 0;
     if (config.randomGrowthStages) {
@@ -216,42 +221,40 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
       stage = stageDist(rng);
     }
 
-    float baseYaw = rotationDist(rng);
-    float rotationVariance =
+    const float baseYaw = rotationDist(rng);
+    const float rotationVariance =
         varianceDist(rng) * config.rotationVariance * 15.0f;
-
-    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-    glm::vec3 rotationAxis = glm::normalize(glm::cross(up, terrainNormal));
-    float tiltAngle =
+    const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 rotationAxis =
+        glm::normalize(glm::cross(up, terrainNormal));
+    const float tiltAngle =
         std::acos(glm::clamp(glm::dot(up, terrainNormal), -1.0f, 1.0f));
-
-    float pitch =
+    const float pitch =
         tiltAngle * config.rotationVariance * (180.0f / glm::pi<float>());
-    float roll = 0.0f;
-    float yaw = baseYaw + rotationVariance;
+    const float roll = 0.0f;
+    const float yaw = baseYaw + rotationVariance;
 
-    float baseScale = 1.0f;
-    float scaleVarianceX = varianceDist(rng) * config.scaleVariance;
-    float scaleVarianceY = varianceDist(rng) * config.scaleVariance;
-    float scaleVarianceZ = varianceDist(rng) * config.scaleVariance;
-
-    float scaleX = baseScale + scaleVarianceX;
-    float scaleY = baseScale + scaleVarianceY;
-    float scaleZ = baseScale + scaleVarianceZ;
+    const float baseScale = 1.0f;
+    const float scaleVarianceX = varianceDist(rng) * config.scaleVariance;
+    const float scaleVarianceY = varianceDist(rng) * config.scaleVariance;
+    const float scaleVarianceZ = varianceDist(rng) * config.scaleVariance;
+    const float scaleX = baseScale + scaleVarianceX;
+    const float scaleY = baseScale + scaleVarianceY;
+    const float scaleZ = baseScale + scaleVarianceZ;
 
     const Mesh* mesh = meshManager->getMesh(treeMeshes[stage]);
-    float yOffset = calculateMeshBottomOffset(mesh);
-    float scaledYOffset = yOffset * scaleY;
-    float sinkAmount = sinkDist(rng);
+    const float yOffset = calculateMeshBottomOffset(mesh);
+    const float scaledYOffset = yOffset * scaleY;
+    const float sinkAmount = sinkDist(rng);
 
-    Object treeObj = ObjectBuilder()
-                         .name("Tree_" + std::to_string(i))
-                         .position(x, y - scaledYOffset - sinkAmount, z)
-                         .rotationEuler(pitch, yaw, roll)
-                         .scale(scaleX, scaleY, scaleZ)
-                         .mesh(treeMeshes[stage])
-                         .material(treeMaterials[stage])
-                         .build();
+    const Object treeObj = ObjectBuilder()
+                               .name("Tree_" + std::to_string(i))
+                               .position(x, y - scaledYOffset - sinkAmount, z)
+                               .rotationEuler(pitch, yaw, roll)
+                               .scale(scaleX, scaleY, scaleZ)
+                               .mesh(treeMeshes[stage])
+                               .material(treeMaterials[stage])
+                               .build();
 
     sceneObjects.push_back(treeObj);
     plants.emplace_back(sceneObjects.size() - 1, PlantType::Tree, stage, 0);
@@ -261,7 +264,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
              plants.size(), " plants");
 }
 
-float PlantManager::calculateMeshBottomOffset(const Mesh* mesh) {
+float PlantManager::calculateMeshBottomOffset(const Mesh* mesh) const {
   if (!mesh || mesh->vertices.empty()) {
     return 0.0f;
   }
@@ -284,27 +287,27 @@ void PlantManager::growPlant(std::vector<Object>& sceneObjects,
   }
 
   Plant& plant = plants[plantIndex];
-  Object& obj = sceneObjects[plant.objectIndex];
+  Object& obj = sceneObjects[plant.getObjectIndex()];
 
-  if (plant.type == PlantType::Cactus) {
-    if (plant.stage < 2) {
-      plant.stage++;
+  if (plant.getType() == PlantType::Cactus) {
+    if (plant.getStage() < 2) {
+      plant.setStage(plant.getStage() + 1);
 
-      obj.setMesh(cactusMeshes[plant.stage][plant.variant]);
-      obj.setMaterial(cactusMaterials[plant.stage][plant.variant]);
+      obj.setMesh(cactusMeshes[plant.getStage()][plant.getVariant()]);
+      obj.setMaterial(cactusMaterials[plant.getStage()][plant.getVariant()]);
 
       Debug::log(Debug::Category::RENDERING,
-                 "PlantManager: Cactus grew to stage ", plant.stage);
+                 "PlantManager: Cactus grew to stage ", plant.getStage());
     }
-  } else if (plant.type == PlantType::Tree) {
-    if (plant.stage < 7) {
-      plant.stage++;
+  } else if (plant.getType() == PlantType::Tree) {
+    if (plant.getStage() < 7) {
+      plant.setStage(plant.getStage() + 1);
 
-      obj.setMesh(treeMeshes[plant.stage]);
-      obj.setMaterial(treeMaterials[plant.stage]);
+      obj.setMesh(treeMeshes[plant.getStage()]);
+      obj.setMaterial(treeMaterials[plant.getStage()]);
 
       Debug::log(Debug::Category::RENDERING,
-                 "PlantManager: Tree grew to stage ", plant.stage);
+                 "PlantManager: Tree grew to stage ", plant.getStage());
     }
   }
 }

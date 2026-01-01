@@ -31,8 +31,8 @@ Vertex::getAttributeDescriptions() {
   return attributeDescriptions;
 }
 
-MeshManager::MeshManager(RenderDevice* renderDevice)
-    : renderDevice(renderDevice), defaultCubeID(0) {
+MeshManager::MeshManager(RenderDevice* renderDev)
+    : renderDevice(renderDev), defaultCubeID(0) {
   Debug::log(Debug::Category::RENDERING, "MeshManager: Constructor called");
 
   meshes.push_back(std::unique_ptr<Mesh>(nullptr));
@@ -43,9 +43,12 @@ MeshManager::MeshManager(RenderDevice* renderDevice)
              "MeshManager: Initialization complete");
 }
 
-MeshManager::~MeshManager() {
-  Debug::log(Debug::Category::RENDERING, "MeshManager: Destructor called");
-  cleanup();
+MeshManager::~MeshManager() noexcept {
+  try {
+    Debug::log(Debug::Category::RENDERING, "MeshManager: Destructor called");
+    cleanup();
+  } catch (...) {
+  }
 }
 
 MeshID MeshManager::createCube(float size) {
@@ -56,7 +59,7 @@ MeshID MeshManager::createCube(float size) {
   mesh->name = "Cube";
   mesh->type = MeshType::Cube;
 
-  float h = size * 0.5f;
+  const float h = size * 0.5f;
 
   mesh->vertices = {
       {{-h, -h, -h}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, -1.0f}},
@@ -95,7 +98,7 @@ MeshID MeshManager::createCube(float size) {
 
   createBuffers(mesh);
 
-  MeshID id = registerMesh(mesh);
+  const MeshID id = registerMesh(mesh);
 
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Created cube with ID: ", id);
@@ -112,8 +115,8 @@ MeshID MeshManager::createSphere(float radius, uint32_t segments) {
   mesh->name = "Sphere";
   mesh->type = MeshType::Sphere;
 
-  uint32_t sliceCount = segments;
-  uint32_t stackCount = segments;
+  const uint32_t sliceCount = segments;
+  const uint32_t stackCount = segments;
 
   Vertex topVertex{};
   topVertex.pos = glm::vec3(0.0f, radius, 0.0f);
@@ -122,13 +125,13 @@ MeshID MeshManager::createSphere(float radius, uint32_t segments) {
   topVertex.texCoord = glm::vec2(0.0f, 0.0f);
   mesh->vertices.push_back(topVertex);
 
-  float phiStep = glm::pi<float>() / stackCount;
-  float thetaStep = 2.0f * glm::pi<float>() / sliceCount;
+  const float phiStep = glm::pi<float>() / stackCount;
+  const float thetaStep = 2.0f * glm::pi<float>() / sliceCount;
 
   for (uint32_t i = 1; i <= stackCount - 1; ++i) {
-    float phi = i * phiStep;
+    const float phi = i * phiStep;
     for (uint32_t j = 0; j <= sliceCount; ++j) {
-      float theta = j * thetaStep;
+      const float theta = j * thetaStep;
 
       Vertex v{};
       v.pos.x = radius * sinf(phi) * cosf(theta);
@@ -156,8 +159,8 @@ MeshID MeshManager::createSphere(float radius, uint32_t segments) {
     mesh->indices.push_back(i);
   }
 
-  uint32_t baseIndex = 1;
-  uint32_t ringVertexCount = sliceCount + 1;
+  const uint32_t baseIndex = 1;
+  const uint32_t ringVertexCount = sliceCount + 1;
   for (uint32_t i = 0; i < stackCount - 2; ++i) {
     for (uint32_t j = 0; j < sliceCount; ++j) {
       mesh->indices.push_back(baseIndex + i * ringVertexCount + j);
@@ -170,17 +173,18 @@ MeshID MeshManager::createSphere(float radius, uint32_t segments) {
     }
   }
 
-  uint32_t southPoleIndex = static_cast<uint32_t>(mesh->vertices.size()) - 1;
-  baseIndex = southPoleIndex - ringVertexCount;
+  const uint32_t southPoleIndex =
+      static_cast<uint32_t>(mesh->vertices.size()) - 1;
+  const uint32_t southBaseIndex = southPoleIndex - ringVertexCount;
   for (uint32_t i = 0; i < sliceCount; ++i) {
     mesh->indices.push_back(southPoleIndex);
-    mesh->indices.push_back(baseIndex + i);
-    mesh->indices.push_back(baseIndex + i + 1);
+    mesh->indices.push_back(southBaseIndex + i);
+    mesh->indices.push_back(southBaseIndex + i + 1);
   }
 
   createBuffers(mesh);
 
-  MeshID id = registerMesh(mesh);
+  const MeshID id = registerMesh(mesh);
 
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Created sphere with ID: ", id);
@@ -197,8 +201,8 @@ MeshID MeshManager::createPlane(float width, float height) {
   mesh->name = "Plane";
   mesh->type = MeshType::Plane;
 
-  float halfW = width * 0.5f;
-  float halfH = height * 0.5f;
+  const float halfW = width * 0.5f;
+  const float halfH = height * 0.5f;
 
   mesh->vertices = {
       {{-halfW, 0.0f, -halfH},
@@ -223,7 +227,7 @@ MeshID MeshManager::createPlane(float width, float height) {
 
   createBuffers(mesh);
 
-  MeshID id = registerMesh(mesh);
+  const MeshID id = registerMesh(mesh);
 
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Created plane with ID: ", id);
@@ -239,17 +243,17 @@ MeshID MeshManager::createCylinder(float radius, float height,
   Mesh* mesh = new Mesh();
   mesh->name = "Cylinder";
   mesh->type = MeshType::Cylinder;
-  uint32_t sliceCount = segments;
-  uint32_t stackCount = 1;
-  float stackHeight = height / stackCount;
-  uint32_t ringCount = stackCount + 1;
+  const uint32_t sliceCount = segments;
+  const uint32_t stackCount = 1;
+  const float stackHeight = height / stackCount;
+  const uint32_t ringCount = stackCount + 1;
   for (uint32_t i = 0; i < ringCount; ++i) {
-    float y = -0.5f * height + i * stackHeight;
-    float dTheta = 2.0f * glm::pi<float>() / sliceCount;
+    const float y = -0.5f * height + i * stackHeight;
+    const float dTheta = 2.0f * glm::pi<float>() / sliceCount;
     for (uint32_t j = 0; j <= sliceCount; ++j) {
       Vertex vertex{};
-      float c = cosf(j * dTheta);
-      float s = sinf(j * dTheta);
+      const float c = cosf(j * dTheta);
+      const float s = sinf(j * dTheta);
       vertex.pos = glm::vec3(radius * c, y, radius * s);
       vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
       vertex.normal = glm::normalize(glm::vec3(c, 0.0f, s));
@@ -258,7 +262,7 @@ MeshID MeshManager::createCylinder(float radius, float height,
       mesh->vertices.push_back(vertex);
     }
   }
-  uint32_t ringVertexCount = sliceCount + 1;
+  const uint32_t ringVertexCount = sliceCount + 1;
   for (uint32_t i = 0; i < stackCount; ++i) {
     for (uint32_t j = 0; j < sliceCount; ++j) {
       mesh->indices.push_back(i * ringVertexCount + j);
@@ -270,11 +274,11 @@ MeshID MeshManager::createCylinder(float radius, float height,
     }
   }
   uint32_t baseIndex = static_cast<uint32_t>(mesh->vertices.size());
-  float dTheta = 2.0f * glm::pi<float>() / sliceCount;
+  const float dTheta = 2.0f * glm::pi<float>() / sliceCount;
   for (uint32_t i = 0; i <= sliceCount; ++i) {
-    float x = radius * cosf(i * dTheta);
-    float z = radius * sinf(i * dTheta);
-    float y = -0.5f * height;
+    const float x = radius * cosf(i * dTheta);
+    const float z = radius * sinf(i * dTheta);
+    const float y = -0.5f * height;
     Vertex vertex{};
     vertex.pos = glm::vec3(x, y, z);
     vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -297,9 +301,9 @@ MeshID MeshManager::createCylinder(float radius, float height,
   }
   baseIndex = static_cast<uint32_t>(mesh->vertices.size());
   for (uint32_t i = 0; i <= sliceCount; ++i) {
-    float x = radius * cosf(i * dTheta);
-    float z = radius * sinf(i * dTheta);
-    float y = 0.5f * height;
+    const float x = radius * cosf(i * dTheta);
+    const float z = radius * sinf(i * dTheta);
+    const float y = 0.5f * height;
     Vertex vertex{};
     vertex.pos = glm::vec3(x, y, z);
     vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -321,7 +325,7 @@ MeshID MeshManager::createCylinder(float radius, float height,
     mesh->indices.push_back(baseIndex + i);
   }
   createBuffers(mesh);
-  MeshID id = registerMesh(mesh);
+  const MeshID id = registerMesh(mesh);
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Created cylinder with ID: ", id);
   return id;
@@ -356,7 +360,7 @@ MeshID MeshManager::createParticleQuad() {
   mesh->indices = {0, 1, 2, 2, 3, 0};
 
   createBuffers(mesh);
-  MeshID id = registerMesh(mesh);
+  const MeshID id = registerMesh(mesh);
 
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Created particle quad with ID: ", id);
@@ -364,7 +368,7 @@ MeshID MeshManager::createParticleQuad() {
 }
 
 MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
-  auto it = filepathToID.find(filepath);
+  const auto it = filepathToID.find(filepath);
   if (it != filepathToID.end()) {
     Debug::log(Debug::Category::RENDERING,
                "MeshManager: OBJ already loaded: ", filepath,
@@ -480,7 +484,7 @@ MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
       maxBounds.z = std::max(maxBounds.z, vertex.pos.z);
     }
 
-    glm::vec3 center = (minBounds + maxBounds) * 0.5f;
+    const glm::vec3 center = (minBounds + maxBounds) * 0.5f;
 
     Debug::log(Debug::Category::RENDERING,
                "MeshManager: Centering mesh - offset: (", center.x, ", ",
@@ -496,7 +500,7 @@ MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
              mesh->vertices.size(), ", indices: ", mesh->indices.size());
 
   createBuffers(mesh);
-  MeshID id = registerMesh(mesh);
+  const MeshID id = registerMesh(mesh);
   filepathToID[filepath] = id;
 
   Debug::log(Debug::Category::RENDERING,
@@ -528,7 +532,7 @@ void MeshManager::cleanup() {
   Debug::log(Debug::Category::RENDERING, "MeshManager: Cleaning up ",
              meshes.size(), " meshes");
 
-  VkDevice device = renderDevice->getDevice();
+  const VkDevice device = renderDevice->getDevice();
 
   for (auto& mesh : meshes) {
     if (mesh) {
@@ -559,7 +563,7 @@ MeshID MeshManager::registerMesh(Mesh* mesh) {
     return defaultCubeID;
   }
 
-  MeshID id = static_cast<MeshID>(meshes.size());
+  const MeshID id = static_cast<MeshID>(meshes.size());
   meshes.push_back(std::unique_ptr<Mesh>(mesh));
 
   Debug::log(Debug::Category::RENDERING, "MeshManager: Registered mesh '",
@@ -581,9 +585,9 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
   mesh->name = "Procedural Terrain";
   mesh->type = MeshType::Plane;
 
-  PerlinNoise perlin(seed);
+  const PerlinNoise perlin(seed);
 
-  uint32_t radialSegments = segments * 4;
+  const uint32_t radialSegments = segments * 4;
 
   Vertex centerVertex{};
   centerVertex.pos = glm::vec3(
@@ -595,19 +599,23 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
   mesh->vertices.push_back(centerVertex);
 
   for (uint32_t ring = 1; ring <= segments; ring++) {
-    float ringRadius = (ring / (float)segments) * radius;
+    const float ringRadius =
+        static_cast<float>(ring) / static_cast<float>(segments) * radius;
 
     for (uint32_t point = 0; point < radialSegments; point++) {
-      float angle = (point / (float)radialSegments) * 2.0f * glm::pi<float>();
+      const float angle = static_cast<float>(point) /
+                          static_cast<float>(radialSegments) * 2.0f *
+                          glm::pi<float>();
 
-      float xPos = ringRadius * cos(angle);
-      float zPos = ringRadius * sin(angle);
+      const float xPos = ringRadius * cos(angle);
+      const float zPos = ringRadius * sin(angle);
 
-      float noiseX = (xPos / radius) * noiseScale;
-      float noiseZ = (zPos / radius) * noiseScale;
+      const float noiseX = (xPos / radius) * noiseScale;
+      const float noiseZ = (zPos / radius) * noiseScale;
 
-      float height = perlin.octaveNoise(noiseX, noiseZ, octaves, persistence) *
-                     heightScale;
+      const float height =
+          perlin.octaveNoise(noiseX, noiseZ, octaves, persistence) *
+          heightScale;
 
       Vertex vertex{};
       vertex.pos = glm::vec3(xPos, height, zPos);
@@ -621,7 +629,7 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
   }
 
   for (uint32_t point = 0; point < radialSegments; point++) {
-    uint32_t nextPoint = (point + 1) % radialSegments;
+    const uint32_t nextPoint = (point + 1) % radialSegments;
 
     mesh->indices.push_back(0);
     mesh->indices.push_back(1 + nextPoint);
@@ -629,16 +637,16 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
   }
 
   for (uint32_t ring = 1; ring < segments; ring++) {
-    uint32_t currentRingStart = 1 + (ring - 1) * radialSegments;
-    uint32_t nextRingStart = 1 + ring * radialSegments;
+    const uint32_t currentRingStart = 1 + (ring - 1) * radialSegments;
+    const uint32_t nextRingStart = 1 + ring * radialSegments;
 
     for (uint32_t point = 0; point < radialSegments; point++) {
-      uint32_t nextPoint = (point + 1) % radialSegments;
+      const uint32_t nextPoint = (point + 1) % radialSegments;
 
-      uint32_t current = currentRingStart + point;
-      uint32_t currentNext = currentRingStart + nextPoint;
-      uint32_t next = nextRingStart + point;
-      uint32_t nextNext = nextRingStart + nextPoint;
+      const uint32_t current = currentRingStart + point;
+      const uint32_t currentNext = currentRingStart + nextPoint;
+      const uint32_t next = nextRingStart + point;
+      const uint32_t nextNext = nextRingStart + nextPoint;
 
       mesh->indices.push_back(current);
       mesh->indices.push_back(nextNext);
@@ -651,15 +659,15 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
   }
 
   for (size_t i = 0; i < mesh->indices.size(); i += 3) {
-    uint32_t idx0 = mesh->indices[i];
-    uint32_t idx1 = mesh->indices[i + 1];
-    uint32_t idx2 = mesh->indices[i + 2];
+    const uint32_t idx0 = mesh->indices[i];
+    const uint32_t idx1 = mesh->indices[i + 1];
+    const uint32_t idx2 = mesh->indices[i + 2];
 
-    glm::vec3 v0 = mesh->vertices[idx0].pos;
-    glm::vec3 v1 = mesh->vertices[idx1].pos;
-    glm::vec3 v2 = mesh->vertices[idx2].pos;
+    const glm::vec3 v0 = mesh->vertices[idx0].pos;
+    const glm::vec3 v1 = mesh->vertices[idx1].pos;
+    const glm::vec3 v2 = mesh->vertices[idx2].pos;
 
-    glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+    const glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
 
     mesh->vertices[idx0].normal += normal;
     mesh->vertices[idx1].normal += normal;
@@ -671,7 +679,7 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
   }
 
   createBuffers(mesh);
-  MeshID id = registerMesh(mesh);
+  const MeshID id = registerMesh(mesh);
 
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Created circular procedural terrain with ID: ", id,
@@ -685,9 +693,9 @@ void MeshManager::createBuffers(Mesh* mesh) {
   Debug::log(Debug::Category::RENDERING,
              "MeshManager: Creating buffers for mesh '", mesh->name, "'");
 
-  VkDevice device = renderDevice->getDevice();
+  const VkDevice device = renderDevice->getDevice();
 
-  VkDeviceSize vertexBufferSize = sizeof(Vertex) * mesh->vertices.size();
+  const VkDeviceSize vertexBufferSize = sizeof(Vertex) * mesh->vertices.size();
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
 
@@ -712,7 +720,7 @@ void MeshManager::createBuffers(Mesh* mesh) {
   vkDestroyBuffer(device, stagingBuffer, nullptr);
   vkFreeMemory(device, stagingBufferMemory, nullptr);
 
-  VkDeviceSize indexBufferSize = sizeof(uint16_t) * mesh->indices.size();
+  const VkDeviceSize indexBufferSize = sizeof(uint16_t) * mesh->indices.size();
 
   renderDevice->createBuffer(indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
