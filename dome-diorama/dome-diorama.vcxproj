@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Resources\MaterialManager.cpp" />
     <ClCompile Include="src\Resources\MeshManager.cpp" />
@@ -178,9 +179,12 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Application.h" />
     <ClInclude Include="src\Particles\DustEmitter.h" />
     <ClInclude Include="src\Particles\RainEmitter.h" />
     <ClInclude Include="src\Particles\SmokeEmitter.h" />
+    <ClInclude Include="src\Rendering\MainPipeline.h" />
+    <ClInclude Include="src\Rendering\Window.h" />
     <ClInclude Include="src\Scene\Shadow.h" />
     <ClInclude Include="src\Scene\Skybox.h" />
     <ClInclude Include="src\Util\Camera.h" />
@@ -199,6 +203,13 @@
     <ClInclude Include="src\Scene\PlantManager.h" />
     <ClInclude Include="src\Rendering\PostProcessing.h" />
     <ClInclude Include="src\Rendering\RenderDevice.h" />
+    <ClInclude Include="src\Vulkan\VulkanCommandBuffer.h" />
+    <ClInclude Include="src\Vulkan\VulkanDepthBuffer.h" />
+    <ClInclude Include="src\Vulkan\VulkanDescriptors.h" />
+    <ClInclude Include="src\Vulkan\VulkanDevice.h" />
+    <ClInclude Include="src\Vulkan\VulkanInstance.h" />
+    <ClInclude Include="src\Vulkan\VulkanSwapchain.h" />
+    <ClInclude Include="src\Vulkan\VulkanSyncObjects.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="src\Resources\Texture.h" />
     <ClInclude Include="src\Resources\TextureManager.h" />
