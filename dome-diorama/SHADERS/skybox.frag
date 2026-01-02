@@ -26,8 +26,10 @@ void main() {
         discard;
     }
     
-    vec3 texCoord = normalize(fragTexCoord);
-    texCoord.y = abs(texCoord.y);
+    vec3 viewDir = normalize(fragWorldPos - camera.eyePos);
+    
+    vec3 texCoord = viewDir;
+    texCoord.x = -texCoord.x;
     
     outColor = texture(skyboxSampler, texCoord);
 }

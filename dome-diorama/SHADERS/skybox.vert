@@ -19,12 +19,9 @@ layout(location = 2) out vec3 fragViewPos;
 void main() {
     fragTexCoord = normalize(inPosition);
     
-    vec4 worldPos = vec4(inPosition * 5000.0, 1.0);
+    vec4 worldPos = push.model * vec4(inPosition, 1.0);
     fragWorldPos = worldPos.xyz;
     fragViewPos = camera.eyePos;
     
-    mat4 viewNoTranslation = mat4(mat3(camera.view));
-    vec4 pos = camera.proj * viewNoTranslation * worldPos;
-    
-    gl_Position = pos.xyww;
+    gl_Position = camera.proj * camera.view * worldPos;
 }

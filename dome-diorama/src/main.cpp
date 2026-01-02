@@ -1660,8 +1660,9 @@ class DomeDiorama final {
       mainObjectCount++;
     }
 
+    const Object* domeGlassObject = &sceneObjects[3];
     skybox->render(commandBuffer, descriptorSets[currentFrame], swapChainExtent,
-                   nullptr);
+                   domeGlassObject);
 
     particleManager->render(
         commandBuffer, descriptorSets[currentFrame], particlePipelineLayout,
@@ -2211,8 +2212,24 @@ class DomeDiorama final {
     sceneObjects.push_back(sun);
     sceneObjects.push_back(sandPlane);
 
-    const MeshID domeGlassMesh =
-        meshManager->loadFromOBJ("./Models/DomeGlass.obj");
+    const MeshID skyboxSphereMesh = meshManager->createSphere(150.0f, 64);
+
+    const MaterialID skyboxMaterialID =
+        materialManager->registerMaterial(MaterialBuilder()
+                                              .name("Skybox Sphere Material")
+                                              .albedoColor(1.0f, 1.0f, 1.0f)
+                                              .metallic(0.0f)
+                                              .opacity(1.0f));
+
+    const Object skyboxSphere = ObjectBuilder()
+                                    .name("Skybox Sphere")
+                                    .position(0.0f, 0.0f, 0.0f)
+                                    .mesh(skyboxSphereMesh)
+                                    .material(skyboxMaterialID)
+                                    .scale(1.0f)
+                                    .build();
+
+    sceneObjects.push_back(skyboxSphere);
 
     const MeshID domeBaseMesh =
         meshManager->loadFromOBJ("./Models/DomeBase.obj");
@@ -2233,24 +2250,6 @@ class DomeDiorama final {
                                 .build();
 
     sceneObjects.push_back(domeBase);
-
-    const MaterialID domeGlassMaterial =
-        materialManager->registerMaterial(MaterialBuilder()
-                                              .name("Dome Glass Material")
-                                              .albedoColor(1.0f, 1.0f, 1.0f)
-                                              .metallic(0.0f)
-                                              .opacity(1.0f)
-                                              .transparent(true));
-
-    const Object domeGlass = ObjectBuilder()
-                                 .name("Dome Glass")
-                                 .position(0.0f, 40.0f, 0.0f)
-                                 .mesh(domeGlassMesh)
-                                 .material(domeGlassMaterial)
-                                 .scale(1.0f)
-                                 .build();
-
-    sceneObjects.push_back(domeGlass);
 
     const Mesh* const terrainMesh = meshManager->getMesh(sandTerrainMesh);
 

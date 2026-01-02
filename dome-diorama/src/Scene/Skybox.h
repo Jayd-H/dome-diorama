@@ -97,7 +97,7 @@ class Skybox final {
     pushConstants.model = domeObject->getModelMatrix();
     pushConstants.domeCenter = domeObject->position;
 
-    float domeRadius = 150.0f;
+    float domeRadius = 150.0f * domeObject->scale.x;
     pushConstants.domeRadiusSquared = domeRadius * domeRadius;
 
     vkCmdPushConstants(
@@ -342,8 +342,7 @@ class Skybox final {
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 
-    Debug::log(Debug::Category::SKYBOX,
-               "Skybox: Cubemap loaded successfully");
+    Debug::log(Debug::Category::SKYBOX, "Skybox: Cubemap loaded successfully");
   }
 
   void createCubemapImageView() {
