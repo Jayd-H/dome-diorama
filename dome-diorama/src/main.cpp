@@ -2189,12 +2189,12 @@ class DomeDiorama final {
     const MaterialID sandMaterialID = materialManager->registerMaterial(
         MaterialBuilder()
             .name("Sand Material")
-            .albedoMap("./Models/textures/gravelly_sand_diff_1k.jpg")
-            .normalMap("./Models/textures/gravelly_sand_nor_gl_1k.png")
-            .roughnessMap("./Models/textures/gravelly_sand_rough_1k.png")
-            .heightMap("./Models/textures/gravelly_sand_disp_1k.png")
-            .heightScale(0.02f)
-            .textureScale(160.0f));
+            .albedoMap("./Models/textures/rockytrail/rocky_trail_02_diff_4k.jpg")
+            .normalMap("./Models/textures/rockytrail/rocky_trail_02_ao_4k.jpg")
+            .roughnessMap("./Models/textures/rockytrail/rocky_trail_02_arm_4k.jpg")
+            .heightMap("./Models/textures/rockytrail/rocky_trail_02_disp_4k.jpg")
+            .heightScale(1.0f)
+            .textureScale(50.0f));
 
     const MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
     const MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
@@ -2271,8 +2271,8 @@ class DomeDiorama final {
     const Mesh* const terrainMesh = meshManager->getMesh(sandTerrainMesh);
 
     PlantSpawnConfig plantConfig;
-    plantConfig.numCacti = 0;
-    plantConfig.numTrees = 0;
+    plantConfig.numCacti = 400;
+    plantConfig.numTrees = 100;
     plantConfig.minRadius = 8.0f;
     plantConfig.maxRadius = 300.0f;
     plantConfig.seed = 67;
