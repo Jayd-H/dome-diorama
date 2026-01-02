@@ -13,6 +13,8 @@
 #include "Rendering/RenderDevice.h"
 #include "Util/Debug.h"
 
+#define SKYBOX_RADIUS 100.0f
+
 class Skybox final {
  public:
   Skybox(RenderDevice* renderDevice, VkDevice device, VkCommandPool commandPool,
@@ -46,7 +48,7 @@ class Skybox final {
   Skybox(const Skybox&) = delete;
   Skybox& operator=(const Skybox&) = delete;
 
-  void init(const std::string& folderPath, VkDescriptorSetLayout cameraLayout,
+void init(const std::string& folderPath, VkDescriptorSetLayout cameraLayout,
             VkFormat swapchainFormat, VkFormat depthFormat) {
     Debug::log(Debug::Category::SKYBOX, "Skybox: Initializing");
 
@@ -97,8 +99,7 @@ class Skybox final {
     pushConstants.model = domeObject->getModelMatrix();
     pushConstants.domeCenter = domeObject->position;
 
-    float domeRadius = 150.0f * domeObject->scale.x;
-    pushConstants.domeRadiusSquared = domeRadius * domeRadius;
+    pushConstants.domeRadiusSquared = SKYBOX_RADIUS * SKYBOX_RADIUS;
 
     vkCmdPushConstants(
         commandBuffer, pipelineLayout,
@@ -386,20 +387,20 @@ class Skybox final {
   void createSkyboxGeometry() {
     const int segments = 64;
     const int rings = 32;
-    const float radius = 100.0f;
+    const float radius = SKYBOX_RADIUS;
 
     vertices.clear();
     indices.clear();
 
     for (int ring = 0; ring <= rings; ++ring) {
-      float phi = (float)ring / (float)rings * (3.14159f / 2.0f);
-      float y = cos(phi);
-      float ringRadius = sin(phi);
+      const float phi = (float)ring / (float)rings * (3.14159f / 2.0f);
+      const float y = cos(phi);
+      const float ringRadius = sin(phi);
 
       for (int seg = 0; seg <= segments; ++seg) {
-        float theta = (float)seg / (float)segments * 2.0f * 3.14159f;
-        float x = ringRadius * cos(theta);
-        float z = ringRadius * sin(theta);
+        const float theta = (float)seg / (float)segments * 2.0f * 3.14159f;
+        const float x = ringRadius * cos(theta);
+        const float z = ringRadius * sin(theta);
 
         vertices.push_back(glm::vec3(x * radius, y * radius, z * radius));
       }

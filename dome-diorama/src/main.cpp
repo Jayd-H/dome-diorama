@@ -810,7 +810,14 @@ class DomeDiorama final {
     colorBlendAttachment.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
+    colorBlendAttachment.blendEnable = VK_TRUE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachment.dstColorBlendFactor =
+        VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
     colorBlending.sType =
@@ -1772,7 +1779,6 @@ class DomeDiorama final {
       ubo.lightSpaceMatrices[i] = glm::mat4(1.0f);
     }
 
-
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
   }
 
@@ -2188,11 +2194,11 @@ class DomeDiorama final {
             .roughnessMap("./Models/textures/gravelly_sand_rough_1k.png")
             .heightMap("./Models/textures/gravelly_sand_disp_1k.png")
             .heightScale(0.02f)
-            .textureScale(40.0f));
+            .textureScale(160.0f));
 
     const MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
     const MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
-        100.0f, 100, 10.0f, 2.0f, 2, 0.6f, 42);
+        300.0f, 100, 10.0f, 2.0f, 2, 0.6f, 42);
 
     const Object sun = ObjectBuilder()
                            .name("Sun")
@@ -2212,56 +2218,67 @@ class DomeDiorama final {
     sceneObjects.push_back(sun);
     sceneObjects.push_back(sandPlane);
 
-    const MeshID skyboxSphereMesh = meshManager->createSphere(150.0f, 64);
+    const MeshID skyboxSphereMesh = meshManager->createSphere(100.0f, 64);
 
-    const MaterialID skyboxMaterialID =
-        materialManager->registerMaterial(MaterialBuilder()
-                                              .name("Skybox Sphere Material")
-                                              .albedoColor(1.0f, 1.0f, 1.0f)
-                                              .metallic(0.0f)
-                                              .opacity(1.0f));
+    const MaterialID skyboxMaterialID = materialManager->registerMaterial(
+        MaterialBuilder()
+            .name("Skybox Sphere Material")
+            .albedoColor(238.0f / 255.0f, 21.0f / 255.0f, 21.0f / 255.0f)
+            .metallic(0.0f)
+            .roughness(0.1f)
+            .transparent(true)
+            .opacity(0.3f));
 
     const Object skyboxSphere = ObjectBuilder()
                                     .name("Skybox Sphere")
                                     .position(0.0f, 0.0f, 0.0f)
                                     .mesh(skyboxSphereMesh)
                                     .material(skyboxMaterialID)
-                                    .scale(1.0f)
+                                    .scale(3.0f)
                                     .build();
 
     sceneObjects.push_back(skyboxSphere);
 
-    const MeshID domeBaseMesh =
-        meshManager->loadFromOBJ("./Models/DomeBase.obj");
+    const MeshID pokeballWhiteMesh =
+        meshManager->loadFromOBJ("./Models/PokeWhite.obj");
+    const MaterialID pokeballWhiteMaterial =
+        materialManager->loadFromMTL("./Models/PokeWhite.mtl");
 
-    const MaterialID domeBaseMaterial =
-        materialManager->registerMaterial(MaterialBuilder()
-                                              .name("Dome Base Material")
-                                              .albedoColor(0.5f, 0.5f, 0.5f)
-                                              .metallic(1.0f)
-                                              .roughness(0.3f));
+    const MeshID pokeballBlackMesh =
+        meshManager->loadFromOBJ("./Models/PokeBlack.obj");
+    const MaterialID pokeballBlackMaterial =
+        materialManager->loadFromMTL("./Models/PokeBlack.mtl");
 
-    const Object domeBase = ObjectBuilder()
-                                .name("Dome Base")
-                                .position(0.0f, -20.0f, 0.0f)
-                                .mesh(domeBaseMesh)
-                                .material(domeBaseMaterial)
-                                .scale(1.0f)
-                                .build();
+    const Object pokeballWhite = ObjectBuilder()
+                                     .name("Pokeball White")
+                                     .position(-10.0f, -130.0f, 0.0f)
+                                     .mesh(pokeballWhiteMesh)
+                                     .material(pokeballWhiteMaterial)
+                                     .scale(3.05f)
+                                     .build();
 
-    sceneObjects.push_back(domeBase);
+    const Object pokeballBlack = ObjectBuilder()
+                                     .name("Pokeball Black")
+                                     .position(0.0f, 0.0f, 0.0f)
+                                     .mesh(pokeballBlackMesh)
+                                     .material(pokeballBlackMaterial)
+                                     .scale(3.05f)
+                                     .build();
+
+    sceneObjects.push_back(pokeballWhite);
+    sceneObjects.push_back(pokeballBlack);
 
     const Mesh* const terrainMesh = meshManager->getMesh(sandTerrainMesh);
 
     PlantSpawnConfig plantConfig;
-    plantConfig.numCacti = 150;
-    plantConfig.numTrees = 100;
-    plantConfig.minRadius = 2.0f;
-    plantConfig.maxRadius = 90.0f;
-    plantConfig.seed = 42;
+    plantConfig.numCacti = 0;
+    plantConfig.numTrees = 0;
+    plantConfig.minRadius = 8.0f;
+    plantConfig.maxRadius = 300.0f;
+    plantConfig.seed = 67;
     plantConfig.randomGrowthStages = true;
-    plantConfig.scaleVariance = 0.3f;
-    plantConfig.rotationVariance = 0.2f;
+    plantConfig.scaleVariance = 0.7f;
+    plantConfig.rotationVariance = 0.8f;
 
     plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
 
