@@ -2227,7 +2227,7 @@ class DomeDiorama final {
             .metallic(0.0f)
             .roughness(0.1f)
             .transparent(true)
-            .opacity(0.3f));
+            .opacity(0.1f));
 
     const Object skyboxSphere = ObjectBuilder()
                                     .name("Skybox Sphere")

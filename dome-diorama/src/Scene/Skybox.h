@@ -13,7 +13,7 @@
 #include "Rendering/RenderDevice.h"
 #include "Util/Debug.h"
 
-#define SKYBOX_RADIUS 100.0f
+#define SKYBOX_RADIUS 300.0f
 
 class Skybox final {
  public:
@@ -48,7 +48,7 @@ class Skybox final {
   Skybox(const Skybox&) = delete;
   Skybox& operator=(const Skybox&) = delete;
 
-void init(const std::string& folderPath, VkDescriptorSetLayout cameraLayout,
+  void init(const std::string& folderPath, VkDescriptorSetLayout cameraLayout,
             VkFormat swapchainFormat, VkFormat depthFormat) {
     Debug::log(Debug::Category::SKYBOX, "Skybox: Initializing");
 
@@ -67,7 +67,7 @@ void init(const std::string& folderPath, VkDescriptorSetLayout cameraLayout,
     Debug::log(Debug::Category::SKYBOX, "Skybox: Initialization complete");
   }
 
-  void render(VkCommandBuffer commandBuffer,
+ void render(VkCommandBuffer commandBuffer,
               VkDescriptorSet cameraDescriptorSet, const VkExtent2D& extent,
               const Object* domeObject) const {
     if (!domeObject || !domeObject->visible) return;
@@ -96,9 +96,8 @@ void init(const std::string& folderPath, VkDescriptorSetLayout cameraLayout,
       alignas(4) float domeRadiusSquared;
     } pushConstants;
 
-    pushConstants.model = domeObject->getModelMatrix();
-    pushConstants.domeCenter = domeObject->position;
-
+    pushConstants.model = glm::mat4(1.0f);
+    pushConstants.domeCenter = glm::vec3(0.0f, 0.0f, 0.0f);
     pushConstants.domeRadiusSquared = SKYBOX_RADIUS * SKYBOX_RADIUS;
 
     vkCmdPushConstants(
@@ -192,13 +191,13 @@ void init(const std::string& folderPath, VkDescriptorSetLayout cameraLayout,
   std::vector<glm::vec3> vertices;
   std::vector<uint16_t> indices;
 
-  void loadCubemap(const std::string& folderPath) {
+ void loadCubemap(const std::string& folderPath) {
     Debug::log(Debug::Category::SKYBOX, "Skybox: Loading cubemap from ",
                folderPath);
 
     const std::array<std::string, 6> faceFiles = {
         folderPath + "/px.jpg", folderPath + "/nx.jpg", folderPath + "/py.jpg",
-        folderPath + "/pz.jpg", folderPath + "/nz.jpg", folderPath + "/ny.jpg"};
+        folderPath + "/ny.jpg", folderPath + "/nz.jpg", folderPath + "/pz.jpg"};
 
     int width = 0, height = 0, channels = 0;
     std::vector<unsigned char*> faceData(6);
@@ -393,14 +392,14 @@ void init(const std::string& folderPath, VkDescriptorSetLayout cameraLayout,
     indices.clear();
 
     for (int ring = 0; ring <= rings; ++ring) {
-      const float phi = (float)ring / (float)rings * (3.14159f / 2.0f);
-      const float y = cos(phi);
-      const float ringRadius = sin(phi);
+      float phi = (float)ring / (float)rings * 3.14159f;
+      float y = cos(phi);
+      float ringRadius = sin(phi);
 
       for (int seg = 0; seg <= segments; ++seg) {
-        const float theta = (float)seg / (float)segments * 2.0f * 3.14159f;
-        const float x = ringRadius * cos(theta);
-        const float z = ringRadius * sin(theta);
+        float theta = (float)seg / (float)segments * 2.0f * 3.14159f;
+        float x = ringRadius * cos(theta);
+        float z = ringRadius * sin(theta);
 
         vertices.push_back(glm::vec3(x * radius, y * radius, z * radius));
       }
@@ -510,7 +509,7 @@ void init(const std::string& folderPath, VkDescriptorSetLayout cameraLayout,
     vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
-  void createPipeline(VkDescriptorSetLayout cameraLayout) {
+ void createPipeline(VkDescriptorSetLayout cameraLayout) {
     const auto vertShaderCode = readFile("shaders/skybox_vert.spv");
     const auto fragShaderCode = readFile("shaders/skybox_frag.spv");
 
