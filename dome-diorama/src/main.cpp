@@ -26,6 +26,9 @@
 #include "Util/Camera.h"
 #include "Util/Debug.h"
 #include "Util/Input.h"
+#include "Particles/SmokeEmitter.h"
+#include "Particles/RainEmitter.h"
+#include "Particles/DustEmitter.h"
 
 #define GLM_FORCE_RADIANS
 #include <algorithm>
@@ -83,7 +86,7 @@ const bool DEBUG_VULKAN = true;
 const bool DEBUG_SKYBOX = true;
 const bool DEBUG_PLANTMANAGER = true;
 const bool DEBUG_WORLD = true;
-const bool DEBUG_PARTICLES = false;
+const bool DEBUG_PARTICLES = true;
 const bool DEBUG_MESH = false;
 const bool DEBUG_LIGHTS = true;
 const bool DEBUG_SCENE = true;
@@ -2349,8 +2352,8 @@ class DomeDiorama final {
 
     FireEmitter* const fireEmitter = FireEmitterBuilder()
                                          .name("Fire Emitter")
-                                         .position(0.0f, 0.5f, 0.0f)
-                                         .maxParticles(500)
+                                         .position(-5.0f, 0.5f, 0.0f)
+                                         .maxParticles(800)
                                          .particleLifetime(2.0f)
                                          .material(particleMaterialID)
                                          .waveFrequency(2.0f)
@@ -2362,9 +2365,55 @@ class DomeDiorama final {
                                          .particleScale(0.5f)
                                          .build();
 
-    particleManager->registerEmitter(fireEmitter);
+    SmokeEmitter* const smokeEmitter = SmokeEmitterBuilder()
+                                           .name("Smoke Emitter")
+                                           .position(5.0f, 0.5f, 0.0f)
+                                           .maxParticles(600)
+                                           .particleLifetime(3.0f)
+                                           .material(particleMaterialID)
+                                           .baseColor(0.3f, 0.3f, 0.3f)
+                                           .tipColor(0.6f, 0.6f, 0.6f)
+                                           .upwardSpeed(1.5f)
+                                           .horizontalSpread(0.8f)
+                                           .spawnRadius(0.3f)
+                                           .particleScale(1.5f)
+                                           .build();
 
-    Debug::log(Debug::Category::MAIN, "Created particle emitter");
+    RainEmitter* const rainEmitter = RainEmitterBuilder()
+                                         .name("Rain Emitter")
+                                         .position(0.0f, 30.0f, 10.0f)
+                                         .maxParticles(1000)
+                                         .particleLifetime(2.0f)
+                                         .material(particleMaterialID)
+                                         .baseColor(0.6f, 0.7f, 0.9f)
+                                         .tipColor(0.8f, 0.9f, 1.0f)
+                                         .downwardSpeed(15.0f)
+                                         .windStrength(2.0f)
+                                         .spawnRadius(15.0f)
+                                         .particleScale(0.1f)
+                                         .build();
+
+    DustEmitter* const dustEmitter = DustEmitterBuilder()
+                                         .name("Dust Emitter")
+                                         .position(0.0f, 5.0f, -10.0f)
+                                         .maxParticles(500)
+                                         .particleLifetime(4.0f)
+                                         .material(particleMaterialID)
+                                         .baseColor(0.7f, 0.6f, 0.5f)
+                                         .tipColor(0.5f, 0.4f, 0.3f)
+                                         .swirlingSpeed(1.0f)
+                                         .swirlingRadius(3.0f)
+                                         .driftSpeed(0.5f)
+                                         .spawnRadius(5.0f)
+                                         .particleScale(0.3f)
+                                         .build();
+
+    particleManager->registerEmitter(fireEmitter);
+    particleManager->registerEmitter(smokeEmitter);
+    particleManager->registerEmitter(rainEmitter);
+    particleManager->registerEmitter(dustEmitter);
+
+    Debug::log(Debug::Category::MAIN, "Created 4 particle emitters");
     Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
                " scene objects and ", lightManager->getLightCount(), " lights");
     Debug::log(Debug::Category::MAIN, "Spawned ",

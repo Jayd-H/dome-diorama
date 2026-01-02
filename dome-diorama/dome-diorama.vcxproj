@@ -178,6 +178,9 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Particles\DustEmitter.h" />
+    <ClInclude Include="src\Particles\RainEmitter.h" />
+    <ClInclude Include="src\Particles\SmokeEmitter.h" />
     <ClInclude Include="src\Scene\Shadow.h" />
     <ClInclude Include="src\Scene\Skybox.h" />
     <ClInclude Include="src\Util\Camera.h" />

@@ -49,12 +49,12 @@ float random(uint seed) {
 void main() {
     uint particleId = uint(inParticleIndex);
     
-    float particleTime = mod(params.time + (inParticleIndex / params.maxParticles) * params.particleLifetime, params.particleLifetime);
+    float particleOffset = (inParticleIndex / params.maxParticles) * params.particleLifetime;
+    float particleTime = mod(params.time + particleOffset, params.particleLifetime);
     float lifeRatio = particleTime / params.particleLifetime;
     
     uint seed1 = particleId * 2u + 1u;
     uint seed2 = particleId * 2u + 2u;
-    uint seed3 = particleId * 3u + 3u;
     
     float spawnX = (random(seed1) - 0.5) * params.spawnRadius * 2.0;
     float spawnZ = (random(seed2) - 0.5) * params.spawnRadius * 2.0;
