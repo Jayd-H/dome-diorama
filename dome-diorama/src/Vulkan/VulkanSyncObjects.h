@@ -6,8 +6,8 @@
 
 namespace Vulkan {
 
-inline void createSyncObjects(
-    VkDevice device, int maxFramesInFlight, size_t swapChainImageCount,
+static void createSyncObjects(
+    VkDevice device, int maxFramesInFlight,
     std::vector<VkSemaphore>& imageAvailableSemaphores,
     std::vector<VkSemaphore>& renderFinishedSemaphores,
     std::vector<VkFence>& inFlightFences) {

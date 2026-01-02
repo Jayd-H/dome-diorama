@@ -1,9 +1,9 @@
 #include "ParticleManager.h"
 
-#include "Util/Debug.h"
 #include "Resources/Material.h"
 #include "Resources/MaterialManager.h"
 #include "Resources/MeshManager.h"
+#include "Util/Debug.h"
 
 ParticleManager::ParticleManager(RenderDevice* renderDevice,
                                  MaterialManager* materialManager)
@@ -132,7 +132,7 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
       continue;
     }
 
-    if (material->descriptorSet == VK_NULL_HANDLE) {
+    if (material->getDescriptorSet() == VK_NULL_HANDLE) {
       Debug::log(
           Debug::Category::PARTICLES,
           "ParticleManager: Material descriptor set is null for emitter ", i);
@@ -140,7 +140,7 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
     }
 
     std::array<VkDescriptorSet, 3> descriptorSets = {
-        cameraDescriptorSet, material->descriptorSet,
+        cameraDescriptorSet, material->getDescriptorSet(),
         particleDescriptorSets[i][currentFrame]};
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,

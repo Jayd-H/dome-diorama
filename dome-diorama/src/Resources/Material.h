@@ -23,8 +23,76 @@ struct MaterialProperties {
   float padding2 = 0.0f;
 };
 
-class Material {
+class MaterialBuilder;
+
+class Material final {
  public:
+  Material() = default;
+  Material(const Material&) = default;
+  Material& operator=(const Material&) = default;
+  ~Material() = default;
+
+  friend class MaterialBuilder;
+
+  inline TextureID getAlbedoMap() const { return albedoMap; }
+  inline void setAlbedoMap(TextureID id) { albedoMap = id; }
+
+  inline TextureID getNormalMap() const { return normalMap; }
+  inline void setNormalMap(TextureID id) { normalMap = id; }
+
+  inline TextureID getRoughnessMap() const { return roughnessMap; }
+  inline void setRoughnessMap(TextureID id) { roughnessMap = id; }
+
+  inline TextureID getMetallicMap() const { return metallicMap; }
+  inline void setMetallicMap(TextureID id) { metallicMap = id; }
+
+  inline TextureID getEmissiveMap() const { return emissiveMap; }
+  inline void setEmissiveMap(TextureID id) { emissiveMap = id; }
+
+  inline TextureID getHeightMap() const { return heightMap; }
+  inline void setHeightMap(TextureID id) { heightMap = id; }
+
+  inline TextureID getAoMap() const { return aoMap; }
+  inline void setAoMap(TextureID id) { aoMap = id; }
+
+  inline const MaterialProperties& getProperties() const { return properties; }
+  inline MaterialProperties& getPropertiesMutable() { return properties; }
+  inline void setProperties(const MaterialProperties& props) {
+    properties = props;
+  }
+
+  inline VkBuffer getPropertiesBuffer() const { return propertiesBuffer; }
+  inline void setPropertiesBuffer(VkBuffer buffer) {
+    propertiesBuffer = buffer;
+  }
+
+  inline VkDeviceMemory getPropertiesBufferMemory() const {
+    return propertiesBufferMemory;
+  }
+  inline void setPropertiesBufferMemory(VkDeviceMemory memory) {
+    propertiesBufferMemory = memory;
+  }
+
+  inline bool getIsTransparent() const { return isTransparent; }
+  inline void setIsTransparent(bool value) { isTransparent = value; }
+
+  inline bool getDoubleSided() const { return doubleSided; }
+  inline void setDoubleSided(bool value) { doubleSided = value; }
+
+  inline const std::string& getName() const { return name; }
+  inline void setName(const std::string& newName) { name = newName; }
+
+  inline VkDescriptorSet getDescriptorSet() const { return descriptorSet; }
+  inline void setDescriptorSet(VkDescriptorSet set) { descriptorSet = set; }
+
+ private:
+  std::string name = "Unnamed Material";
+  MaterialProperties properties;
+
+  VkBuffer propertiesBuffer = VK_NULL_HANDLE;
+  VkDeviceMemory propertiesBufferMemory = VK_NULL_HANDLE;
+  VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+
   TextureID albedoMap = INVALID_TEXTURE_ID;
   TextureID normalMap = INVALID_TEXTURE_ID;
   TextureID roughnessMap = INVALID_TEXTURE_ID;
@@ -33,20 +101,11 @@ class Material {
   TextureID heightMap = INVALID_TEXTURE_ID;
   TextureID aoMap = INVALID_TEXTURE_ID;
 
-  MaterialProperties properties;
-
-  VkBuffer propertiesBuffer = VK_NULL_HANDLE;
-  VkDeviceMemory propertiesBufferMemory = VK_NULL_HANDLE;
-
   bool isTransparent = false;
   bool doubleSided = false;
-
-  std::string name = "Unnamed Material";
-
-  VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 };
 
-class MaterialBuilder {
+class MaterialBuilder final {
  public:
   MaterialBuilder() { material.properties = MaterialProperties{}; }
 
@@ -189,27 +248,49 @@ class MaterialBuilder {
 
   Material* build() const { return new Material(material); }
 
-  bool hasAlbedoTexture = false;
-  std::string albedoFilepath;
+  inline bool getHasAlbedoTexture() const { return hasAlbedoTexture; }
+  inline const std::string& getAlbedoFilepath() const { return albedoFilepath; }
 
-  bool hasNormalTexture = false;
-  std::string normalFilepath;
+  inline bool getHasNormalTexture() const { return hasNormalTexture; }
+  inline const std::string& getNormalFilepath() const { return normalFilepath; }
 
-  bool hasRoughnessTexture = false;
-  std::string roughnessFilepath;
+  inline bool getHasRoughnessTexture() const { return hasRoughnessTexture; }
+  inline const std::string& getRoughnessFilepath() const {
+    return roughnessFilepath;
+  }
 
-  bool hasMetallicTexture = false;
-  std::string metallicFilepath;
+  inline bool getHasMetallicTexture() const { return hasMetallicTexture; }
+  inline const std::string& getMetallicFilepath() const {
+    return metallicFilepath;
+  }
 
-  bool hasEmissiveTexture = false;
-  std::string emissiveFilepath;
+  inline bool getHasEmissiveTexture() const { return hasEmissiveTexture; }
+  inline const std::string& getEmissiveFilepath() const {
+    return emissiveFilepath;
+  }
 
-  bool hasHeightTexture = false;
-  std::string heightFilepath;
+  inline bool getHasHeightTexture() const { return hasHeightTexture; }
+  inline const std::string& getHeightFilepath() const { return heightFilepath; }
 
-  bool hasAOTexture = false;
-  std::string aoFilepath;
+  inline bool getHasAOTexture() const { return hasAOTexture; }
+  inline const std::string& getAoFilepath() const { return aoFilepath; }
 
  private:
+  std::string albedoFilepath;
+  std::string normalFilepath;
+  std::string roughnessFilepath;
+  std::string metallicFilepath;
+  std::string emissiveFilepath;
+  std::string heightFilepath;
+  std::string aoFilepath;
+
   Material material;
+
+  bool hasAlbedoTexture = false;
+  bool hasNormalTexture = false;
+  bool hasRoughnessTexture = false;
+  bool hasMetallicTexture = false;
+  bool hasEmissiveTexture = false;
+  bool hasHeightTexture = false;
+  bool hasAOTexture = false;
 };

@@ -45,40 +45,41 @@ MaterialID MaterialManager::registerMaterial(Material* material) {
   }
 
   Debug::log(Debug::Category::MATERIALS,
-             "MaterialManager: Registering material '", material->name, "'");
+             "MaterialManager: Registering material '", material->getName(),
+             "'");
 
-  if (material->albedoMap == INVALID_TEXTURE_ID) {
-    material->albedoMap = textureManager->getDefaultWhite();
+  if (material->getAlbedoMap() == INVALID_TEXTURE_ID) {
+    material->setAlbedoMap(textureManager->getDefaultWhite());
     Debug::log(Debug::Category::MATERIALS,
                "  - Using default white for albedo map");
   }
-  if (material->normalMap == INVALID_TEXTURE_ID) {
-    material->normalMap = textureManager->getDefaultNormal();
+  if (material->getNormalMap() == INVALID_TEXTURE_ID) {
+    material->setNormalMap(textureManager->getDefaultNormal());
     Debug::log(Debug::Category::MATERIALS,
                "  - Using default normal for normal map");
   }
-  if (material->roughnessMap == INVALID_TEXTURE_ID) {
-    material->roughnessMap = textureManager->getDefaultWhite();
+  if (material->getRoughnessMap() == INVALID_TEXTURE_ID) {
+    material->setRoughnessMap(textureManager->getDefaultWhite());
     Debug::log(Debug::Category::MATERIALS,
                "  - Using default white for roughness map");
   }
-  if (material->metallicMap == INVALID_TEXTURE_ID) {
-    material->metallicMap = textureManager->getDefaultBlack();
+  if (material->getMetallicMap() == INVALID_TEXTURE_ID) {
+    material->setMetallicMap(textureManager->getDefaultBlack());
     Debug::log(Debug::Category::MATERIALS,
                "  - Using default black for metallic map");
   }
-  if (material->emissiveMap == INVALID_TEXTURE_ID) {
-    material->emissiveMap = textureManager->getDefaultBlack();
+  if (material->getEmissiveMap() == INVALID_TEXTURE_ID) {
+    material->setEmissiveMap(textureManager->getDefaultBlack());
     Debug::log(Debug::Category::MATERIALS,
                "  - Using default black for emissive map");
   }
-  if (material->heightMap == INVALID_TEXTURE_ID) {
-    material->heightMap = textureManager->getDefaultBlack();
+  if (material->getHeightMap() == INVALID_TEXTURE_ID) {
+    material->setHeightMap(textureManager->getDefaultBlack());
     Debug::log(Debug::Category::MATERIALS,
                "  - Using default black for height map");
   }
-  if (material->aoMap == INVALID_TEXTURE_ID) {
-    material->aoMap = textureManager->getDefaultWhite();
+  if (material->getAoMap() == INVALID_TEXTURE_ID) {
+    material->setAoMap(textureManager->getDefaultWhite());
     Debug::log(Debug::Category::MATERIALS,
                "  - Using default white for AO map");
   }
@@ -90,7 +91,7 @@ MaterialID MaterialManager::registerMaterial(Material* material) {
 
   Debug::log(Debug::Category::MATERIALS,
              "MaterialManager: Successfully registered material '",
-             material->name, "' with ID: ", id);
+             material->getName(), "' with ID: ", id);
 
   return id;
 }
@@ -98,33 +99,33 @@ MaterialID MaterialManager::registerMaterial(Material* material) {
 MaterialID MaterialManager::registerMaterial(MaterialBuilder& builder) {
   Material* material = builder.build();
 
-  if (builder.hasAlbedoTexture) {
-    material->albedoMap =
-        textureManager->load(builder.albedoFilepath, TextureType::sRGB);
+  if (builder.getHasAlbedoTexture()) {
+    material->setAlbedoMap(
+        textureManager->load(builder.getAlbedoFilepath(), TextureType::sRGB));
   }
-  if (builder.hasNormalTexture) {
-    material->normalMap =
-        textureManager->load(builder.normalFilepath, TextureType::Linear);
+  if (builder.getHasNormalTexture()) {
+    material->setNormalMap(
+        textureManager->load(builder.getNormalFilepath(), TextureType::Linear));
   }
-  if (builder.hasRoughnessTexture) {
-    material->roughnessMap =
-        textureManager->load(builder.roughnessFilepath, TextureType::Linear);
+  if (builder.getHasRoughnessTexture()) {
+    material->setRoughnessMap(textureManager->load(
+        builder.getRoughnessFilepath(), TextureType::Linear));
   }
-  if (builder.hasMetallicTexture) {
-    material->metallicMap =
-        textureManager->load(builder.metallicFilepath, TextureType::Linear);
+  if (builder.getHasMetallicTexture()) {
+    material->setMetallicMap(textureManager->load(builder.getMetallicFilepath(),
+                                                  TextureType::Linear));
   }
-  if (builder.hasEmissiveTexture) {
-    material->emissiveMap =
-        textureManager->load(builder.emissiveFilepath, TextureType::sRGB);
+  if (builder.getHasEmissiveTexture()) {
+    material->setEmissiveMap(
+        textureManager->load(builder.getEmissiveFilepath(), TextureType::sRGB));
   }
-  if (builder.hasHeightTexture) {
-    material->heightMap =
-        textureManager->load(builder.heightFilepath, TextureType::Linear);
+  if (builder.getHasHeightTexture()) {
+    material->setHeightMap(
+        textureManager->load(builder.getHeightFilepath(), TextureType::Linear));
   }
-  if (builder.hasAOTexture) {
-    material->aoMap =
-        textureManager->load(builder.aoFilepath, TextureType::Linear);
+  if (builder.getHasAOTexture()) {
+    material->setAoMap(
+        textureManager->load(builder.getAoFilepath(), TextureType::Linear));
   }
 
   return registerMaterial(material);
@@ -161,7 +162,7 @@ void MaterialManager::updateMaterialProperties(
   Debug::log(Debug::Category::MATERIALS,
              "MaterialManager: Updating properties for material ID: ", id);
 
-  materials[id]->properties = properties;
+  materials[id]->setProperties(properties);
   updateDescriptorSet(materials[id].get());
 
   Debug::log(Debug::Category::MATERIALS,
@@ -178,22 +179,26 @@ void MaterialManager::cleanup() {
 void MaterialManager::createDescriptorSet(Material* material) {
   Debug::log(Debug::Category::MATERIALS,
              "MaterialManager: Creating descriptor set for material '",
-             material->name, "'");
+             material->getName(), "'");
 
   VkDevice device = renderDevice->getDevice();
   VkDeviceSize bufferSize = sizeof(MaterialProperties);
 
+  VkBuffer buffer;
+  VkDeviceMemory memory;
+
   renderDevice->createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                             material->propertiesBuffer,
-                             material->propertiesBufferMemory);
+                             buffer, memory);
+
+  material->setPropertiesBuffer(buffer);
+  material->setPropertiesBufferMemory(memory);
 
   void* data;
-  vkMapMemory(device, material->propertiesBufferMemory, 0, bufferSize, 0,
-              &data);
-  memcpy(data, &material->properties, bufferSize);
-  vkUnmapMemory(device, material->propertiesBufferMemory);
+  vkMapMemory(device, memory, 0, bufferSize, 0, &data);
+  memcpy(data, &material->getProperties(), bufferSize);
+  vkUnmapMemory(device, memory);
 
   Debug::log(Debug::Category::MATERIALS, "  - Created properties buffer");
 
@@ -203,10 +208,12 @@ void MaterialManager::createDescriptorSet(Material* material) {
   allocInfo.descriptorSetCount = 1;
   allocInfo.pSetLayouts = &descriptorSetLayout;
 
-  if (vkAllocateDescriptorSets(device, &allocInfo, &material->descriptorSet) !=
-      VK_SUCCESS) {
+  VkDescriptorSet set;
+  if (vkAllocateDescriptorSets(device, &allocInfo, &set) != VK_SUCCESS) {
     throw std::runtime_error("Failed to allocate descriptor set for material!");
   }
+
+  material->setDescriptorSet(set);
 
   Debug::log(Debug::Category::MATERIALS, "  - Allocated descriptor set");
 
@@ -219,45 +226,53 @@ void MaterialManager::updateDescriptorSet(Material* material) {
   VkDevice device = renderDevice->getDevice();
 
   VkDescriptorBufferInfo bufferInfo{};
-  bufferInfo.buffer = material->propertiesBuffer;
+  bufferInfo.buffer = material->getPropertiesBuffer();
   bufferInfo.offset = 0;
   bufferInfo.range = sizeof(MaterialProperties);
 
   std::array<VkDescriptorImageInfo, 7> imageInfos{};
 
   imageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfos[0].imageView = textureManager->getImageView(material->albedoMap);
-  imageInfos[0].sampler = textureManager->getSampler(material->albedoMap);
+  imageInfos[0].imageView =
+      textureManager->getImageView(material->getAlbedoMap());
+  imageInfos[0].sampler = textureManager->getSampler(material->getAlbedoMap());
 
   imageInfos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfos[1].imageView = textureManager->getImageView(material->normalMap);
-  imageInfos[1].sampler = textureManager->getSampler(material->normalMap);
+  imageInfos[1].imageView =
+      textureManager->getImageView(material->getNormalMap());
+  imageInfos[1].sampler = textureManager->getSampler(material->getNormalMap());
 
   imageInfos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   imageInfos[2].imageView =
-      textureManager->getImageView(material->roughnessMap);
-  imageInfos[2].sampler = textureManager->getSampler(material->roughnessMap);
+      textureManager->getImageView(material->getRoughnessMap());
+  imageInfos[2].sampler =
+      textureManager->getSampler(material->getRoughnessMap());
 
   imageInfos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfos[3].imageView = textureManager->getImageView(material->metallicMap);
-  imageInfos[3].sampler = textureManager->getSampler(material->metallicMap);
+  imageInfos[3].imageView =
+      textureManager->getImageView(material->getMetallicMap());
+  imageInfos[3].sampler =
+      textureManager->getSampler(material->getMetallicMap());
 
   imageInfos[4].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfos[4].imageView = textureManager->getImageView(material->emissiveMap);
-  imageInfos[4].sampler = textureManager->getSampler(material->emissiveMap);
+  imageInfos[4].imageView =
+      textureManager->getImageView(material->getEmissiveMap());
+  imageInfos[4].sampler =
+      textureManager->getSampler(material->getEmissiveMap());
 
   imageInfos[5].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfos[5].imageView = textureManager->getImageView(material->heightMap);
-  imageInfos[5].sampler = textureManager->getSampler(material->heightMap);
+  imageInfos[5].imageView =
+      textureManager->getImageView(material->getHeightMap());
+  imageInfos[5].sampler = textureManager->getSampler(material->getHeightMap());
 
   imageInfos[6].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfos[6].imageView = textureManager->getImageView(material->aoMap);
-  imageInfos[6].sampler = textureManager->getSampler(material->aoMap);
+  imageInfos[6].imageView = textureManager->getImageView(material->getAoMap());
+  imageInfos[6].sampler = textureManager->getSampler(material->getAoMap());
 
   std::array<VkWriteDescriptorSet, 8> descriptorWrites{};
 
   descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  descriptorWrites[0].dstSet = material->descriptorSet;
+  descriptorWrites[0].dstSet = material->getDescriptorSet();
   descriptorWrites[0].dstBinding = 0;
   descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   descriptorWrites[0].descriptorCount = 1;
@@ -265,7 +280,7 @@ void MaterialManager::updateDescriptorSet(Material* material) {
 
   for (size_t i = 0; i < 7; i++) {
     descriptorWrites[i + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[i + 1].dstSet = material->descriptorSet;
+    descriptorWrites[i + 1].dstSet = material->getDescriptorSet();
     descriptorWrites[i + 1].dstBinding = static_cast<uint32_t>(i + 1);
     descriptorWrites[i + 1].descriptorType =
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -344,7 +359,7 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
       }
 
       currentMaterial = new Material();
-      currentMaterial->name = currentMaterialName;
+      currentMaterial->setName(currentMaterialName);
 
       Debug::log(Debug::Category::MATERIALS,
                  "  - Found material: ", currentMaterialName);
@@ -353,32 +368,34 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
       if (prefix == "Ns") {
         float ns;
         iss >> ns;
-        currentMaterial->properties.roughness = 1.0f - (ns / 1000.0f);
+        currentMaterial->getPropertiesMutable().roughness =
+            1.0f - (ns / 1000.0f);
       } else if (prefix == "Ka") {
       } else if (prefix == "Kd") {
         float r, g, b;
         iss >> r >> g >> b;
-        currentMaterial->properties.albedoColor = glm::vec4(r, g, b, 1.0f);
+        currentMaterial->getPropertiesMutable().albedoColor =
+            glm::vec4(r, g, b, 1.0f);
       } else if (prefix == "Ks") {
         float r, g, b;
         iss >> r >> g >> b;
         float specular = (r + g + b) / 3.0f;
-        currentMaterial->properties.metallic = specular;
+        currentMaterial->getPropertiesMutable().metallic = specular;
       } else if (prefix == "Ke") {
         float r, g, b;
         iss >> r >> g >> b;
         float emission = (r + g + b) / 3.0f;
-        currentMaterial->properties.emissiveIntensity = emission;
+        currentMaterial->getPropertiesMutable().emissiveIntensity = emission;
       } else if (prefix == "Ni") {
         float ior;
         iss >> ior;
-        currentMaterial->properties.indexOfRefraction = ior;
+        currentMaterial->getPropertiesMutable().indexOfRefraction = ior;
       } else if (prefix == "d") {
         float opacity;
         iss >> opacity;
-        currentMaterial->properties.opacity = opacity;
+        currentMaterial->getPropertiesMutable().opacity = opacity;
         if (opacity < 1.0f) {
-          currentMaterial->isTransparent = true;
+          currentMaterial->setIsTransparent(true);
         }
       } else if (prefix == "illum") {
       } else if (prefix == "map_Kd") {
@@ -389,7 +406,7 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
         std::string filename = extractFilename(texPath);
         std::string fullPath = baseDir + "textures/" + filename;
         TextureID texID = textureManager->load(fullPath, TextureType::sRGB);
-        currentMaterial->albedoMap = texID;
+        currentMaterial->setAlbedoMap(texID);
 
         Debug::log(Debug::Category::MATERIALS,
                    "    - Loaded albedo texture: ", fullPath);
@@ -401,7 +418,7 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
         std::string filename = extractFilename(texPath);
         std::string fullPath = baseDir + "textures/" + filename;
         TextureID texID = textureManager->load(fullPath, TextureType::Linear);
-        currentMaterial->metallicMap = texID;
+        currentMaterial->setMetallicMap(texID);
 
         Debug::log(Debug::Category::MATERIALS,
                    "    - Loaded specular texture: ", fullPath);
@@ -413,7 +430,7 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
         std::string filename = extractFilename(texPath);
         std::string fullPath = baseDir + "textures/" + filename;
         TextureID texID = textureManager->load(fullPath, TextureType::Linear);
-        currentMaterial->normalMap = texID;
+        currentMaterial->setNormalMap(texID);
 
         Debug::log(Debug::Category::MATERIALS,
                    "    - Loaded normal texture: ", fullPath);
@@ -429,7 +446,7 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
         Debug::log(Debug::Category::MATERIALS,
                    "    - Found opacity texture: ", fullPath);
 
-        currentMaterial->isTransparent = true;
+        currentMaterial->setIsTransparent(true);
       }
     }
   }
@@ -471,10 +488,11 @@ void MaterialManager::createDefaultMaterial() {
              "MaterialManager: Creating default material");
 
   Material* defaultMat = new Material();
-  defaultMat->name = "Default Material";
-  defaultMat->properties.albedoColor = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
-  defaultMat->properties.roughness = 0.5f;
-  defaultMat->properties.metallic = 0.0f;
+  defaultMat->setName("Default Material");
+  defaultMat->getPropertiesMutable().albedoColor =
+      glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
+  defaultMat->getPropertiesMutable().roughness = 0.5f;
+  defaultMat->getPropertiesMutable().metallic = 0.0f;
 
   defaultMaterialID = registerMaterial(defaultMat);
 

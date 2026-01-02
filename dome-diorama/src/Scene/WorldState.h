@@ -50,16 +50,17 @@ struct WorldConfig {
 
 class WorldState final {
  public:
-  inline WorldState(const WorldConfig& config = WorldConfig())
-      : currentTemperature(config.startingTemperature),
+  inline explicit WorldState(const WorldConfig& config = WorldConfig())
+      : rng(std::random_device{}()),
+        windDirection(1.0f, 0.0f, 0.0f),
+        dayLengthInSeconds(config.dayLengthInSeconds),
+        currentTemperature(config.startingTemperature),
         targetTemperature(config.startingTemperature),
         humidity(config.startingHumidity),
         targetHumidity(config.startingHumidity),
         windSpeed(config.startingWindSpeed),
         targetWindSpeed(config.startingWindSpeed),
-        windDirection(1.0f, 0.0f, 0.0f),
         precipitationIntensity(0.0f),
-        dayLengthInSeconds(config.dayLengthInSeconds),
         minTemperature(config.minTemperature),
         maxTemperature(config.maxTemperature),
         minHumidity(config.minHumidity),
@@ -67,8 +68,7 @@ class WorldState final {
         minWindSpeed(config.minWindSpeed),
         maxWindSpeed(config.maxWindSpeed),
         parameterUpdateInterval(config.parameterUpdateInterval),
-        dayNightTempVariation(config.dayNightTempVariation),
-        rng(std::random_device{}()) {
+        dayNightTempVariation(config.dayNightTempVariation) {
     time.hours = config.startingHour;
     time.minutes = config.startingMinute;
     time.normalizedTime =
@@ -87,9 +87,9 @@ class WorldState final {
   }
 
   inline float getTemperature() const { return currentTemperature; }
-  inline glm::vec3 getWindDirection() const { return windDirection; }
+  inline const glm::vec3& getWindDirection() const { return windDirection; }
   inline float getWindSpeed() const { return windSpeed; }
-  inline const TimeOfDay& getTime() const { return time; }
+  inline TimeOfDay getTime() const { return time; }
   inline WeatherState getWeather() const { return currentWeather; }
   inline float getPrecipitationIntensity() const {
     return precipitationIntensity;
@@ -135,16 +135,18 @@ class WorldState final {
   }
 
  private:
+  mutable std::mt19937 rng;
+  glm::vec3 windDirection;
   TimeOfDay time;
-  float dayLengthInSeconds;
+  WeatherState currentWeather = WeatherState::Clear;
 
+  float dayLengthInSeconds;
   float currentTemperature;
   float targetTemperature;
   float humidity;
   float targetHumidity;
   float windSpeed;
   float targetWindSpeed;
-  glm::vec3 windDirection;
   float precipitationIntensity;
 
   float minTemperature;
@@ -155,12 +157,7 @@ class WorldState final {
   float maxWindSpeed;
   float parameterUpdateInterval;
   float dayNightTempVariation;
-
-  WeatherState currentWeather = WeatherState::Clear;
-
   float parameterUpdateTimer = 0.0f;
-
-  mutable std::mt19937 rng;
 
   inline void updateTime(float deltaTime) {
     time.totalSeconds += deltaTime;
@@ -214,7 +211,6 @@ class WorldState final {
     const bool isDry = humidity < 0.4f;
     const bool isHumid = humidity > 0.7f;
     const bool isWindy = windSpeed > 5.0f;
-    const bool isCalm = windSpeed < 2.0f;
 
     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
     const float roll = dist(rng);
@@ -231,6 +227,7 @@ class WorldState final {
     }
 
     if (isHumid && !isCold) {
+      const bool isCalm = windSpeed < 2.0f;
       if (isWindy) {
         return roll < 0.6f ? WeatherState::HeavyRain : WeatherState::LightRain;
       }

@@ -152,6 +152,7 @@
     <ClCompile Include="src\Rendering\PostProcessing.cpp" />
     <ClCompile Include="src\Rendering\RenderDevice.cpp" />
     <ClCompile Include="src\Resources\TextureManager.cpp" />
+    <ClCompile Include="src\Util\ConfigParser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SHADERS\shader.frag">

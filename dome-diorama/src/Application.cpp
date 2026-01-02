@@ -168,8 +168,8 @@ void Application::initVulkan() {
 
   Debug::log(Debug::Category::VULKAN, "Creating sync objects...");
   Vulkan::createSyncObjects(device, MAX_FRAMES_IN_FLIGHT,
-                            swapChainImages.size(), imageAvailableSemaphores,
-                            renderFinishedSemaphores, inFlightFences);
+                            imageAvailableSemaphores, renderFinishedSemaphores,
+                            inFlightFences);
 
   Debug::log(Debug::Category::VULKAN, "Vulkan initialization complete!");
 }
@@ -1089,7 +1089,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         materialManager->getMaterial(object.materialID);
 
     if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
-    if (!material || material->descriptorSet == VK_NULL_HANDLE) continue;
+    if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
 
     const glm::mat4 modelMatrix = object.getModelMatrix();
     vkCmdPushConstants(
@@ -1105,7 +1105,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
                          VK_INDEX_TYPE_UINT16);
 
     std::array<VkDescriptorSet, 3> descriptorSetsToBind = {
-        descriptorSets[currentFrame], material->descriptorSet,
+        descriptorSets[currentFrame], material->getDescriptorSet(),
         lightManager->getShadowDescriptorSet()};
 
     vkCmdBindDescriptorSets(
