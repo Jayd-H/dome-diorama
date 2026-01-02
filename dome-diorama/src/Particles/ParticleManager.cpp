@@ -16,35 +16,35 @@ ParticleManager::ParticleManager(RenderDevice* renderDevice,
       materialDescriptorSetLayout(VK_NULL_HANDLE),
       particleParamsLayout(VK_NULL_HANDLE),
       particleDescriptorPool(VK_NULL_HANDLE) {
-  Debug::log(Debug::Category::RENDERING, "ParticleManager: Constructor called");
+  Debug::log(Debug::Category::PARTICLES, "ParticleManager: Constructor called");
 }
 
 ParticleManager::~ParticleManager() {
-  Debug::log(Debug::Category::RENDERING, "ParticleManager: Destructor called");
+  Debug::log(Debug::Category::PARTICLES, "ParticleManager: Destructor called");
   cleanup();
 }
 
 void ParticleManager::init(VkDescriptorSetLayout materialDescriptorSetLayout,
                            VkPipelineLayout pipelineLayout) {
-  Debug::log(Debug::Category::RENDERING, "ParticleManager: Initializing");
+  Debug::log(Debug::Category::PARTICLES, "ParticleManager: Initializing");
 
   this->materialDescriptorSetLayout = materialDescriptorSetLayout;
 
   createParticleDescriptorSetLayout();
   createInstanceBuffer();
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Initialization complete");
 }
 
 EmitterID ParticleManager::registerEmitter(ParticleEmitter* emitter) {
   if (!emitter) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::PARTICLES,
                "ParticleManager: Attempted to register null emitter!");
     return INVALID_EMITTER_ID;
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Registering emitter '", emitter->getName(), "'");
 
   EmitterID id = static_cast<EmitterID>(emitters.size());
@@ -58,7 +58,7 @@ EmitterID ParticleManager::registerEmitter(ParticleEmitter* emitter) {
 
   createParticleDescriptorSets(id, frameCount);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Successfully registered emitter with ID: ", id);
 
   return id;
@@ -66,7 +66,7 @@ EmitterID ParticleManager::registerEmitter(ParticleEmitter* emitter) {
 
 ParticleEmitter* ParticleManager::getEmitter(EmitterID id) {
   if (id >= emitters.size()) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::PARTICLES,
                "ParticleManager: Invalid emitter ID requested: ", id);
     return nullptr;
   }
@@ -89,7 +89,7 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
   if (emitters.empty()) return;
 
   if (shaderParamsMapped.empty() || currentFrame >= shaderParamsMapped.size()) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::PARTICLES,
                "ParticleManager: Invalid shader params mapped array - size: ",
                shaderParamsMapped.size(), ", currentFrame: ", currentFrame);
     return;
@@ -109,14 +109,14 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
     if (!emitter || !emitter->isActive()) continue;
 
     if (i >= particleDescriptorSets.size()) {
-      Debug::log(Debug::Category::RENDERING,
+      Debug::log(Debug::Category::PARTICLES,
                  "ParticleManager: Invalid descriptor set index for emitter ",
                  i);
       continue;
     }
 
     if (currentFrame >= particleDescriptorSets[i].size()) {
-      Debug::log(Debug::Category::RENDERING,
+      Debug::log(Debug::Category::PARTICLES,
                  "ParticleManager: Invalid frame index for emitter ", i);
       continue;
     }
@@ -127,14 +127,14 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
 
     Material* material = materialManager->getMaterial(emitter->getMaterialID());
     if (!material) {
-      Debug::log(Debug::Category::RENDERING,
+      Debug::log(Debug::Category::PARTICLES,
                  "ParticleManager: Invalid material for emitter ", i);
       continue;
     }
 
     if (material->descriptorSet == VK_NULL_HANDLE) {
       Debug::log(
-          Debug::Category::RENDERING,
+          Debug::Category::PARTICLES,
           "ParticleManager: Material descriptor set is null for emitter ", i);
       continue;
     }
@@ -159,7 +159,7 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
 }
 
 void ParticleManager::cleanup() {
-  Debug::log(Debug::Category::RENDERING, "ParticleManager: Cleaning up");
+  Debug::log(Debug::Category::PARTICLES, "ParticleManager: Cleaning up");
 
   if (instanceBuffer != VK_NULL_HANDLE) {
     vkDestroyBuffer(renderDevice->getDevice(), instanceBuffer, nullptr);
@@ -190,11 +190,11 @@ void ParticleManager::cleanup() {
 
   emitters.clear();
 
-  Debug::log(Debug::Category::RENDERING, "ParticleManager: Cleanup complete");
+  Debug::log(Debug::Category::PARTICLES, "ParticleManager: Cleanup complete");
 }
 
 void ParticleManager::createInstanceBuffer() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Creating instance buffer");
 
   instanceBufferSize = sizeof(ParticleInstanceData) * 10000;
@@ -215,12 +215,12 @@ void ParticleManager::createInstanceBuffer() {
 
   memcpy(instanceBufferMapped, instanceData.data(), instanceBufferSize);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Instance buffer created");
 }
 
 void ParticleManager::createShaderParamsBuffers(size_t frameCount) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Creating shader params buffers");
 
   VkDeviceSize bufferSize = sizeof(ParticleShaderParams);
@@ -241,12 +241,12 @@ void ParticleManager::createShaderParamsBuffers(size_t frameCount) {
                 0, &shaderParamsMapped[i]);
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Shader params buffers created");
 }
 
 void ParticleManager::createParticleDescriptorSetLayout() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Creating particle descriptor set layout");
 
   VkDescriptorSetLayoutBinding paramsBinding{};
@@ -268,12 +268,12 @@ void ParticleManager::createParticleDescriptorSetLayout() {
         "Failed to create particle descriptor set layout!");
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Particle descriptor set layout created");
 }
 
 void ParticleManager::createParticleDescriptorPool(size_t frameCount) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Creating particle descriptor pool");
 
   VkDescriptorPoolSize poolSize{};
@@ -291,13 +291,13 @@ void ParticleManager::createParticleDescriptorPool(size_t frameCount) {
     throw std::runtime_error("Failed to create particle descriptor pool!");
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Particle descriptor pool created");
 }
 
 void ParticleManager::createParticleDescriptorSets(size_t emitterIndex,
                                                    size_t frameCount) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Creating particle descriptor sets for emitter ",
              emitterIndex);
 
@@ -339,6 +339,6 @@ void ParticleManager::createParticleDescriptorSets(size_t emitterIndex,
                            nullptr);
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Particle descriptor sets created");
 }

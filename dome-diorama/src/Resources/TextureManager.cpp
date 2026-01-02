@@ -15,38 +15,38 @@ TextureManager::TextureManager(VkDevice dev, VkPhysicalDevice physDev,
       defaultWhiteTexture(0),
       defaultNormalTexture(0),
       defaultBlackTexture(0) {
-  Debug::log(Debug::Category::RENDERING, "TextureManager: Constructor called");
+  Debug::log(Debug::Category::TEXTURE, "TextureManager: Constructor called");
 
   textures.push_back(TextureData{});
 
   const std::array<unsigned char, 4> whitePixel = {255, 255, 255, 255};
   defaultWhiteTexture =
       createDefaultTexture(whitePixel.data(), 1, 1, TextureType::sRGB);
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::TEXTURE,
              "TextureManager: Created default white texture (ID: ",
              defaultWhiteTexture, ")");
 
   const std::array<unsigned char, 4> normalPixel = {128, 128, 255, 255};
   defaultNormalTexture =
       createDefaultTexture(normalPixel.data(), 1, 1, TextureType::Linear);
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::TEXTURE,
              "TextureManager: Created default normal texture (ID: ",
              defaultNormalTexture, ")");
 
   const std::array<unsigned char, 4> blackPixel = {0, 0, 0, 255};
   defaultBlackTexture =
       createDefaultTexture(blackPixel.data(), 1, 1, TextureType::sRGB);
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::TEXTURE,
              "TextureManager: Created default black texture (ID: ",
              defaultBlackTexture, ")");
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::TEXTURE,
              "TextureManager: Initialization complete");
 }
 
 TextureManager::~TextureManager() noexcept {
   try {
-    Debug::log(Debug::Category::RENDERING, "TextureManager: Destructor called");
+    Debug::log(Debug::Category::TEXTURE, "TextureManager: Destructor called");
     cleanup();
   } catch (...) {
   }
@@ -55,13 +55,13 @@ TextureManager::~TextureManager() noexcept {
 TextureID TextureManager::load(const TextureCreateInfo& createInfo) {
   auto it = filepathToID.find(createInfo.filepath);
   if (it != filepathToID.end()) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::TEXTURE,
                "TextureManager: Texture already loaded: ", createInfo.filepath,
                " (ID: ", it->second, ")");
     return it->second;
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::TEXTURE,
              "TextureManager: Loading new texture: ", createInfo.filepath);
 
   return createTexture(createInfo);
@@ -76,7 +76,7 @@ TextureID TextureManager::load(const std::string& filepath, TextureType type) {
 
 VkImageView TextureManager::getImageView(TextureID id) const {
   if (id >= textures.size()) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::TEXTURE,
                "TextureManager: Invalid texture ID for getImageView: ", id,
                ", returning default white");
     return textures[defaultWhiteTexture].imageView;
@@ -86,7 +86,7 @@ VkImageView TextureManager::getImageView(TextureID id) const {
 
 VkSampler TextureManager::getSampler(TextureID id) const {
   if (id >= textures.size()) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::TEXTURE,
                "TextureManager: Invalid texture ID for getSampler: ", id,
                ", returning default white");
     return textures[defaultWhiteTexture].sampler;
@@ -95,7 +95,7 @@ VkSampler TextureManager::getSampler(TextureID id) const {
 }
 
 void TextureManager::cleanup() {
-  Debug::log(Debug::Category::RENDERING, "TextureManager: Cleaning up ",
+  Debug::log(Debug::Category::TEXTURE, "TextureManager: Cleaning up ",
              textures.size(), " textures");
 
   for (auto& texture : textures) {
@@ -114,7 +114,7 @@ void TextureManager::cleanup() {
   }
   textures.clear();
 
-  Debug::log(Debug::Category::RENDERING, "TextureManager: Cleanup complete");
+  Debug::log(Debug::Category::TEXTURE, "TextureManager: Cleanup complete");
 }
 
 void TextureManager::createStagingBuffer(
@@ -144,7 +144,7 @@ void TextureManager::createStagingBuffer(
 
 TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
   Debug::log(
-      Debug::Category::RENDERING,
+      Debug::Category::TEXTURE,
       "TextureManager: Creating texture from file: ", createInfo.filepath);
 
   int texWidth, texHeight, texChannels;
@@ -152,13 +152,13 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
                                     &texHeight, &texChannels, STBI_rgb_alpha);
 
   if (!pixels) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::TEXTURE,
                "TextureManager: Failed to load texture file: ",
                createInfo.filepath, ", returning default white");
     return defaultWhiteTexture;
   }
 
-  Debug::log(Debug::Category::RENDERING, "  - Dimensions: ", texWidth, "x",
+  Debug::log(Debug::Category::TEXTURE, "  - Dimensions: ", texWidth, "x",
              texHeight, ", channels: ", texChannels);
 
   const VkDeviceSize imageSize = static_cast<VkDeviceSize>(texWidth) *
@@ -170,7 +170,7 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
                 1
           : 1;
 
-  Debug::log(Debug::Category::RENDERING, "  - Mip levels: ", mipLevels);
+  Debug::log(Debug::Category::TEXTURE, "  - Mip levels: ", mipLevels);
 
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
@@ -200,7 +200,7 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
   copyBufferToImage(stagingBuffer, textureData.image, texWidth, texHeight);
 
   if (createInfo.generateMipmaps) {
-    Debug::log(Debug::Category::RENDERING, "  - Generating mipmaps");
+    Debug::log(Debug::Category::TEXTURE, "  - Generating mipmaps");
     generateMipmaps(textureData.image, texWidth, texHeight, mipLevels);
   } else {
     transitionImageLayout(textureData.image,
@@ -238,7 +238,7 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
   textures.push_back(std::move(textureData));
   filepathToID[createInfo.filepath] = id;
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::TEXTURE,
              "TextureManager: Successfully created texture (ID: ", id, ")");
 
   return id;
@@ -247,7 +247,7 @@ TextureID TextureManager::createTexture(const TextureCreateInfo& createInfo) {
 TextureID TextureManager::createDefaultTexture(const unsigned char* pixelData,
                                                uint32_t width, uint32_t height,
                                                TextureType type) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::TEXTURE,
              "TextureManager: Creating default texture ", width, "x", height);
 
   const VkDeviceSize imageSize =
@@ -305,7 +305,7 @@ TextureID TextureManager::createDefaultTexture(const unsigned char* pixelData,
   TextureID id = static_cast<TextureID>(textures.size());
   textures.push_back(std::move(textureData));
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::TEXTURE,
              "TextureManager: Default texture created (ID: ", id, ")");
 
   return id;
@@ -580,7 +580,7 @@ VkSampler TextureManager::createSampler(TextureFilter filter, TextureWrap wrap,
 }
 
 void TextureManager::recreateSamplers(VkFilter magFilter, VkFilter minFilter) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::TEXTURE,
              "TextureManager: Recreating all samplers with new filter mode");
 
   vkDeviceWaitIdle(device);
@@ -614,7 +614,7 @@ void TextureManager::recreateSamplers(VkFilter magFilter, VkFilter minFilter) {
     }
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::TEXTURE,
              "TextureManager: Successfully recreated ", textures.size(),
              " samplers");
 }

@@ -131,16 +131,16 @@ class ObjectBuilder {
 
   Object build() {
     if (object.meshID == INVALID_MESH_ID) {
-      Debug::log(Debug::Category::RENDERING,
+      Debug::log(Debug::Category::OBJECTS,
                  "ObjectBuilder: Warning - building object '", object.name,
                  "' with invalid mesh ID");
     }
     if (object.materialID == INVALID_MATERIAL_ID) {
-      Debug::log(Debug::Category::RENDERING,
+      Debug::log(Debug::Category::OBJECTS,
                  "ObjectBuilder: Warning - building object '", object.name,
                  "' with invalid material ID");
     }
-    Debug::log(Debug::Category::RENDERING, "ObjectBuilder: Built object '",
+    Debug::log(Debug::Category::OBJECTS, "ObjectBuilder: Built object '",
                object.name, "' (Mesh: ", object.meshID,
                ", Material: ", object.materialID, ")");
     return std::move(object);

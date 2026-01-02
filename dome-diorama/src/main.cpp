@@ -61,6 +61,17 @@ const bool DEBUG_CAMERA = false;
 const bool DEBUG_INPUT = false;
 const bool DEBUG_RENDERING = false;
 const bool DEBUG_VULKAN = false;
+const bool DEBUG_SKYBOX = false;
+const bool DEBUG_PLANTMANAGER = false;
+const bool DEBUG_WORLD = false;
+const bool DEBUG_PARTICLES = false;
+const bool DEBUG_MESH = false;
+const bool DEBUG_LIGHTS = false;
+const bool DEBUG_SCENE = false;
+const bool DEBUG_OBJECTS = false;
+const bool DEBUG_TEXTURE = false;
+const bool DEBUG_MATERIALS = false;
+const bool DEBUG_POSTPROCESSING = false;
 #else
 const bool enableValidationLayers = true;
 const bool DEBUG_MAIN = true;
@@ -68,6 +79,17 @@ const bool DEBUG_CAMERA = false;
 const bool DEBUG_INPUT = false;
 const bool DEBUG_RENDERING = true;
 const bool DEBUG_VULKAN = true;
+const bool DEBUG_SKYBOX = true;
+const bool DEBUG_PLANTMANAGER = true;
+const bool DEBUG_WORLD = true;
+const bool DEBUG_PARTICLES = false;
+const bool DEBUG_MESH = false;
+const bool DEBUG_LIGHTS = true;
+const bool DEBUG_SCENE = true;
+const bool DEBUG_OBJECTS = false;
+const bool DEBUG_TEXTURE = false;
+const bool DEBUG_MATERIALS = false;
+const bool DEBUG_POSTPROCESSING = true;
 #endif
 
 struct QueueFamilyIndices {
@@ -810,9 +832,11 @@ class DomeDiorama final {
         lightManager->getShadowDescriptorSetLayout()};
 
     VkPushConstantRange pushConstantRange{};
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.stageFlags =
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(glm::mat4);
+    pushConstantRange.size =
+        sizeof(glm::mat4) + sizeof(glm::vec3) + sizeof(float);
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -1457,9 +1481,6 @@ class DomeDiorama final {
 
     const auto& shadowMaps = lightManager->getShadowMaps();
 
-    Debug::log(Debug::Category::RENDERING, "Recording shadow passes for ",
-               shadowMaps.size(), " shadow maps");
-
     for (size_t smIdx = 0; smIdx < shadowMaps.size(); smIdx++) {
       const auto& shadowMap = shadowMaps[smIdx];
       Light* const light = shadowMap.light;
@@ -1566,9 +1587,6 @@ class DomeDiorama final {
         shadowObjectCount++;
       }
 
-      Debug::log(Debug::Category::RENDERING, "Shadow map ", smIdx, " rendered ",
-                 shadowObjectCount, " objects");
-
       vkCmdEndRendering(commandBuffer);
 
       shadowBarrier.srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
@@ -1642,11 +1660,8 @@ class DomeDiorama final {
       mainObjectCount++;
     }
 
-    Debug::log(Debug::Category::RENDERING, "Main pass rendered ",
-               mainObjectCount, " objects");
-
-    skybox->render(commandBuffer, descriptorSets[currentFrame],
-                   swapChainExtent);
+    skybox->render(commandBuffer, descriptorSets[currentFrame], swapChainExtent,
+                   nullptr);
 
     particleManager->render(
         commandBuffer, descriptorSets[currentFrame], particlePipelineLayout,
@@ -1756,8 +1771,6 @@ class DomeDiorama final {
       ubo.lightSpaceMatrices[i] = glm::mat4(1.0f);
     }
 
-    Debug::log(Debug::Category::RENDERING, "Copied ", shadowMaps.size(),
-               " light space matrices to UBO");
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
   }
@@ -2166,14 +2179,6 @@ class DomeDiorama final {
                                               .roughness(1.0f)
                                               .metallic(0.0f));
 
-    const MaterialID moonMaterialID =
-        materialManager->registerMaterial(MaterialBuilder()
-                                              .name("Moon Material")
-                                              .albedoColor(0.7f, 0.7f, 0.8f)
-                                              .emissiveIntensity(0.3f)
-                                              .roughness(0.8f)
-                                              .metallic(0.0f));
-
     const MaterialID sandMaterialID = materialManager->registerMaterial(
         MaterialBuilder()
             .name("Sand Material")
@@ -2208,21 +2213,40 @@ class DomeDiorama final {
 
     const MeshID domeGlassMesh =
         meshManager->loadFromOBJ("./Models/DomeGlass.obj");
-    const MaterialID domeGlassMaterialID =
-        materialManager->loadFromMTL("./Models/DomeGlass.mtl");
 
-    Material* domeGlassMat = materialManager->getMaterial(domeGlassMaterialID);
-    if (domeGlassMat) {
-      domeGlassMat->properties.opacity = 0.3f;
-      domeGlassMat->isTransparent = true;
-      domeGlassMat->doubleSided = true;
-    }
+    const MeshID domeBaseMesh =
+        meshManager->loadFromOBJ("./Models/DomeBase.obj");
+
+    const MaterialID domeBaseMaterial =
+        materialManager->registerMaterial(MaterialBuilder()
+                                              .name("Dome Base Material")
+                                              .albedoColor(0.5f, 0.5f, 0.5f)
+                                              .metallic(1.0f)
+                                              .roughness(0.3f));
+
+    const Object domeBase = ObjectBuilder()
+                                .name("Dome Base")
+                                .position(0.0f, -20.0f, 0.0f)
+                                .mesh(domeBaseMesh)
+                                .material(domeBaseMaterial)
+                                .scale(1.0f)
+                                .build();
+
+    sceneObjects.push_back(domeBase);
+
+    const MaterialID domeGlassMaterial =
+        materialManager->registerMaterial(MaterialBuilder()
+                                              .name("Dome Glass Material")
+                                              .albedoColor(1.0f, 1.0f, 1.0f)
+                                              .metallic(0.0f)
+                                              .opacity(1.0f)
+                                              .transparent(true));
 
     const Object domeGlass = ObjectBuilder()
                                  .name("Dome Glass")
-                                 .position(0.0f, 0.0f, 0.0f)
+                                 .position(0.0f, 40.0f, 0.0f)
                                  .mesh(domeGlassMesh)
-                                 .material(domeGlassMaterialID)
+                                 .material(domeGlassMaterial)
                                  .scale(1.0f)
                                  .build();
 
@@ -2233,7 +2257,7 @@ class DomeDiorama final {
     PlantSpawnConfig plantConfig;
     plantConfig.numCacti = 150;
     plantConfig.numTrees = 100;
-    plantConfig.minRadius = 10.0f;
+    plantConfig.minRadius = 2.0f;
     plantConfig.maxRadius = 90.0f;
     plantConfig.seed = 42;
     plantConfig.randomGrowthStages = true;
@@ -2296,6 +2320,17 @@ int main() {
   Debug::setEnabled(Debug::Category::INPUT, DEBUG_INPUT);
   Debug::setEnabled(Debug::Category::RENDERING, DEBUG_RENDERING);
   Debug::setEnabled(Debug::Category::VULKAN, DEBUG_VULKAN);
+  Debug::setEnabled(Debug::Category::SKYBOX, DEBUG_SKYBOX);
+  Debug::setEnabled(Debug::Category::PLANTMANAGER, DEBUG_PLANTMANAGER);
+  Debug::setEnabled(Debug::Category::WORLD, DEBUG_WORLD);
+  Debug::setEnabled(Debug::Category::PARTICLES, DEBUG_PARTICLES);
+  Debug::setEnabled(Debug::Category::MESH, DEBUG_MESH);
+  Debug::setEnabled(Debug::Category::LIGHTS, DEBUG_LIGHTS);
+  Debug::setEnabled(Debug::Category::SCENE, DEBUG_SCENE);
+  Debug::setEnabled(Debug::Category::OBJECTS, DEBUG_OBJECTS);
+  Debug::setEnabled(Debug::Category::TEXTURE, DEBUG_TEXTURE);
+  Debug::setEnabled(Debug::Category::MATERIALS, DEBUG_MATERIALS);
+  Debug::setEnabled(Debug::Category::POSTPROCESSING, DEBUG_POSTPROCESSING);
 
   try {
     DomeDiorama application;

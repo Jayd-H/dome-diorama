@@ -36,12 +36,11 @@ class Skybox final {
         pipelineLayout(VK_NULL_HANDLE),
         swapchainFormat(VK_FORMAT_UNDEFINED),
         depthFormat(VK_FORMAT_UNDEFINED) {
-    Debug::log(Debug::Category::RENDERING, "Skybox: Constructor called");
+    Debug::log(Debug::Category::SKYBOX, "Skybox: Constructor called");
   }
 
   ~Skybox() {
-    Debug::log(Debug::Category::RENDERING, "Skybox: Destructor called");
-    cleanup();
+    Debug::log(Debug::Category::SKYBOX, "Skybox: Destructor called");
   }
 
   Skybox(const Skybox&) = delete;
@@ -49,7 +48,7 @@ class Skybox final {
 
   void init(const std::string& folderPath, VkDescriptorSetLayout cameraLayout,
             VkFormat swapchainFormat, VkFormat depthFormat) {
-    Debug::log(Debug::Category::RENDERING, "Skybox: Initializing");
+    Debug::log(Debug::Category::SKYBOX, "Skybox: Initializing");
 
     this->swapchainFormat = swapchainFormat;
     this->depthFormat = depthFormat;
@@ -63,7 +62,7 @@ class Skybox final {
     createDescriptorSet();
     createPipeline(cameraLayout);
 
-    Debug::log(Debug::Category::RENDERING, "Skybox: Initialization complete");
+    Debug::log(Debug::Category::SKYBOX, "Skybox: Initialization complete");
   }
 
   void render(VkCommandBuffer commandBuffer,
@@ -89,10 +88,22 @@ class Skybox final {
                             pipelineLayout, 0, 2, descriptorSets.data(), 0,
                             nullptr);
 
-    const glm::mat4 modelMatrix = domeObject->getModelMatrix();
-    vkCmdPushConstants(commandBuffer, pipelineLayout,
-                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4),
-                       &modelMatrix);
+    struct SkyboxPushConstants {
+      alignas(16) glm::mat4 model;
+      alignas(16) glm::vec3 domeCenter;
+      alignas(4) float domeRadiusSquared;
+    } pushConstants;
+
+    pushConstants.model = domeObject->getModelMatrix();
+    pushConstants.domeCenter = domeObject->position;
+
+    float domeRadius = 150.0f;
+    pushConstants.domeRadiusSquared = domeRadius * domeRadius;
+
+    vkCmdPushConstants(
+        commandBuffer, pipelineLayout,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+        sizeof(SkyboxPushConstants), &pushConstants);
 
     std::array<VkBuffer, 1> vertexBuffers = {vertexBuffer};
     std::array<VkDeviceSize, 1> offsets = {0};
@@ -109,7 +120,7 @@ class Skybox final {
   }
 
   void cleanup() {
-    Debug::log(Debug::Category::RENDERING, "Skybox: Cleaning up");
+    Debug::log(Debug::Category::SKYBOX, "Skybox: Cleaning up");
 
     if (pipeline != VK_NULL_HANDLE) {
       vkDestroyPipeline(device, pipeline, nullptr);
@@ -148,7 +159,7 @@ class Skybox final {
       vkFreeMemory(device, indexBufferMemory, nullptr);
     }
 
-    Debug::log(Debug::Category::RENDERING, "Skybox: Cleanup complete");
+    Debug::log(Debug::Category::SKYBOX, "Skybox: Cleanup complete");
   }
 
  private:
@@ -181,7 +192,7 @@ class Skybox final {
   std::vector<uint16_t> indices;
 
   void loadCubemap(const std::string& folderPath) {
-    Debug::log(Debug::Category::RENDERING, "Skybox: Loading cubemap from ",
+    Debug::log(Debug::Category::SKYBOX, "Skybox: Loading cubemap from ",
                folderPath);
 
     const std::array<std::string, 6> faceFiles = {
@@ -214,7 +225,7 @@ class Skybox final {
       }
     }
 
-    Debug::log(Debug::Category::RENDERING, "  Cubemap dimensions: ", width, "x",
+    Debug::log(Debug::Category::SKYBOX, "  Cubemap dimensions: ", width, "x",
                height);
 
     VkImageCreateInfo imageInfo{};
@@ -331,7 +342,7 @@ class Skybox final {
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::SKYBOX,
                "Skybox: Cubemap loaded successfully");
   }
 
@@ -604,9 +615,11 @@ class Skybox final {
                                                     descriptorSetLayout};
 
     VkPushConstantRange pushConstantRange{};
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.stageFlags =
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(glm::mat4);
+    pushConstantRange.size =
+        sizeof(glm::mat4) + sizeof(glm::vec3) + sizeof(float);
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

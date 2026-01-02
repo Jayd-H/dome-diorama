@@ -3,7 +3,24 @@
 
 class Debug final {
  public:
-  enum class Category { MAIN, CAMERA, INPUT, RENDERING, VULKAN };
+  enum class Category {
+    MAIN,
+    CAMERA,
+    INPUT,
+    RENDERING,
+    VULKAN,
+    SKYBOX,
+    PLANTMANAGER,
+    WORLD,
+    PARTICLES,
+    MESH,
+    LIGHTS,
+    SCENE,
+    OBJECTS,
+    TEXTURE,
+    MATERIALS,
+    POSTPROCESSING
+  };
 
   static void setEnabled(Category category, bool enabled) {
     switch (category) {
@@ -22,6 +39,39 @@ class Debug final {
       case Category::VULKAN:
         enableVulkan = enabled;
         break;
+      case Category::SKYBOX:
+        enableSkybox = enabled;
+        break;
+      case Category::PLANTMANAGER:
+        enablePlantManager = enabled;
+        break;
+      case Category::WORLD:
+        enableWorld = enabled;
+        break;
+      case Category::PARTICLES:
+        enableParticles = enabled;
+        break;
+      case Category::MESH:
+        enableMesh = enabled;
+        break;
+      case Category::LIGHTS:
+        enableLights = enabled;
+        break;
+      case Category::SCENE:
+        enableScene = enabled;
+        break;
+      case Category::OBJECTS:
+        enableObjects = enabled;
+        break;
+      case Category::TEXTURE:
+        enableTexture = enabled;
+        break;
+      case Category::MATERIALS:
+        enableMaterials = enabled;
+        break;
+      case Category::POSTPROCESSING:
+        enablePostProcessing = enabled;
+        break;
     }
   }
 
@@ -37,6 +87,28 @@ class Debug final {
         return enableRendering;
       case Category::VULKAN:
         return enableVulkan;
+      case Category::SKYBOX:
+        return enableSkybox;
+      case Category::PLANTMANAGER:
+        return enablePlantManager;
+      case Category::WORLD:
+        return enableWorld;
+      case Category::PARTICLES:
+        return enableParticles;
+      case Category::MESH:
+        return enableMesh;
+      case Category::LIGHTS:
+        return enableLights;
+      case Category::SCENE:
+        return enableScene;
+      case Category::OBJECTS:
+        return enableObjects;
+      case Category::TEXTURE:
+        return enableTexture;
+      case Category::MATERIALS:
+        return enableMaterials;
+      case Category::POSTPROCESSING:
+        return enablePostProcessing;
       default:
         return false;
     }
@@ -50,7 +122,7 @@ class Debug final {
     }
   }
 
-private:
+ private:
   static const char* categoryName(Category cat) {
     switch (cat) {
       case Category::MAIN:
@@ -63,6 +135,28 @@ private:
         return "RENDERING";
       case Category::VULKAN:
         return "VULKAN";
+      case Category::SKYBOX:
+        return "SKYBOX";
+      case Category::PLANTMANAGER:
+        return "PLANTMANAGER";
+      case Category::WORLD:
+        return "WORLD";
+      case Category::PARTICLES:
+        return "PARTICLES";
+      case Category::MESH:
+        return "MESH";
+      case Category::LIGHTS:
+        return "LIGHTS";
+      case Category::SCENE:
+        return "SCENE";
+      case Category::OBJECTS:
+        return "OBJECTS";
+      case Category::TEXTURE:
+        return "TEXTURE";
+      case Category::MATERIALS:
+        return "MATERIALS";
+      case Category::POSTPROCESSING:
+        return "POSTPROCESSING";
       default:
         return "UNKNOWN";
     }
@@ -73,12 +167,32 @@ private:
   static bool enableInput;
   static bool enableRendering;
   static bool enableVulkan;
+  static bool enableSkybox;
+  static bool enablePlantManager;
+  static bool enableWorld;
+  static bool enableParticles;
+  static bool enableMesh;
+  static bool enableLights;
+  static bool enableScene;
+  static bool enableObjects;
+  static bool enableTexture;
+  static bool enableMaterials;
+  static bool enablePostProcessing;
 };
-
-
 
 inline bool Debug::enableMain = false;
 inline bool Debug::enableCamera = false;
 inline bool Debug::enableInput = false;
 inline bool Debug::enableRendering = false;
 inline bool Debug::enableVulkan = false;
+inline bool Debug::enableSkybox = false;
+inline bool Debug::enablePlantManager = false;
+inline bool Debug::enableWorld = false;
+inline bool Debug::enableParticles = false;
+inline bool Debug::enableMesh = false;
+inline bool Debug::enableLights = false;
+inline bool Debug::enableScene = false;
+inline bool Debug::enableObjects = false;
+inline bool Debug::enableTexture = false;
+inline bool Debug::enableMaterials = false;
+inline bool Debug::enablePostProcessing = false;

@@ -17,27 +17,27 @@ LightManager::LightManager(RenderDevice* device)
       dummyShadowMapMemory(VK_NULL_HANDLE),
       dummyShadowMapView(VK_NULL_HANDLE),
       dummyShadowMapSampler(VK_NULL_HANDLE) {
-  Debug::log(Debug::Category::RENDERING, "LightManager: Constructor called");
+  Debug::log(Debug::Category::LIGHTS, "LightManager: Constructor called");
 }
 
 LightManager::~LightManager() {
-  Debug::log(Debug::Category::RENDERING, "LightManager: Destructor called");
+  Debug::log(Debug::Category::LIGHTS, "LightManager: Destructor called");
   cleanup();
 }
 
 void LightManager::init() {
-  Debug::log(Debug::Category::RENDERING, "LightManager: Initializing");
+  Debug::log(Debug::Category::LIGHTS, "LightManager: Initializing");
   createLightBuffer();
   createDummyShadowMap();
   createShadowDescriptorSetLayout();
   createShadowDescriptorPool();
   createShadowDescriptorSet();
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Initialization complete");
 }
 
 void LightManager::createDummyShadowMap() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Creating dummy shadow map");
 
   VkImageCreateInfo imageInfo{};
@@ -79,7 +79,7 @@ void LightManager::createDummyShadowMap() {
   vkBindImageMemory(renderDevice->getDevice(), dummyShadowMap,
                     dummyShadowMapMemory, 0);
 
-  VkCommandBuffer commandBuffer = renderDevice->beginSingleTimeCommands();
+  const VkCommandBuffer commandBuffer = renderDevice->beginSingleTimeCommands();
 
   VkImageMemoryBarrier2 barrier{};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -139,18 +139,18 @@ void LightManager::createDummyShadowMap() {
     throw std::runtime_error("Failed to create dummy shadow map sampler!");
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Dummy shadow map created");
 }
 
 LightID LightManager::addLight(const Light& light) {
   if (lights.size() >= MAX_LIGHTS) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::LIGHTS,
                "LightManager: Maximum light count reached!");
     return INVALID_LIGHT_ID;
   }
 
-  Debug::log(Debug::Category::RENDERING, "LightManager: Adding light '",
+  Debug::log(Debug::Category::LIGHTS, "LightManager: Adding light '",
              light.name, "'");
 
   LightID id = static_cast<LightID>(lights.size() + 1);
@@ -163,7 +163,7 @@ LightID LightManager::addLight(const Light& light) {
 
   updateLightBuffer();
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Successfully added light with ID: ", id);
   return id;
 }
@@ -233,7 +233,7 @@ void LightManager::updateLightSpaceMatrix(LightID id, const glm::mat4& matrix) {
 }
 
 void LightManager::cleanup() {
-  Debug::log(Debug::Category::RENDERING, "LightManager: Cleaning up");
+  Debug::log(Debug::Category::LIGHTS, "LightManager: Cleaning up");
 
   cleanupShadowResources();
 
@@ -277,13 +277,13 @@ void LightManager::cleanup() {
 
   lights.clear();
 
-  Debug::log(Debug::Category::RENDERING, "LightManager: Cleanup complete");
+  Debug::log(Debug::Category::LIGHTS, "LightManager: Cleanup complete");
 }
 
 void LightManager::createLightBuffer() {
-  Debug::log(Debug::Category::RENDERING, "LightManager: Creating light buffer");
+  Debug::log(Debug::Category::LIGHTS, "LightManager: Creating light buffer");
 
-  VkDeviceSize bufferSize = sizeof(LightBufferObject);
+  const VkDeviceSize bufferSize = sizeof(LightBufferObject);
 
   renderDevice->createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -298,11 +298,11 @@ void LightManager::createLightBuffer() {
   lbo.numShadowMaps = 0;
   memcpy(lightBufferMapped, &lbo, sizeof(LightBufferObject));
 
-  Debug::log(Debug::Category::RENDERING, "LightManager: Light buffer created");
+  Debug::log(Debug::Category::LIGHTS, "LightManager: Light buffer created");
 }
 
 void LightManager::createShadowMapForLight(Light* light, LightID lightId) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Creating shadow map for light '", light->name, "'");
 
   ShadowMapInfo info{};
@@ -347,7 +347,7 @@ void LightManager::createShadowMapForLight(Light* light, LightID lightId) {
 
   vkBindImageMemory(renderDevice->getDevice(), info.image, info.memory, 0);
 
-  VkCommandBuffer commandBuffer = renderDevice->beginSingleTimeCommands();
+  const VkCommandBuffer commandBuffer = renderDevice->beginSingleTimeCommands();
 
   VkImageMemoryBarrier2 barrier{};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -409,13 +409,13 @@ void LightManager::createShadowMapForLight(Light* light, LightID lightId) {
 
   shadowMaps.push_back(info);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Shadow map created (index: ", shadowMaps.size() - 1,
              ")");
 }
 
 void LightManager::createShadowDescriptorSetLayout() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Creating shadow descriptor set layout");
 
   VkDescriptorSetLayoutBinding binding{};
@@ -435,12 +435,12 @@ void LightManager::createShadowDescriptorSetLayout() {
     throw std::runtime_error("Failed to create shadow descriptor set layout!");
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Shadow descriptor set layout created");
 }
 
 void LightManager::createShadowDescriptorPool() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Creating shadow descriptor pool");
 
   VkDescriptorPoolSize poolSize{};
@@ -458,12 +458,12 @@ void LightManager::createShadowDescriptorPool() {
     throw std::runtime_error("Failed to create shadow descriptor pool!");
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Shadow descriptor pool created");
 }
 
 void LightManager::createShadowDescriptorSet() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Creating shadow descriptor set");
 
   VkDescriptorSetAllocateInfo allocInfo{};
@@ -479,12 +479,12 @@ void LightManager::createShadowDescriptorSet() {
 
   updateShadowDescriptorSet();
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Shadow descriptor set created");
 }
 
 void LightManager::updateShadowDescriptorSet() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Updating shadow descriptor set");
 
   std::array<VkDescriptorImageInfo, MAX_SHADOW_CASTING_LIGHTS> imageInfos{};
@@ -515,7 +515,7 @@ void LightManager::updateShadowDescriptorSet() {
   vkUpdateDescriptorSets(renderDevice->getDevice(), 1, &descriptorWrite, 0,
                          nullptr);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::LIGHTS,
              "LightManager: Shadow descriptor set updated with ",
              shadowMaps.size(), " shadow maps");
 }

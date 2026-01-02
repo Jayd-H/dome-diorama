@@ -5,6 +5,13 @@ layout(set = 0, binding = 0) uniform CameraUBO {
     mat4 proj;
     vec3 eyePos;
 } camera;
+
+layout(push_constant) uniform PushConstants {
+    mat4 model;
+    vec3 domeCenter;
+    float domeRadiusSquared;
+} push;
+
 layout(location = 0) out vec3 fragTexCoord;
 layout(location = 1) out vec3 fragWorldPos;
 layout(location = 2) out vec3 fragViewPos;

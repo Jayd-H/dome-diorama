@@ -33,26 +33,26 @@ Vertex::getAttributeDescriptions() {
 
 MeshManager::MeshManager(RenderDevice* renderDev)
     : renderDevice(renderDev), defaultCubeID(0) {
-  Debug::log(Debug::Category::RENDERING, "MeshManager: Constructor called");
+  Debug::log(Debug::Category::MESH, "MeshManager: Constructor called");
 
   meshes.push_back(std::unique_ptr<Mesh>(nullptr));
 
   createDefaultMeshes();
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Initialization complete");
 }
 
 MeshManager::~MeshManager() noexcept {
   try {
-    Debug::log(Debug::Category::RENDERING, "MeshManager: Destructor called");
+    Debug::log(Debug::Category::MESH, "MeshManager: Destructor called");
     cleanup();
   } catch (...) {
   }
 }
 
 MeshID MeshManager::createCube(float size) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Creating cube (size: ", size, ")");
 
   Mesh* mesh = new Mesh();
@@ -100,14 +100,14 @@ MeshID MeshManager::createCube(float size) {
 
   const MeshID id = registerMesh(mesh);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Created cube with ID: ", id);
 
   return id;
 }
 
 MeshID MeshManager::createSphere(float radius, uint32_t segments) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Creating sphere (radius: ", radius,
              ", segments: ", segments, ")");
 
@@ -186,14 +186,14 @@ MeshID MeshManager::createSphere(float radius, uint32_t segments) {
 
   const MeshID id = registerMesh(mesh);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Created sphere with ID: ", id);
 
   return id;
 }
 
 MeshID MeshManager::createPlane(float width, float height) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Creating plane (width: ", width,
              ", height: ", height, ")");
 
@@ -229,7 +229,7 @@ MeshID MeshManager::createPlane(float width, float height) {
 
   const MeshID id = registerMesh(mesh);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Created plane with ID: ", id);
 
   return id;
@@ -237,7 +237,7 @@ MeshID MeshManager::createPlane(float width, float height) {
 
 MeshID MeshManager::createCylinder(float radius, float height,
                                    uint32_t segments) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Creating cylinder (radius: ", radius,
              ", height: ", height, ", segments: ", segments, ")");
   Mesh* mesh = new Mesh();
@@ -326,13 +326,13 @@ MeshID MeshManager::createCylinder(float radius, float height,
   }
   createBuffers(mesh);
   const MeshID id = registerMesh(mesh);
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Created cylinder with ID: ", id);
   return id;
 }
 
 MeshID MeshManager::createParticleQuad() {
-  Debug::log(Debug::Category::RENDERING, "MeshManager: Creating particle quad");
+  Debug::log(Debug::Category::MESH, "MeshManager: Creating particle quad");
 
   Mesh* mesh = new Mesh();
   mesh->name = "Particle Quad";
@@ -362,7 +362,7 @@ MeshID MeshManager::createParticleQuad() {
   createBuffers(mesh);
   const MeshID id = registerMesh(mesh);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Created particle quad with ID: ", id);
   return id;
 }
@@ -370,18 +370,18 @@ MeshID MeshManager::createParticleQuad() {
 MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
   const auto it = filepathToID.find(filepath);
   if (it != filepathToID.end()) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::MESH,
                "MeshManager: OBJ already loaded: ", filepath,
                " (ID: ", it->second, ")");
     return it->second;
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Loading OBJ: ", filepath);
 
   std::ifstream file(filepath);
   if (!file.is_open()) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::MESH,
                "MeshManager: Failed to open OBJ file: ", filepath,
                ", returning default cube");
     return defaultCubeID;
@@ -486,7 +486,7 @@ MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
 
     const glm::vec3 center = (minBounds + maxBounds) * 0.5f;
 
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::MESH,
                "MeshManager: Centering mesh - offset: (", center.x, ", ",
                center.y, ", ", center.z, ")");
 
@@ -495,7 +495,7 @@ MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
     }
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: OBJ loaded successfully - vertices: ",
              mesh->vertices.size(), ", indices: ", mesh->indices.size());
 
@@ -503,7 +503,7 @@ MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
   const MeshID id = registerMesh(mesh);
   filepathToID[filepath] = id;
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Registered OBJ with ID: ", id);
 
   return id;
@@ -511,7 +511,7 @@ MeshID MeshManager::loadFromOBJ(const std::string& filepath) {
 
 Mesh* MeshManager::getMesh(MeshID id) {
   if (id >= meshes.size() || meshes[id] == nullptr) {
-    Debug::log(Debug::Category::RENDERING, "MeshManager: Invalid mesh ID: ", id,
+    Debug::log(Debug::Category::MESH, "MeshManager: Invalid mesh ID: ", id,
                ", returning default cube");
     return meshes[defaultCubeID].get();
   }
@@ -520,7 +520,7 @@ Mesh* MeshManager::getMesh(MeshID id) {
 
 const Mesh* MeshManager::getMesh(MeshID id) const {
   if (id >= meshes.size() || meshes[id] == nullptr) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::MESH,
                "MeshManager: Invalid mesh ID (const): ", id,
                ", returning default cube");
     return meshes[defaultCubeID].get();
@@ -529,7 +529,7 @@ const Mesh* MeshManager::getMesh(MeshID id) const {
 }
 
 void MeshManager::cleanup() {
-  Debug::log(Debug::Category::RENDERING, "MeshManager: Cleaning up ",
+  Debug::log(Debug::Category::MESH, "MeshManager: Cleaning up ",
              meshes.size(), " meshes");
 
   const VkDevice device = renderDevice->getDevice();
@@ -553,12 +553,12 @@ void MeshManager::cleanup() {
 
   meshes.clear();
 
-  Debug::log(Debug::Category::RENDERING, "MeshManager: Cleanup complete");
+  Debug::log(Debug::Category::MESH, "MeshManager: Cleanup complete");
 }
 
 MeshID MeshManager::registerMesh(Mesh* mesh) {
   if (!mesh) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::MESH,
                "MeshManager: Attempted to register null mesh!");
     return defaultCubeID;
   }
@@ -566,7 +566,7 @@ MeshID MeshManager::registerMesh(Mesh* mesh) {
   const MeshID id = static_cast<MeshID>(meshes.size());
   meshes.push_back(std::unique_ptr<Mesh>(mesh));
 
-  Debug::log(Debug::Category::RENDERING, "MeshManager: Registered mesh '",
+  Debug::log(Debug::Category::MESH, "MeshManager: Registered mesh '",
              mesh->name, "' (ID: ", id, ", vertices: ", mesh->vertices.size(),
              ", indices: ", mesh->indices.size(), ")");
 
@@ -577,7 +577,7 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
                                             float heightScale, float noiseScale,
                                             int octaves, float persistence,
                                             unsigned int seed) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Creating circular procedural terrain (radius: ",
              radius, ", segments: ", segments, ")");
 
@@ -681,7 +681,7 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
   createBuffers(mesh);
   const MeshID id = registerMesh(mesh);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Created circular procedural terrain with ID: ", id,
              " (vertices: ", mesh->vertices.size(),
              ", indices: ", mesh->indices.size(), ")");
@@ -690,7 +690,7 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
 }
 
 void MeshManager::createBuffers(Mesh* mesh) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Creating buffers for mesh '", mesh->name, "'");
 
   const VkDevice device = renderDevice->getDevice();
@@ -742,16 +742,16 @@ void MeshManager::createBuffers(Mesh* mesh) {
   vkDestroyBuffer(device, stagingBuffer, nullptr);
   vkFreeMemory(device, stagingBufferMemory, nullptr);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "  - Created vertex and index buffers");
 }
 
 void MeshManager::createDefaultMeshes() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Creating default meshes");
 
   defaultCubeID = createCube(1.0f);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::MESH,
              "MeshManager: Default cube created with ID: ", defaultCubeID);
 }

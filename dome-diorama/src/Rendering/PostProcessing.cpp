@@ -14,19 +14,19 @@ PostProcessing::PostProcessing(RenderDevice* renderDeviceParam,
       device(deviceParam),
       swapchainFormat(swapchainFormatParam),
       depthFormat(VK_FORMAT_D32_SFLOAT) {
-  Debug::log(Debug::Category::RENDERING, "PostProcessing: Constructor called");
+  Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Constructor called");
 }
 
 PostProcessing::~PostProcessing() noexcept {
   try {
-    Debug::log(Debug::Category::RENDERING, "PostProcessing: Destructor called");
+    Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Destructor called");
   } catch (...) {
   }
 }
 
 void PostProcessing::init(VkDescriptorPool descriptorPool, uint32_t frameWidth,
                           uint32_t frameHeight) {
-  Debug::log(Debug::Category::RENDERING, "PostProcessing: Initializing");
+  Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Initializing");
 
   this->width = frameWidth;
   this->height = frameHeight;
@@ -37,12 +37,12 @@ void PostProcessing::init(VkDescriptorPool descriptorPool, uint32_t frameWidth,
   createPipeline();
   createDescriptorSets(descriptorPool);
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Initialization complete");
 }
 
 void PostProcessing::cleanup() {
-  Debug::log(Debug::Category::RENDERING, "PostProcessing: Cleaning up");
+  Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Cleaning up");
 
   cleanupOffscreenResources();
   cleanupDepthResources();
@@ -67,12 +67,12 @@ void PostProcessing::cleanup() {
     offscreenSampler = VK_NULL_HANDLE;
   }
 
-  Debug::log(Debug::Category::RENDERING, "PostProcessing: Cleanup complete");
+  Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Cleanup complete");
 }
 
 void PostProcessing::resize(uint32_t newWidth, uint32_t newHeight,
                             VkDescriptorPool /*descriptorPool*/) {
-  Debug::log(Debug::Category::RENDERING, "PostProcessing: Resizing to ",
+  Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Resizing to ",
              newWidth, "x", newHeight);
 
   this->width = newWidth;
@@ -85,7 +85,7 @@ void PostProcessing::resize(uint32_t newWidth, uint32_t newHeight,
   createDepthResources();
   updateDescriptorSets();
 
-  Debug::log(Debug::Category::RENDERING, "PostProcessing: Resize complete");
+  Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Resize complete");
 }
 
 void PostProcessing::beginOffscreenPass(VkCommandBuffer commandBuffer,
@@ -222,7 +222,7 @@ void PostProcessing::render(VkCommandBuffer commandBuffer,
 }
 
 void PostProcessing::createOffscreenResources() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Creating offscreen resources");
 
   VkImageCreateInfo imageInfo{};
@@ -296,12 +296,12 @@ void PostProcessing::createOffscreenResources() {
     throw std::runtime_error("failed to create offscreen sampler!");
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Offscreen resources created");
 }
 
 void PostProcessing::createDepthResources() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Creating depth resources");
 
   VkImageCreateInfo imageInfo{};
@@ -355,12 +355,12 @@ void PostProcessing::createDepthResources() {
     throw std::runtime_error("failed to create depth image view!");
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Depth resources created");
 }
 
 void PostProcessing::createDescriptorSetLayout() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Creating descriptor set layout");
 
   VkDescriptorSetLayoutBinding samplerLayoutBinding{};
@@ -381,12 +381,12 @@ void PostProcessing::createDescriptorSetLayout() {
         "failed to create post-process descriptor set layout!");
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Descriptor set layout created");
 }
 
 void PostProcessing::createPipeline() {
-  Debug::log(Debug::Category::RENDERING, "PostProcessing: Creating pipeline");
+  Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Creating pipeline");
 
   const std::vector<char> vertShaderCode =
       readFile("shaders/postprocess_vert.spv");
@@ -512,11 +512,11 @@ void PostProcessing::createPipeline() {
   vkDestroyShaderModule(device, fragShaderModule, nullptr);
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
 
-  Debug::log(Debug::Category::RENDERING, "PostProcessing: Pipeline created");
+  Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Pipeline created");
 }
 
 void PostProcessing::createDescriptorSets(VkDescriptorPool descriptorPool) {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Creating descriptor sets");
 
   std::vector<VkDescriptorSetLayout> layouts(2, descriptorSetLayout);
@@ -535,12 +535,12 @@ void PostProcessing::createDescriptorSets(VkDescriptorPool descriptorPool) {
 
   updateDescriptorSets();
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Descriptor sets created");
 }
 
 void PostProcessing::updateDescriptorSets() {
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Updating descriptor sets");
 
   for (size_t i = 0; i < descriptorSets.size(); i++) {
@@ -560,7 +560,7 @@ void PostProcessing::updateDescriptorSets() {
     vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Descriptor sets updated");
 }
 

@@ -12,28 +12,28 @@ PlantManager::PlantManager(MeshManager* meshMgr, MaterialManager* materialMgr)
       materialManager(materialMgr),
       cactusMeshes(3),
       cactusMaterials(3) {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Constructor called");
+  Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Constructor called");
 }
 
 PlantManager::~PlantManager() noexcept {
   try {
-    Debug::log(Debug::Category::RENDERING, "PlantManager: Destructor called");
+    Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Destructor called");
   } catch (...) {
   }
 }
 
 void PlantManager::init() {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Initializing");
+  Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Initializing");
 
   loadCactiModels();
   loadTreeModels();
 
-  Debug::log(Debug::Category::RENDERING,
+  Debug::log(Debug::Category::PLANTMANAGER,
              "PlantManager: Initialization complete");
 }
 
 void PlantManager::loadCactiModels() {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Loading cactus models");
+  Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Loading cactus models");
 
   struct CactusModelPair {
     std::string objPath;
@@ -67,14 +67,14 @@ void PlantManager::loadCactiModels() {
   cactusMaterials[2] = cactusMaterials[1];
 
   Debug::log(
-      Debug::Category::RENDERING,
+      Debug::Category::PLANTMANAGER,
       "PlantManager: Loaded cactus models - Stage 0: ", cactusMeshes[0].size(),
       " variants, Stage 1: ", cactusMeshes[1].size(),
       " variants, Stage 2: ", cactusMeshes[2].size(), " variants");
 }
 
 void PlantManager::loadTreeModels() {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Loading tree models");
+  Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Loading tree models");
 
   for (int i = 1; i <= 8; i++) {
     const std::string objPath =
@@ -89,7 +89,7 @@ void PlantManager::loadTreeModels() {
     treeMaterials.push_back(matID);
   }
 
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Loaded ",
+  Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Loaded ",
              treeMeshes.size(), " tree growth stages");
 }
 
@@ -134,7 +134,7 @@ glm::vec3 PlantManager::getTerrainNormalAt(const Mesh* terrainMesh, float x,
 void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
                                         const Mesh* terrainMesh,
                                         const PlantSpawnConfig& config) {
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Spawning ",
+  Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Spawning ",
              config.numCacti, " cacti and ", config.numTrees,
              " trees with seed ", config.seed);
 
@@ -260,7 +260,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
     plants.emplace_back(sceneObjects.size() - 1, PlantType::Tree, stage, 0);
   }
 
-  Debug::log(Debug::Category::RENDERING, "PlantManager: Successfully spawned ",
+  Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Successfully spawned ",
              plants.size(), " plants");
 }
 
@@ -281,7 +281,7 @@ float PlantManager::calculateMeshBottomOffset(const Mesh* mesh) const {
 void PlantManager::growPlant(std::vector<Object>& sceneObjects,
                              size_t plantIndex) {
   if (plantIndex >= plants.size()) {
-    Debug::log(Debug::Category::RENDERING,
+    Debug::log(Debug::Category::PLANTMANAGER,
                "PlantManager: Invalid plant index: ", plantIndex);
     return;
   }
@@ -296,7 +296,7 @@ void PlantManager::growPlant(std::vector<Object>& sceneObjects,
       obj.setMesh(cactusMeshes[plant.getStage()][plant.getVariant()]);
       obj.setMaterial(cactusMaterials[plant.getStage()][plant.getVariant()]);
 
-      Debug::log(Debug::Category::RENDERING,
+      Debug::log(Debug::Category::PLANTMANAGER,
                  "PlantManager: Cactus grew to stage ", plant.getStage());
     }
   } else if (plant.getType() == PlantType::Tree) {
@@ -306,7 +306,7 @@ void PlantManager::growPlant(std::vector<Object>& sceneObjects,
       obj.setMesh(treeMeshes[plant.getStage()]);
       obj.setMaterial(treeMaterials[plant.getStage()]);
 
-      Debug::log(Debug::Category::RENDERING,
+      Debug::log(Debug::Category::PLANTMANAGER,
                  "PlantManager: Tree grew to stage ", plant.getStage());
     }
   }
