@@ -12,7 +12,7 @@ inline void createSyncObjects(
     std::vector<VkSemaphore>& renderFinishedSemaphores,
     std::vector<VkFence>& inFlightFences) {
   imageAvailableSemaphores.resize(maxFramesInFlight);
-  renderFinishedSemaphores.resize(swapChainImageCount);
+  renderFinishedSemaphores.resize(maxFramesInFlight);
   inFlightFences.resize(maxFramesInFlight);
 
   VkSemaphoreCreateInfo semaphoreInfo{};
@@ -25,17 +25,12 @@ inline void createSyncObjects(
   for (size_t i = 0; i < maxFramesInFlight; i++) {
     if (vkCreateSemaphore(device, &semaphoreInfo, nullptr,
                           &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+        vkCreateSemaphore(device, &semaphoreInfo, nullptr,
+                          &renderFinishedSemaphores[i]) != VK_SUCCESS ||
         vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) !=
             VK_SUCCESS) {
       throw std::runtime_error(
           "Failed to create synchronization objects for a frame!");
-    }
-  }
-
-  for (size_t i = 0; i < swapChainImageCount; i++) {
-    if (vkCreateSemaphore(device, &semaphoreInfo, nullptr,
-                          &renderFinishedSemaphores[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create render finished semaphore!");
     }
   }
 }

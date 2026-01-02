@@ -25,9 +25,12 @@ Application::~Application() {
   Debug::log(Debug::Category::MAIN, "Application: Destructor called");
 }
 
-void Application::run() {
+void Application::init() {
   initWindow();
   initVulkan();
+}
+
+void Application::run() {
   mainLoop();
   cleanup();
 }
@@ -143,6 +146,9 @@ void Application::initVulkan() {
   postProcessing->init(descriptorPool, swapChainExtent.width,
                        swapChainExtent.height);
 
+  Debug::log(Debug::Category::VULKAN, "Creating depth resources...");
+  createDepthResources();
+
   Debug::log(Debug::Category::VULKAN, "Creating skybox...");
   skybox = new Skybox(renderDevice, device, commandPool, graphicsQueue);
   skybox->init("./Models/Skybox", descriptorSetLayout, swapChainImageFormat,
@@ -169,6 +175,8 @@ void Application::initVulkan() {
 }
 
 void Application::mainLoop() {
+  Debug::log(Debug::Category::MAIN, "Entering main loop...");
+
   while (!window->shouldClose()) {
     window->pollEvents();
 
@@ -184,6 +192,7 @@ void Application::mainLoop() {
     drawFrame();
   }
 
+  Debug::log(Debug::Category::MAIN, "Exiting main loop...");
   vkDeviceWaitIdle(device);
 }
 
@@ -327,7 +336,7 @@ void Application::drawFrame() {
   submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
   const std::array<VkSemaphore, 1> signalSemaphores = {
-      renderFinishedSemaphores[imageIndex]};
+      renderFinishedSemaphores[currentFrame]};
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = signalSemaphores.data();
 
@@ -377,11 +386,25 @@ void Application::recreateSwapChain() {
   swapChainImageViews =
       Vulkan::createImageViews(device, swapChainImages, swapChainImageFormat);
 
+  createDepthResources();
   postProcessing->resize(swapChainExtent.width, swapChainExtent.height,
                          descriptorPool);
 }
 
 void Application::cleanupSwapChain() {
+  if (depthImageView != VK_NULL_HANDLE) {
+    vkDestroyImageView(device, depthImageView, nullptr);
+    depthImageView = VK_NULL_HANDLE;
+  }
+  if (depthImage != VK_NULL_HANDLE) {
+    vkDestroyImage(device, depthImage, nullptr);
+    depthImage = VK_NULL_HANDLE;
+  }
+  if (depthImageMemory != VK_NULL_HANDLE) {
+    vkFreeMemory(device, depthImageMemory, nullptr);
+    depthImageMemory = VK_NULL_HANDLE;
+  }
+
   for (const auto imageView : swapChainImageViews) {
     vkDestroyImageView(device, imageView, nullptr);
   }
@@ -478,6 +501,59 @@ void Application::toggleShadingMode() {
     Debug::log(Debug::Category::INPUT, "Switched to PHONG shading");
   }
   recreateGraphicsPipeline();
+}
+
+void Application::createDepthResources() {
+  VkImageCreateInfo imageInfo{};
+  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageInfo.extent.width = swapChainExtent.width;
+  imageInfo.extent.height = swapChainExtent.height;
+  imageInfo.extent.depth = 1;
+  imageInfo.mipLevels = 1;
+  imageInfo.arrayLayers = 1;
+  imageInfo.format = depthFormat;
+  imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  if (vkCreateImage(device, &imageInfo, nullptr, &depthImage) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create depth image!");
+  }
+
+  VkMemoryRequirements memRequirements;
+  vkGetImageMemoryRequirements(device, depthImage, &memRequirements);
+
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memRequirements.size;
+  allocInfo.memoryTypeIndex = renderDevice->findMemoryType(
+      memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+  if (vkAllocateMemory(device, &allocInfo, nullptr, &depthImageMemory) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate depth image memory!");
+  }
+
+  vkBindImageMemory(device, depthImage, depthImageMemory, 0);
+
+  VkImageViewCreateInfo viewInfo{};
+  viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  viewInfo.image = depthImage;
+  viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  viewInfo.format = depthFormat;
+  viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  viewInfo.subresourceRange.baseMipLevel = 0;
+  viewInfo.subresourceRange.levelCount = 1;
+  viewInfo.subresourceRange.baseArrayLayer = 0;
+  viewInfo.subresourceRange.layerCount = 1;
+
+  if (vkCreateImageView(device, &viewInfo, nullptr, &depthImageView) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("Failed to create depth image view!");
+  }
 }
 
 void Application::framebufferResizeCallback(GLFWwindow* win, int width,
@@ -1016,9 +1092,10 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
     if (!material || material->descriptorSet == VK_NULL_HANDLE) continue;
 
     const glm::mat4 modelMatrix = object.getModelMatrix();
-    vkCmdPushConstants(commandBuffer, mainPipeline->getPipelineLayout(),
-                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4),
-                       &modelMatrix);
+    vkCmdPushConstants(
+        commandBuffer, mainPipeline->getPipelineLayout(),
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+        sizeof(glm::mat4), &modelMatrix);
 
     const std::array<VkBuffer, 1> vertexBuffersArr = {mesh->vertexBuffer};
     const std::array<VkDeviceSize, 1> offsetsArr = {0};

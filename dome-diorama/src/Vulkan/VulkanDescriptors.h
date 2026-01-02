@@ -19,7 +19,9 @@ inline VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device) {
   lightLayoutBinding.binding = 1;
   lightLayoutBinding.descriptorCount = 1;
   lightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  lightLayoutBinding.stageFlags =
+      VK_SHADER_STAGE_VERTEX_BIT |
+      VK_SHADER_STAGE_FRAGMENT_BIT;  // Changed from just FRAGMENT_BIT
 
   std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding,
                                                           lightLayoutBinding};
@@ -45,13 +47,16 @@ inline VkDescriptorSetLayout createMaterialDescriptorSetLayout(
   bindings[0].binding = 0;
   bindings[0].descriptorCount = 1;
   bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  bindings[0].stageFlags =
+      VK_SHADER_STAGE_VERTEX_BIT |
+      VK_SHADER_STAGE_FRAGMENT_BIT;
 
   for (uint32_t i = 1; i < 8; i++) {
     bindings[i].binding = i;
     bindings[i].descriptorCount = 1;
     bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    bindings[i].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings[i].stageFlags =
+        VK_SHADER_STAGE_FRAGMENT_BIT;
   }
 
   VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -118,12 +123,12 @@ inline std::vector<VkDescriptorSet> createDescriptorSets(
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = uniformBuffers[i];
     bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(void*);
+    bufferInfo.range = VK_WHOLE_SIZE;
 
     VkDescriptorBufferInfo lightBufferInfo{};
     lightBufferInfo.buffer = lightBuffer;
     lightBufferInfo.offset = 0;
-    lightBufferInfo.range = sizeof(void*);
+    lightBufferInfo.range = VK_WHOLE_SIZE;
 
     std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 

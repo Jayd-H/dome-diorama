@@ -40,8 +40,8 @@ class Application final {
   Application(const Application&) = delete;
   Application& operator=(const Application&) = delete;
 
+  void init();
   void setScene(const std::vector<Object>& objects) { sceneObjects = objects; }
-
   void run();
 
   MeshManager* getMeshManager() const { return meshManager; }
@@ -137,6 +137,7 @@ class Application final {
   void drawFrame();
   void recreateSwapChain();
   void cleanupSwapChain();
+  void createDepthResources();
   void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
   void updateUniformBuffer(uint32_t currentImage);
 
