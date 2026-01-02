@@ -11,8 +11,8 @@ namespace Vulkan {
 inline VkCommandPool createCommandPool(VkDevice device,
                                        VkPhysicalDevice physicalDevice,
                                        VkSurfaceKHR surface) {
-  QueueFamilyIndices queueFamilyIndices =
-      findQueueFamilies(physicalDevice, surface);
+  QueueFamilyIndices queueFamilyIndices;
+  findQueueFamilies(physicalDevice, surface, queueFamilyIndices);
 
   VkCommandPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;

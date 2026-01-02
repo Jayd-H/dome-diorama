@@ -69,9 +69,9 @@ void Application::initVulkan() {
                                       window->getHandle(), swapChainImageFormat,
                                       swapChainExtent, swapChainImages);
 
-  Debug::log(Debug::Category::VULKAN, "Creating image views...");
-  swapChainImageViews =
-      Vulkan::createImageViews(device, swapChainImages, swapChainImageFormat);
+ Debug::log(Debug::Category::VULKAN, "Creating image views...");
+  Vulkan::createImageViews(device, swapChainImages, swapChainImageFormat,
+                           swapChainImageViews);
 
   Debug::log(Debug::Category::VULKAN, "Finding depth format...");
   depthFormat = Vulkan::findDepthFormat(physicalDevice);
@@ -158,9 +158,9 @@ void Application::initVulkan() {
   createUniformBuffers();
 
   Debug::log(Debug::Category::VULKAN, "Creating descriptor sets...");
-  descriptorSets = Vulkan::createDescriptorSets(
-      device, descriptorPool, descriptorSetLayout, uniformBuffers,
-      lightManager->getLightBuffer(), MAX_FRAMES_IN_FLIGHT);
+  Vulkan::createDescriptorSets(device, descriptorPool, descriptorSetLayout,
+                              uniformBuffers, lightManager->getLightBuffer(),
+                              MAX_FRAMES_IN_FLIGHT, descriptorSets);
 
   Debug::log(Debug::Category::VULKAN, "Creating command buffers...");
   commandBuffers =
@@ -383,8 +383,8 @@ void Application::recreateSwapChain() {
   swapChain = Vulkan::createSwapChain(device, physicalDevice, surface,
                                       window->getHandle(), swapChainImageFormat,
                                       swapChainExtent, swapChainImages);
-  swapChainImageViews =
-      Vulkan::createImageViews(device, swapChainImages, swapChainImageFormat);
+  Vulkan::createImageViews(device, swapChainImages, swapChainImageFormat,
+                           swapChainImageViews);
 
   createDepthResources();
   postProcessing->resize(swapChainExtent.width, swapChainExtent.height,

@@ -284,7 +284,7 @@ int main() {
 
     Debug::log(Debug::Category::MAIN, "Creating scene...");
     LightID sunLightID = INVALID_LIGHT_ID;
-    std::vector<Object> sceneObjects =
+    std::vector<Object> const sceneObjects =
         createScene(config, app.getMeshManager(), app.getMaterialManager(),
                     app.getPlantManager(), app.getParticleManager(),
                     app.getLightManager(), sunLightID);

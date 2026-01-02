@@ -7,11 +7,11 @@
 
 class Window final {
  public:
-  Window(int width, int height, const char* title)
-      : width(width), height(height) {
+  Window(int w, int h, const char* title)
+      : window(nullptr), width(w), height(h) {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    window = glfwCreateWindow(w, h, title, nullptr, nullptr);
     if (!window) {
       throw std::runtime_error("Failed to create GLFW window!");
     }
@@ -29,7 +29,7 @@ class Window final {
 
   GLFWwindow* getHandle() const { return window; }
 
-  VkSurfaceKHR createSurface(VkInstance instance) {
+  VkSurfaceKHR createSurface(VkInstance instance) const {
     VkSurfaceKHR surface;
     if (glfwCreateWindowSurface(instance, window, nullptr, &surface) !=
         VK_SUCCESS) {
@@ -38,25 +38,27 @@ class Window final {
     return surface;
   }
 
-  void setUserPointer(void* ptr) { glfwSetWindowUserPointer(window, ptr); }
+  void setUserPointer(void* ptr) const {
+    glfwSetWindowUserPointer(window, ptr);
+  }
 
-  void setFramebufferSizeCallback(GLFWframebuffersizefun callback) {
+  void setFramebufferSizeCallback(GLFWframebuffersizefun callback) const {
     glfwSetFramebufferSizeCallback(window, callback);
   }
 
-  void setKeyCallback(GLFWkeyfun callback) {
+  void setKeyCallback(GLFWkeyfun callback) const {
     glfwSetKeyCallback(window, callback);
   }
 
-  void setCursorPosCallback(GLFWcursorposfun callback) {
+  void setCursorPosCallback(GLFWcursorposfun callback) const {
     glfwSetCursorPosCallback(window, callback);
   }
 
-  void setMouseButtonCallback(GLFWmousebuttonfun callback) {
+  void setMouseButtonCallback(GLFWmousebuttonfun callback) const {
     glfwSetMouseButtonCallback(window, callback);
   }
 
-  void setScrollCallback(GLFWscrollfun callback) {
+  void setScrollCallback(GLFWscrollfun callback) const {
     glfwSetScrollCallback(window, callback);
   }
 
@@ -70,7 +72,7 @@ class Window final {
 
   void waitEvents() const { glfwWaitEvents(); }
 
-  void setTitle(const char* title) { glfwSetWindowTitle(window, title); }
+  void setTitle(const char* title) const { glfwSetWindowTitle(window, title); }
 
  private:
   GLFWwindow* window;

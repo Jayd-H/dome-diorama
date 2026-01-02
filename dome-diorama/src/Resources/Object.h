@@ -11,7 +11,7 @@
 using MeshID = uint32_t;
 constexpr MeshID INVALID_MESH_ID = 0;
 
-class Object {
+class Object final {
  public:
   std::string name;
   glm::vec3 position;
@@ -64,7 +64,7 @@ class Object {
   void setMaterial(MaterialID material) { materialID = material; }
 };
 
-class ObjectBuilder {
+class ObjectBuilder final {
  public:
   ObjectBuilder() : object() {}
 

@@ -21,9 +21,9 @@ struct QueueFamilyIndices {
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-inline QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device,
-                                            VkSurfaceKHR surface) {
-  QueueFamilyIndices indices;
+static void findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface,
+                              QueueFamilyIndices& indices) {
+  indices = {};
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
   std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
@@ -44,10 +44,9 @@ inline QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device,
     }
     i++;
   }
-  return indices;
 }
 
-inline bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
+static bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
   uint32_t extensionCount;
   vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
                                        nullptr);
@@ -62,9 +61,10 @@ inline bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
   return requiredExtensions.empty();
 }
 
-inline bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
-  QueueFamilyIndices indices = findQueueFamilies(device, surface);
-  bool extensionsSupported = checkDeviceExtensionSupport(device);
+static bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+  QueueFamilyIndices indices;
+  findQueueFamilies(device, surface, indices);
+  const bool extensionsSupported = checkDeviceExtensionSupport(device);
 
   bool swapChainAdequate = false;
   if (extensionsSupported) {
@@ -89,7 +89,7 @@ inline bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
          dynamicRenderingFeatures.dynamicRendering;
 }
 
-inline VkPhysicalDevice pickPhysicalDevice(VkInstance instance,
+static VkPhysicalDevice pickPhysicalDevice(VkInstance instance,
                                            VkSurfaceKHR surface) {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -114,19 +114,19 @@ inline VkPhysicalDevice pickPhysicalDevice(VkInstance instance,
   return physicalDevice;
 }
 
-inline VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
+static VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
                                     VkSurfaceKHR surface,
                                     VkQueue& graphicsQueue,
                                     VkQueue& presentQueue) {
-  QueueFamilyIndices queueFamilyIndices =
-      findQueueFamilies(physicalDevice, surface);
+  QueueFamilyIndices queueFamilyIndices;
+  findQueueFamilies(physicalDevice, surface, queueFamilyIndices);
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
   std::set<uint32_t> uniqueQueueFamilies = {
       queueFamilyIndices.graphicsFamily.value(),
       queueFamilyIndices.presentFamily.value()};
 
   float queuePriority = 1.0f;
-  for (uint32_t queueFamily : uniqueQueueFamilies) {
+  for (const uint32_t queueFamily : uniqueQueueFamilies) {
     VkDeviceQueueCreateInfo queueCreateInfo{};
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queueCreateInfo.queueFamilyIndex = queueFamily;

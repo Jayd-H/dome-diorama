@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 
 #include <algorithm>
+#include <array>
 #include <limits>
 #include <stdexcept>
 #include <vector>
@@ -17,9 +18,8 @@ struct SwapChainSupportDetails {
   std::vector<VkPresentModeKHR> presentModes;
 };
 
-inline SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device,
-                                                     VkSurfaceKHR surface) {
-  SwapChainSupportDetails details;
+static void querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface,
+                                  SwapChainSupportDetails& details) {
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
                                             &details.capabilities);
   uint32_t formatCount;
@@ -37,21 +37,22 @@ inline SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device,
     vkGetPhysicalDeviceSurfacePresentModesKHR(
         device, surface, &presentModeCount, details.presentModes.data());
   }
-  return details;
 }
 
-inline VkSurfaceFormatKHR chooseSwapSurfaceFormat(
-    const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+static void chooseSwapSurfaceFormat(
+    const std::vector<VkSurfaceFormatKHR>& availableFormats,
+    VkSurfaceFormatKHR& format) {
   for (const auto& availableFormat : availableFormats) {
     if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
         availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-      return availableFormat;
+      format = availableFormat;
+      return;
     }
   }
-  return availableFormats[0];
+  format = availableFormats[0];
 }
 
-inline VkPresentModeKHR chooseSwapPresentMode(
+static VkPresentModeKHR chooseSwapPresentMode(
     const std::vector<VkPresentModeKHR>& availablePresentModes) {
   for (const auto& availablePresentMode : availablePresentModes) {
     if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
@@ -61,11 +62,11 @@ inline VkPresentModeKHR chooseSwapPresentMode(
   return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-inline VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
-                                   GLFWwindow* window) {
+static void chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
+                             GLFWwindow* window, VkExtent2D& extent) {
   if (capabilities.currentExtent.width !=
       std::numeric_limits<uint32_t>::max()) {
-    return capabilities.currentExtent;
+    extent = capabilities.currentExtent;
   } else {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -77,23 +78,27 @@ inline VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
     actualExtent.height =
         std::clamp(actualExtent.height, capabilities.minImageExtent.height,
                    capabilities.maxImageExtent.height);
-    return actualExtent;
+    extent = actualExtent;
   }
 }
 
-inline VkSwapchainKHR createSwapChain(VkDevice device,
+static VkSwapchainKHR createSwapChain(VkDevice device,
                                       VkPhysicalDevice physicalDevice,
                                       VkSurfaceKHR surface, GLFWwindow* window,
                                       VkFormat& swapChainImageFormat,
                                       VkExtent2D& swapChainExtent,
                                       std::vector<VkImage>& swapChainImages) {
-  SwapChainSupportDetails swapChainSupport =
-      querySwapChainSupport(physicalDevice, surface);
-  VkSurfaceFormatKHR surfaceFormat =
-      chooseSwapSurfaceFormat(swapChainSupport.formats);
-  VkPresentModeKHR presentMode =
+  SwapChainSupportDetails swapChainSupport;
+  querySwapChainSupport(physicalDevice, surface, swapChainSupport);
+
+  VkSurfaceFormatKHR surfaceFormat;
+  chooseSwapSurfaceFormat(swapChainSupport.formats, surfaceFormat);
+
+  const VkPresentModeKHR presentMode =
       chooseSwapPresentMode(swapChainSupport.presentModes);
-  VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
+
+  VkExtent2D extent;
+  chooseSwapExtent(swapChainSupport.capabilities, window, extent);
 
   uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
   if (swapChainSupport.capabilities.maxImageCount > 0 &&
@@ -111,14 +116,16 @@ inline VkSwapchainKHR createSwapChain(VkDevice device,
   createInfo.imageArrayLayers = 1;
   createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  QueueFamilyIndices queueIndices = findQueueFamilies(physicalDevice, surface);
+  QueueFamilyIndices queueIndices;
+  findQueueFamilies(physicalDevice, surface, queueIndices);
 
   if (queueIndices.graphicsFamily != queueIndices.presentFamily) {
-    uint32_t queueFamilyIndicesArr[] = {queueIndices.graphicsFamily.value(),
-                                        queueIndices.presentFamily.value()};
+    std::array<uint32_t, 2> queueFamilyIndicesArr = {
+        queueIndices.graphicsFamily.value(),
+        queueIndices.presentFamily.value()};
     createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
     createInfo.queueFamilyIndexCount = 2;
-    createInfo.pQueueFamilyIndices = queueFamilyIndicesArr;
+    createInfo.pQueueFamilyIndices = queueFamilyIndicesArr.data();
   } else {
     createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   }
@@ -146,10 +153,10 @@ inline VkSwapchainKHR createSwapChain(VkDevice device,
   return swapChain;
 }
 
-inline std::vector<VkImageView> createImageViews(
-    VkDevice device, const std::vector<VkImage>& swapChainImages,
-    VkFormat swapChainImageFormat) {
-  std::vector<VkImageView> swapChainImageViews;
+static void createImageViews(VkDevice device,
+                             const std::vector<VkImage>& swapChainImages,
+                             VkFormat swapChainImageFormat,
+                             std::vector<VkImageView>& swapChainImageViews) {
   swapChainImageViews.resize(swapChainImages.size());
 
   for (size_t i = 0; i < swapChainImages.size(); i++) {
@@ -169,8 +176,6 @@ inline std::vector<VkImageView> createImageViews(
       throw std::runtime_error("Failed to create image views!");
     }
   }
-
-  return swapChainImageViews;
 }
 
 }  // namespace Vulkan

@@ -7,7 +7,7 @@
 
 namespace Vulkan {
 
-inline VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device) {
+static VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device) {
   VkDescriptorSetLayoutBinding uboLayoutBinding{};
   uboLayoutBinding.binding = 0;
   uboLayoutBinding.descriptorCount = 1;
@@ -40,7 +40,7 @@ inline VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device) {
   return descriptorSetLayout;
 }
 
-inline VkDescriptorSetLayout createMaterialDescriptorSetLayout(
+static VkDescriptorSetLayout createMaterialDescriptorSetLayout(
     VkDevice device) {
   std::array<VkDescriptorSetLayoutBinding, 8> bindings{};
 
@@ -48,15 +48,13 @@ inline VkDescriptorSetLayout createMaterialDescriptorSetLayout(
   bindings[0].descriptorCount = 1;
   bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   bindings[0].stageFlags =
-      VK_SHADER_STAGE_VERTEX_BIT |
-      VK_SHADER_STAGE_FRAGMENT_BIT;
+      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
   for (uint32_t i = 1; i < 8; i++) {
     bindings[i].binding = i;
     bindings[i].descriptorCount = 1;
     bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    bindings[i].stageFlags =
-        VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings[i].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
   }
 
   VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -74,7 +72,7 @@ inline VkDescriptorSetLayout createMaterialDescriptorSetLayout(
   return materialDescriptorSetLayout;
 }
 
-inline VkDescriptorPool createDescriptorPool(VkDevice device,
+static VkDescriptorPool createDescriptorPool(VkDevice device,
                                              int maxFramesInFlight) {
   std::array<VkDescriptorPoolSize, 2> poolSizes{};
   poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -99,11 +97,12 @@ inline VkDescriptorPool createDescriptorPool(VkDevice device,
   return descriptorPool;
 }
 
-inline std::vector<VkDescriptorSet> createDescriptorSets(
-    VkDevice device, VkDescriptorPool descriptorPool,
-    VkDescriptorSetLayout descriptorSetLayout,
-    const std::vector<VkBuffer>& uniformBuffers, VkBuffer lightBuffer,
-    int maxFramesInFlight) {
+static void createDescriptorSets(VkDevice device,
+                                 VkDescriptorPool descriptorPool,
+                                 VkDescriptorSetLayout descriptorSetLayout,
+                                 const std::vector<VkBuffer>& uniformBuffers,
+                                 VkBuffer lightBuffer, int maxFramesInFlight,
+                                 std::vector<VkDescriptorSet>& descriptorSets) {
   std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight,
                                              descriptorSetLayout);
   VkDescriptorSetAllocateInfo allocInfo{};
@@ -112,7 +111,6 @@ inline std::vector<VkDescriptorSet> createDescriptorSets(
   allocInfo.descriptorSetCount = static_cast<uint32_t>(maxFramesInFlight);
   allocInfo.pSetLayouts = layouts.data();
 
-  std::vector<VkDescriptorSet> descriptorSets;
   descriptorSets.resize(maxFramesInFlight);
   if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) !=
       VK_SUCCESS) {
@@ -150,8 +148,6 @@ inline std::vector<VkDescriptorSet> createDescriptorSets(
                            static_cast<uint32_t>(descriptorWrites.size()),
                            descriptorWrites.data(), 0, nullptr);
   }
-
-  return descriptorSets;
 }
 
 }  // namespace Vulkan
