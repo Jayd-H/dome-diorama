@@ -72,6 +72,7 @@ const bool DEBUG_OBJECTS = false;
 const bool DEBUG_TEXTURE = false;
 const bool DEBUG_MATERIALS = false;
 const bool DEBUG_POSTPROCESSING = false;
+const bool DEBUG_SHADOWS = false;
 #else
 const bool enableValidationLayers = true;
 const bool DEBUG_MAIN = true;
@@ -90,6 +91,7 @@ const bool DEBUG_OBJECTS = false;
 const bool DEBUG_TEXTURE = false;
 const bool DEBUG_MATERIALS = false;
 const bool DEBUG_POSTPROCESSING = true;
+const bool DEBUG_SHADOWS = true;
 #endif
 
 struct QueueFamilyIndices {
@@ -112,7 +114,7 @@ struct UniformBufferObject {
   alignas(16) glm::mat4 proj;
   alignas(16) glm::vec3 eyePos;
   alignas(4) float time;
-  alignas(16) glm::mat4 lightSpaceMatrices[MAX_SHADOW_CASTING_LIGHTS];
+  alignas(16) glm::mat4 lightSpaceMatrices[MAX_SHADOW_CASTERS];
 };
 
 VkResult CreateDebugUtilsMessengerEXT(
@@ -1486,11 +1488,12 @@ class DomeDiorama final {
       throw std::runtime_error("Failed to begin recording command buffer!");
     }
 
-    const auto& shadowMaps = lightManager->getShadowMaps();
+    const auto& shadowMaps = lightManager->getShadowSystem()->getShadowMaps();
 
     for (size_t smIdx = 0; smIdx < shadowMaps.size(); smIdx++) {
       const auto& shadowMap = shadowMaps[smIdx];
-      Light* const light = shadowMap.light;
+      const uint32_t lightIndex = shadowMap.lightIndex;
+      Light* const light = lightManager->getLight(lightIndex + 1);
 
       VkImageMemoryBarrier2 shadowBarrier{};
       shadowBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -1565,7 +1568,7 @@ class DomeDiorama final {
         glm::mat4 model;
       } shadowPush;
 
-      shadowPush.lightSpaceMatrix = light->lightSpaceMatrix;
+      shadowPush.lightSpaceMatrix = shadowMap.lightSpaceMatrix;
 
       uint32_t shadowObjectCount = 0;
       for (const auto& object : sceneObjects) {
@@ -1716,7 +1719,7 @@ class DomeDiorama final {
     }
   }
 
-  void updateUniformBuffer(uint32_t currentImage) {
+ void updateUniformBuffer(uint32_t currentImage) {
     static const auto startTime = std::chrono::high_resolution_clock::now();
     const auto currentTime = std::chrono::high_resolution_clock::now();
     const float time =
@@ -1770,12 +1773,11 @@ class DomeDiorama final {
     ubo.eyePos = camPos;
     ubo.time = time;
 
-    const auto& shadowMaps = lightManager->getShadowMaps();
-    for (size_t i = 0; i < shadowMaps.size() && i < MAX_SHADOW_CASTING_LIGHTS;
-         i++) {
-      ubo.lightSpaceMatrices[i] = shadowMaps[i].light->lightSpaceMatrix;
+    const auto& shadowMaps = lightManager->getShadowSystem()->getShadowMaps();
+    for (size_t i = 0; i < shadowMaps.size() && i < MAX_SHADOW_CASTERS; i++) {
+      ubo.lightSpaceMatrices[i] = shadowMaps[i].lightSpaceMatrix;
     }
-    for (size_t i = shadowMaps.size(); i < MAX_SHADOW_CASTING_LIGHTS; i++) {
+    for (size_t i = shadowMaps.size(); i < MAX_SHADOW_CASTERS; i++) {
       ubo.lightSpaceMatrices[i] = glm::mat4(1.0f);
     }
 
@@ -2347,6 +2349,7 @@ int main() {
   Debug::setEnabled(Debug::Category::TEXTURE, DEBUG_TEXTURE);
   Debug::setEnabled(Debug::Category::MATERIALS, DEBUG_MATERIALS);
   Debug::setEnabled(Debug::Category::POSTPROCESSING, DEBUG_POSTPROCESSING);
+  Debug::setEnabled(Debug::Category::SHADOWS, DEBUG_SHADOWS);
 
   try {
     DomeDiorama application;

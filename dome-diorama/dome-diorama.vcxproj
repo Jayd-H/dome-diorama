@@ -179,6 +179,7 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Scene\Shadow.h" />
     <ClInclude Include="src\Scene\Skybox.h" />
     <ClInclude Include="src\Util\Camera.h" />
     <ClInclude Include="src\Util\Debug.h" />

@@ -5,10 +5,9 @@
 
 #include "Light.h"
 #include "Rendering/RenderDevice.h"
+#include "Shadow.h"
 
 constexpr uint32_t MAX_LIGHTS = 8;
-constexpr uint32_t MAX_SHADOW_CASTING_LIGHTS = 4;
-constexpr uint32_t SHADOW_MAP_SIZE = 16384;
 
 struct LightData {
   alignas(16) glm::mat4 lightSpaceMatrix;
@@ -53,49 +52,35 @@ class LightManager final {
   VkBuffer getLightBuffer() const { return lightBuffer; }
   int getLightCount() const { return static_cast<int>(lights.size()); }
 
-  VkDescriptorSetLayout getShadowDescriptorSetLayout() const {
-    return shadowDescriptorSetLayout;
+VkDescriptorSetLayout getShadowDescriptorSetLayout() const {
+    return shadowSystem->getShadowDescriptorSetLayout();
   }
-  VkDescriptorSet getShadowDescriptorSet() const { return shadowDescriptorSet; }
 
-  struct ShadowMapInfo {
-    Light* light;
-    LightID lightId;
-    VkImage image;
-    VkImageView imageView;
-    VkSampler sampler;
-    VkDeviceMemory memory;
-  };
+  VkDescriptorSet getShadowDescriptorSet() const {
+    return shadowSystem->getShadowDescriptorSet();
+  }
 
-  const std::vector<ShadowMapInfo>& getShadowMaps() const { return shadowMaps; }
-  int getShadowMapCount() const { return static_cast<int>(shadowMaps.size()); }
+  const std::vector<ShadowMapData>& getShadowMaps() const {
+    return shadowSystem->getShadowMaps();
+  }
+
+  int getShadowMapCount() const {
+    return static_cast<int>(shadowSystem->getShadowMaps().size());
+  }
+
+  ShadowSystem* getShadowSystem() const { return shadowSystem.get(); }
 
   void cleanup();
 
  private:
   std::vector<std::unique_ptr<Light>> lights;
-  std::vector<ShadowMapInfo> shadowMaps;
   RenderDevice* renderDevice;
 
   void* lightBufferMapped;
   VkBuffer lightBuffer;
   VkDeviceMemory lightBufferMemory;
 
-  VkDescriptorSetLayout shadowDescriptorSetLayout;
-  VkDescriptorPool shadowDescriptorPool;
-  VkDescriptorSet shadowDescriptorSet;
-
-  VkImage dummyShadowMap;
-  VkDeviceMemory dummyShadowMapMemory;
-  VkImageView dummyShadowMapView;
-  VkSampler dummyShadowMapSampler;
+  std::unique_ptr<ShadowSystem> shadowSystem;
 
   void createLightBuffer();
-  void createShadowMapForLight(Light* light, LightID lightId);
-  void createDummyShadowMap();
-  void createShadowDescriptorSetLayout();
-  void createShadowDescriptorPool();
-  void createShadowDescriptorSet();
-  void updateShadowDescriptorSet();
-  void cleanupShadowResources();
 };

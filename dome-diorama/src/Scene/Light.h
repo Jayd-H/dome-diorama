@@ -1,6 +1,4 @@
 #pragma once
-#include <vulkan/vulkan.h>
-
 #include <glm/glm.hpp>
 #include <string>
 
@@ -24,11 +22,7 @@ class Light final {
         outerCutOff(17.5f),
         name("Unnamed Light"),
         castsShadows(false),
-        shadowMap(VK_NULL_HANDLE),
-        shadowMapMemory(VK_NULL_HANDLE),
-        shadowMapView(VK_NULL_HANDLE),
-        shadowMapSampler(VK_NULL_HANDLE),
-        lightSpaceMatrix(1.0f) {}
+        shadowMapIndex(UINT32_MAX) {}
 
   Light(const Light&) = default;
   Light& operator=(const Light&) = default;
@@ -45,11 +39,7 @@ class Light final {
   float outerCutOff;
   std::string name;
   bool castsShadows;
-  VkImage shadowMap;
-  VkDeviceMemory shadowMapMemory;
-  VkImageView shadowMapView;
-  VkSampler shadowMapSampler;
-  glm::mat4 lightSpaceMatrix;
+  uint32_t shadowMapIndex;
 };
 
 class LightBuilder final {
@@ -67,6 +57,7 @@ class LightBuilder final {
     light.cutOff = 12.5f;
     light.outerCutOff = 17.5f;
     light.castsShadows = false;
+    light.shadowMapIndex = UINT32_MAX;
   }
 
   inline LightBuilder& type(LightType t) {
