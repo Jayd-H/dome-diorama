@@ -52,6 +52,10 @@ class Application final {
 
   void setSunLightID(LightID id) { sunLightID = id; }
 
+  void setWorldConfig(const WorldConfig& config) {
+    worldState = WorldState(config);
+  }
+
  private:
   std::unique_ptr<Window> window;
   bool framebufferResized = false;

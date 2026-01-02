@@ -13,47 +13,12 @@
 #include "Particles/RainEmitter.h"
 #include "Particles/SmokeEmitter.h"
 #include "Resources/Object.h"
+#include "Scene/WorldState.h"
+#include "Util/ConfigParser.h"
 #include "Util/Debug.h"
 
-#ifdef NDEBUG
-const bool DEBUG_MAIN = false;
-const bool DEBUG_CAMERA = false;
-const bool DEBUG_INPUT = false;
-const bool DEBUG_RENDERING = false;
-const bool DEBUG_VULKAN = false;
-const bool DEBUG_SKYBOX = false;
-const bool DEBUG_PLANTMANAGER = false;
-const bool DEBUG_WORLD = false;
-const bool DEBUG_PARTICLES = false;
-const bool DEBUG_MESH = false;
-const bool DEBUG_LIGHTS = false;
-const bool DEBUG_SCENE = false;
-const bool DEBUG_OBJECTS = false;
-const bool DEBUG_TEXTURE = false;
-const bool DEBUG_MATERIALS = false;
-const bool DEBUG_POSTPROCESSING = false;
-const bool DEBUG_SHADOWS = false;
-#else
-const bool DEBUG_MAIN = true;
-const bool DEBUG_CAMERA = false;
-const bool DEBUG_INPUT = false;
-const bool DEBUG_RENDERING = true;
-const bool DEBUG_VULKAN = true;
-const bool DEBUG_SKYBOX = true;
-const bool DEBUG_PLANTMANAGER = true;
-const bool DEBUG_WORLD = true;
-const bool DEBUG_PARTICLES = true;
-const bool DEBUG_MESH = false;
-const bool DEBUG_LIGHTS = true;
-const bool DEBUG_SCENE = true;
-const bool DEBUG_OBJECTS = false;
-const bool DEBUG_TEXTURE = false;
-const bool DEBUG_MATERIALS = false;
-const bool DEBUG_POSTPROCESSING = true;
-const bool DEBUG_SHADOWS = true;
-#endif
-
-std::vector<Object> createScene(MeshManager* meshManager,
+std::vector<Object> createScene(const ConfigParser& config,
+                                MeshManager* meshManager,
                                 MaterialManager* materialManager,
                                 PlantManager* plantManager,
                                 ParticleManager* particleManager,
@@ -83,8 +48,15 @@ std::vector<Object> createScene(MeshManager* meshManager,
           .textureScale(50.0f));
 
   const MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
+
   const MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
-      300.0f, 100, 10.0f, 2.0f, 2, 0.6f, 42);
+      config.getFloat("Terrain.terrain_size", 300.0f),
+      config.getInt("Terrain.terrain_resolution", 100),
+      config.getFloat("Terrain.terrain_height", 10.0f),
+      config.getFloat("Terrain.terrain_frequency", 2.0f),
+      config.getInt("Terrain.terrain_octaves", 2),
+      config.getFloat("Terrain.terrain_persistence", 0.6f),
+      config.getInt("Terrain.terrain_seed", 42));
 
   const Object sun = ObjectBuilder()
                          .name("Sun")
@@ -157,14 +129,16 @@ std::vector<Object> createScene(MeshManager* meshManager,
   const Mesh* const terrainMesh = meshManager->getMesh(sandTerrainMesh);
 
   PlantSpawnConfig plantConfig;
-  plantConfig.numCacti = 400;
-  plantConfig.numTrees = 100;
-  plantConfig.minRadius = 8.0f;
-  plantConfig.maxRadius = 300.0f;
-  plantConfig.seed = 67;
-  plantConfig.randomGrowthStages = true;
-  plantConfig.scaleVariance = 0.7f;
-  plantConfig.rotationVariance = 0.8f;
+  plantConfig.numCacti = config.getInt("Plants.num_cacti", 400);
+  plantConfig.numTrees = config.getInt("Plants.num_trees", 100);
+  plantConfig.minRadius = config.getFloat("Plants.min_spawn_radius", 8.0f);
+  plantConfig.maxRadius = config.getFloat("Plants.max_spawn_radius", 300.0f);
+  plantConfig.seed = config.getInt("Plants.spawn_seed", 67);
+  plantConfig.randomGrowthStages =
+      config.getBool("Plants.random_growth_stages", true);
+  plantConfig.scaleVariance = config.getFloat("Plants.scale_variance", 0.7f);
+  plantConfig.rotationVariance =
+      config.getFloat("Plants.rotation_variance", 0.8f);
 
   plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
 
@@ -264,23 +238,46 @@ int main() {
   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
-  Debug::setEnabled(Debug::Category::MAIN, DEBUG_MAIN);
-  Debug::setEnabled(Debug::Category::CAMERA, DEBUG_CAMERA);
-  Debug::setEnabled(Debug::Category::INPUT, DEBUG_INPUT);
-  Debug::setEnabled(Debug::Category::RENDERING, DEBUG_RENDERING);
-  Debug::setEnabled(Debug::Category::VULKAN, DEBUG_VULKAN);
-  Debug::setEnabled(Debug::Category::SKYBOX, DEBUG_SKYBOX);
-  Debug::setEnabled(Debug::Category::PLANTMANAGER, DEBUG_PLANTMANAGER);
-  Debug::setEnabled(Debug::Category::WORLD, DEBUG_WORLD);
-  Debug::setEnabled(Debug::Category::PARTICLES, DEBUG_PARTICLES);
-  Debug::setEnabled(Debug::Category::MESH, DEBUG_MESH);
-  Debug::setEnabled(Debug::Category::LIGHTS, DEBUG_LIGHTS);
-  Debug::setEnabled(Debug::Category::SCENE, DEBUG_SCENE);
-  Debug::setEnabled(Debug::Category::OBJECTS, DEBUG_OBJECTS);
-  Debug::setEnabled(Debug::Category::TEXTURE, DEBUG_TEXTURE);
-  Debug::setEnabled(Debug::Category::MATERIALS, DEBUG_MATERIALS);
-  Debug::setEnabled(Debug::Category::POSTPROCESSING, DEBUG_POSTPROCESSING);
-  Debug::setEnabled(Debug::Category::SHADOWS, DEBUG_SHADOWS);
+  ConfigParser config;
+  if (!config.load("config.ini")) {
+    Debug::log(Debug::Category::MAIN,
+               "Warning: Could not load config.ini, using defaults");
+  }
+
+  Debug::setEnabled(Debug::Category::MAIN,
+                    config.getBool("Debug.debug_main", true));
+  Debug::setEnabled(Debug::Category::CAMERA,
+                    config.getBool("Debug.debug_camera", false));
+  Debug::setEnabled(Debug::Category::INPUT,
+                    config.getBool("Debug.debug_input", false));
+  Debug::setEnabled(Debug::Category::RENDERING,
+                    config.getBool("Debug.debug_rendering", true));
+  Debug::setEnabled(Debug::Category::VULKAN,
+                    config.getBool("Debug.debug_vulkan", true));
+  Debug::setEnabled(Debug::Category::SKYBOX,
+                    config.getBool("Debug.debug_skybox", true));
+  Debug::setEnabled(Debug::Category::PLANTMANAGER,
+                    config.getBool("Debug.debug_plantmanager", true));
+  Debug::setEnabled(Debug::Category::WORLD,
+                    config.getBool("Debug.debug_world", true));
+  Debug::setEnabled(Debug::Category::PARTICLES,
+                    config.getBool("Debug.debug_particles", true));
+  Debug::setEnabled(Debug::Category::MESH,
+                    config.getBool("Debug.debug_mesh", false));
+  Debug::setEnabled(Debug::Category::LIGHTS,
+                    config.getBool("Debug.debug_lights", true));
+  Debug::setEnabled(Debug::Category::SCENE,
+                    config.getBool("Debug.debug_scene", true));
+  Debug::setEnabled(Debug::Category::OBJECTS,
+                    config.getBool("Debug.debug_objects", false));
+  Debug::setEnabled(Debug::Category::TEXTURE,
+                    config.getBool("Debug.debug_texture", false));
+  Debug::setEnabled(Debug::Category::MATERIALS,
+                    config.getBool("Debug.debug_materials", false));
+  Debug::setEnabled(Debug::Category::POSTPROCESSING,
+                    config.getBool("Debug.debug_postprocessing", true));
+  Debug::setEnabled(Debug::Category::SHADOWS,
+                    config.getBool("Debug.debug_shadows", true));
 
   try {
     Application app;
@@ -290,12 +287,39 @@ int main() {
 
     Debug::log(Debug::Category::MAIN, "Creating scene...");
     LightID sunLightID = INVALID_LIGHT_ID;
-    std::vector<Object> sceneObjects = createScene(
-        app.getMeshManager(), app.getMaterialManager(), app.getPlantManager(),
-        app.getParticleManager(), app.getLightManager(), sunLightID);
+    std::vector<Object> sceneObjects =
+        createScene(config, app.getMeshManager(), app.getMaterialManager(),
+                    app.getPlantManager(), app.getParticleManager(),
+                    app.getLightManager(), sunLightID);
 
     app.setSunLightID(sunLightID);
     app.setScene(sceneObjects);
+
+    WorldConfig worldConfig;
+    worldConfig.dayLengthInSeconds =
+        config.getFloat("World.day_length", 120.0f);
+    worldConfig.startingHour = config.getInt("World.starting_hour", 12);
+    worldConfig.startingMinute = config.getInt("World.starting_minute", 0);
+    worldConfig.startingTemperature =
+        config.getFloat("World.starting_temperature", 20.0f);
+    worldConfig.minTemperature =
+        config.getFloat("World.min_temperature", -15.0f);
+    worldConfig.maxTemperature =
+        config.getFloat("World.max_temperature", 40.0f);
+    worldConfig.startingHumidity =
+        config.getFloat("World.starting_humidity", 0.3f);
+    worldConfig.minHumidity = config.getFloat("World.min_humidity", 0.1f);
+    worldConfig.maxHumidity = config.getFloat("World.max_humidity", 0.95f);
+    worldConfig.startingWindSpeed =
+        config.getFloat("World.starting_wind_speed", 2.0f);
+    worldConfig.minWindSpeed = config.getFloat("World.min_wind_speed", 0.5f);
+    worldConfig.maxWindSpeed = config.getFloat("World.max_wind_speed", 10.0f);
+    worldConfig.parameterUpdateInterval =
+        config.getFloat("World.parameter_update_interval", 30.0f);
+    worldConfig.dayNightTempVariation =
+        config.getFloat("World.day_night_temp_variation", 8.0f);
+
+    app.setWorldConfig(worldConfig);
 
     Debug::log(Debug::Category::MAIN, "Scene created, starting main loop...");
     app.run();

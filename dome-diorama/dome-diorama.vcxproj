@@ -152,7 +152,6 @@
     <ClCompile Include="src\Rendering\PostProcessing.cpp" />
     <ClCompile Include="src\Rendering\RenderDevice.cpp" />
     <ClCompile Include="src\Resources\TextureManager.cpp" />
-    <ClCompile Include="src\Scene\WorldState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SHADERS\shader.frag">
@@ -188,6 +187,7 @@
     <ClInclude Include="src\Scene\Shadow.h" />
     <ClInclude Include="src\Scene\Skybox.h" />
     <ClInclude Include="src\Util\Camera.h" />
+    <ClInclude Include="src\Util\ConfigParser.h" />
     <ClInclude Include="src\Util\Debug.h" />
     <ClInclude Include="src\Particles\FireEmitter.h" />
     <ClInclude Include="src\Util\Input.h" />
