@@ -250,6 +250,8 @@ class DomeDiorama final {
         app->recreateTextureSamplers(VK_FILTER_LINEAR, VK_FILTER_LINEAR);
         glfwSetWindowTitle(win, "Dome Diorama - LINEAR FILTERING");
         Debug::log(Debug::Category::INPUT, "Switched to LINEAR filtering");
+      } else if (key == GLFW_KEY_L) {
+        app->toggleShadingMode();
       }
     }
   }
@@ -305,6 +307,23 @@ class DomeDiorama final {
 
   // Skybox
   Skybox* skybox = nullptr;
+
+  // Shader Modes
+  enum class ShadingMode { Phong, Gouraud };
+  ShadingMode currentShadingMode = ShadingMode::Phong;
+
+ void toggleShadingMode() {
+    if (currentShadingMode == ShadingMode::Phong) {
+      currentShadingMode = ShadingMode::Gouraud;
+      glfwSetWindowTitle(window, "Dome Diorama - GOURAUD SHADING");
+      Debug::log(Debug::Category::INPUT, "Switched to GOURAUD shading");
+    } else {
+      currentShadingMode = ShadingMode::Phong;
+      glfwSetWindowTitle(window, "Dome Diorama - PHONG SHADING");
+      Debug::log(Debug::Category::INPUT, "Switched to PHONG shading");
+    }
+    recreateGraphicsPipeline();
+  }
 
   void initWindow() {
     glfwInit();
@@ -742,12 +761,27 @@ class DomeDiorama final {
     const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 
+    uint32_t shadingModeValue =
+        (currentShadingMode == ShadingMode::Phong) ? 0 : 1;
+
+    VkSpecializationMapEntry specializationMapEntry{};
+    specializationMapEntry.constantID = 0;
+    specializationMapEntry.offset = 0;
+    specializationMapEntry.size = sizeof(uint32_t);
+
+    VkSpecializationInfo specializationInfo{};
+    specializationInfo.mapEntryCount = 1;
+    specializationInfo.pMapEntries = &specializationMapEntry;
+    specializationInfo.dataSize = sizeof(uint32_t);
+    specializationInfo.pData = &shadingModeValue;
+
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType =
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
     vertShaderStageInfo.module = vertShaderModule;
     vertShaderStageInfo.pName = "main";
+    vertShaderStageInfo.pSpecializationInfo = &specializationInfo;
 
     VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
     fragShaderStageInfo.sType =
@@ -755,6 +789,7 @@ class DomeDiorama final {
     fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     fragShaderStageInfo.module = fragShaderModule;
     fragShaderStageInfo.pName = "main";
+    fragShaderStageInfo.pSpecializationInfo = &specializationInfo;
 
     const std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
         vertShaderStageInfo, fragShaderStageInfo};
@@ -854,9 +889,11 @@ class DomeDiorama final {
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
-                               &pipelineLayout) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create pipeline layout!");
+    if (pipelineLayout == VK_NULL_HANDLE) {
+      if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
+                                 &pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create pipeline layout!");
+      }
     }
 
     VkPipelineRenderingCreateInfo renderingCreateInfo{};
@@ -890,6 +927,10 @@ class DomeDiorama final {
 
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
+
+    Debug::log(Debug::Category::VULKAN, "Graphics pipeline created for ",
+               currentShadingMode == ShadingMode::Phong ? "Phong" : "Gouraud",
+               " shading");
   }
 
   void recreateGraphicsPipeline() {
@@ -1719,7 +1760,7 @@ class DomeDiorama final {
     }
   }
 
- void updateUniformBuffer(uint32_t currentImage) {
+  void updateUniformBuffer(uint32_t currentImage) {
     static const auto startTime = std::chrono::high_resolution_clock::now();
     const auto currentTime = std::chrono::high_resolution_clock::now();
     const float time =
@@ -2191,10 +2232,13 @@ class DomeDiorama final {
     const MaterialID sandMaterialID = materialManager->registerMaterial(
         MaterialBuilder()
             .name("Sand Material")
-            .albedoMap("./Models/textures/rockytrail/rocky_trail_02_diff_4k.jpg")
+            .albedoMap(
+                "./Models/textures/rockytrail/rocky_trail_02_diff_4k.jpg")
             .normalMap("./Models/textures/rockytrail/rocky_trail_02_ao_4k.jpg")
-            .roughnessMap("./Models/textures/rockytrail/rocky_trail_02_arm_4k.jpg")
-            .heightMap("./Models/textures/rockytrail/rocky_trail_02_disp_4k.jpg")
+            .roughnessMap(
+                "./Models/textures/rockytrail/rocky_trail_02_arm_4k.jpg")
+            .heightMap(
+                "./Models/textures/rockytrail/rocky_trail_02_disp_4k.jpg")
             .heightScale(1.0f)
             .textureScale(50.0f));
 
@@ -2285,7 +2329,7 @@ class DomeDiorama final {
     plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
 
     const Light sunLight = LightBuilder()
-                               .type(LightType::Directional)
+                               .type(LightType::Sun)
                                .name("Sun Light")
                                .direction(0.0f, -1.0f, 0.0f)
                                .color(1.0f, 0.95f, 0.8f)

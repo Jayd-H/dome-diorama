@@ -33,9 +33,6 @@
     <ClCompile Include="src\Resources\MeshManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Scene\LightManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\Rendering\PostProcessing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

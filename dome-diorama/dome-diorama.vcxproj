@@ -143,7 +143,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Scene\LightManager.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Resources\MaterialManager.cpp" />
     <ClCompile Include="src\Resources\MeshManager.cpp" />

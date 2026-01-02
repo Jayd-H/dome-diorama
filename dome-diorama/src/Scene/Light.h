@@ -5,7 +5,7 @@
 using LightID = uint32_t;
 constexpr LightID INVALID_LIGHT_ID = 0;
 
-enum class LightType { Point, Directional, Spot };
+enum class LightType { Point, Sun };
 
 class Light final {
  public:
@@ -18,8 +18,6 @@ class Light final {
         constant(1.0f),
         linear(0.09f),
         quadratic(0.032f),
-        cutOff(12.5f),
-        outerCutOff(17.5f),
         name("Unnamed Light"),
         castsShadows(false),
         shadowMapIndex(UINT32_MAX) {}
@@ -35,8 +33,6 @@ class Light final {
   float constant;
   float linear;
   float quadratic;
-  float cutOff;
-  float outerCutOff;
   std::string name;
   bool castsShadows;
   uint32_t shadowMapIndex;
@@ -54,8 +50,6 @@ class LightBuilder final {
     light.constant = 1.0f;
     light.linear = 0.09f;
     light.quadratic = 0.032f;
-    light.cutOff = 12.5f;
-    light.outerCutOff = 17.5f;
     light.castsShadows = false;
     light.shadowMapIndex = UINT32_MAX;
   }
@@ -110,12 +104,6 @@ class LightBuilder final {
     light.constant = constant;
     light.linear = linear;
     light.quadratic = quadratic;
-    return *this;
-  }
-
-  inline LightBuilder& spotAngles(float inner, float outer) {
-    light.cutOff = inner;
-    light.outerCutOff = outer;
     return *this;
   }
 
