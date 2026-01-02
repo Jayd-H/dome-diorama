@@ -5,13 +5,13 @@ layout(binding = 0) uniform sampler2D screenTexture;
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 0) out vec4 outColor;
 
-const float GAMMA = 2.2;
+const float GAMMA = 1.0;
 const float EXPOSURE = 1.0;
-const float SATURATION = 1.2;
-const float CONTRAST = 1.1;
+const float SATURATION = 0.9;
+const float CONTRAST = 1.0;
 const float VIGNETTE_STRENGTH = 0.3;
 const float VIGNETTE_EXTENT = 0.6;
-const float CHROMATIC_ABERRATION = 0.002;
+const float CHROMATIC_ABERRATION = 0.0;
 
 vec3 tonemap_reinhard(vec3 color) {
     return color / (color + vec3(1.0));
