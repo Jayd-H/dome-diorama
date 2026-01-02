@@ -40,10 +40,17 @@ class Application final {
   Application(const Application&) = delete;
   Application& operator=(const Application&) = delete;
 
-  public:
   void setScene(const std::vector<Object>& objects) { sceneObjects = objects; }
 
   void run();
+
+  MeshManager* getMeshManager() const { return meshManager; }
+  MaterialManager* getMaterialManager() const { return materialManager; }
+  PlantManager* getPlantManager() const { return plantManager; }
+  ParticleManager* getParticleManager() const { return particleManager; }
+  LightManager* getLightManager() const { return lightManager; }
+
+  void setSunLightID(LightID id) { sunLightID = id; }
 
  private:
   std::unique_ptr<Window> window;
@@ -123,28 +130,10 @@ class Application final {
   void mainLoop();
   void cleanup();
 
-  void createInstance();
-  void setupDebugMessenger();
-  void createSurface();
-  void pickPhysicalDevice();
-  void createLogicalDevice();
-  void createSwapChain();
-  void createImageViews();
-  void createDescriptorSetLayout();
-  void createMaterialDescriptorSetLayout();
-  void createGraphicsPipeline();
   void recreateGraphicsPipeline();
   void createParticlePipeline();
   void createShadowPipeline();
-  void createCommandPool();
-  void createDepthResources();
   void createUniformBuffers();
-  void createDescriptorPool();
-  void createDescriptorSets();
-  void createCommandBuffers();
-  void createSyncObjects();
-  void createScene();
-
   void drawFrame();
   void recreateSwapChain();
   void cleanupSwapChain();

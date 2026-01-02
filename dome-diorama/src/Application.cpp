@@ -148,8 +148,6 @@ void Application::initVulkan() {
   skybox->init("./Models/Skybox", descriptorSetLayout, swapChainImageFormat,
                depthFormat);
 
-  createScene();
-
   Debug::log(Debug::Category::VULKAN, "Creating uniform buffers...");
   createUniformBuffers();
 
@@ -581,7 +579,8 @@ void Application::createParticlePipeline() {
   attributes[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)};
   attributes[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)};
   attributes[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)};
-  attributes[3] = {3, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)};
+  attributes[3] = {3, 0, VK_FORMAT_R32G32B32_SFLOAT,
+                   offsetof(Vertex, normal)};
   attributes[4] = {4, 1, VK_FORMAT_R32_SFLOAT,
                    offsetof(ParticleInstanceData, particleIndex)};
 
@@ -607,7 +606,8 @@ void Application::createParticlePipeline() {
   viewportState.scissorCount = 1;
 
   VkPipelineRasterizationStateCreateInfo rasterizer{};
-  rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  rasterizer.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   rasterizer.depthClampEnable = VK_FALSE;
   rasterizer.rasterizerDiscardEnable = VK_FALSE;
   rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
@@ -655,7 +655,8 @@ void Application::createParticlePipeline() {
                                                VK_DYNAMIC_STATE_SCISSOR};
   VkPipelineDynamicStateCreateInfo dynamicState{};
   dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-  dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+  dynamicState.dynamicStateCount =
+      static_cast<uint32_t>(dynamicStates.size());
   dynamicState.pDynamicStates = dynamicStates.data();
 
   std::array<VkDescriptorSetLayout, 3> layouts = {
@@ -673,7 +674,8 @@ void Application::createParticlePipeline() {
   }
 
   VkPipelineRenderingCreateInfo renderingCreateInfo{};
-  renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+  renderingCreateInfo.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
   renderingCreateInfo.colorAttachmentCount = 1;
   renderingCreateInfo.pColorAttachmentFormats = &swapChainImageFormat;
   renderingCreateInfo.depthAttachmentFormat = depthFormat;
@@ -702,7 +704,8 @@ void Application::createParticlePipeline() {
   vkDestroyShaderModule(device, fragShaderModule, nullptr);
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
 
-  Debug::log(Debug::Category::VULKAN, "Particle pipeline created successfully");
+  Debug::log(Debug::Category::VULKAN,
+             "Particle pipeline created successfully");
 }
 
 void Application::createShadowPipeline() {
@@ -754,7 +757,8 @@ void Application::createShadowPipeline() {
   viewportState.scissorCount = 1;
 
   VkPipelineRasterizationStateCreateInfo rasterizer{};
-  rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  rasterizer.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   rasterizer.depthClampEnable = VK_FALSE;
   rasterizer.rasterizerDiscardEnable = VK_FALSE;
   rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
@@ -788,7 +792,8 @@ void Application::createShadowPipeline() {
                                                VK_DYNAMIC_STATE_DEPTH_BIAS};
   VkPipelineDynamicStateCreateInfo dynamicState{};
   dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-  dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+  dynamicState.dynamicStateCount =
+      static_cast<uint32_t>(dynamicStates.size());
   dynamicState.pDynamicStates = dynamicStates.data();
 
   struct ShadowPushConstants {
@@ -814,7 +819,8 @@ void Application::createShadowPipeline() {
   const VkFormat shadowDepthFormat = VK_FORMAT_D32_SFLOAT;
 
   VkPipelineRenderingCreateInfo renderingCreateInfo{};
-  renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+  renderingCreateInfo.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
   renderingCreateInfo.depthAttachmentFormat = shadowDepthFormat;
 
   VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -844,8 +850,7 @@ void Application::createShadowPipeline() {
   Debug::log(Debug::Category::VULKAN, "Shadow pipeline created successfully");
 }
 
-void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
-                                      uint32_t imageIndex) {
+void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -865,13 +870,15 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     shadowBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
     shadowBarrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
     shadowBarrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-    shadowBarrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-                                 VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+    shadowBarrier.dstStageMask =
+        VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+        VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
     shadowBarrier.dstAccessMask =
         VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
         VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     shadowBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    shadowBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    shadowBarrier.newLayout =
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     shadowBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     shadowBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     shadowBarrier.image = shadowMap.image;
@@ -956,7 +963,8 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
                            VK_INDEX_TYPE_UINT16);
 
       vkCmdDrawIndexed(commandBuffer,
-                       static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
+                       static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0,
+                       0);
       shadowObjectCount++;
     }
 
@@ -967,7 +975,8 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
         VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     shadowBarrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
     shadowBarrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-    shadowBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    shadowBarrier.oldLayout =
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     shadowBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
     vkCmdPipelineBarrier2(commandBuffer, &depInfo);
@@ -1022,13 +1031,13 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
         descriptorSets[currentFrame], material->descriptorSet,
         lightManager->getShadowDescriptorSet()};
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            mainPipeline->getPipelineLayout(), 0,
-                            static_cast<uint32_t>(descriptorSetsToBind.size()),
-                            descriptorSetsToBind.data(), 0, nullptr);
+    vkCmdBindDescriptorSets(
+        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mainPipeline->getPipelineLayout(), 0,
+        static_cast<uint32_t>(descriptorSetsToBind.size()),
+        descriptorSetsToBind.data(), 0, nullptr);
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh->indices.size()),
-                     1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer,
+                     static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
     mainObjectCount++;
   }
 
@@ -1081,8 +1090,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
   }
 }
 
-VkShaderModule Application::createShaderModule(
-    const std::vector<char>& code) const {
+VkShaderModule Application::createShaderModule(const std::vector<char>& code) const {
   VkShaderModuleCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   createInfo.codeSize = code.size();

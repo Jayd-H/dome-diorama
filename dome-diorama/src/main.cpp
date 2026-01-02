@@ -284,6 +284,20 @@ int main() {
 
   try {
     Application app;
+
+    Debug::log(Debug::Category::MAIN,
+               "Application initialized, creating scene...");
+
+    LightID sunLightID = INVALID_LIGHT_ID;
+    std::vector<Object> sceneObjects = createScene(
+        app.getMeshManager(), app.getMaterialManager(), app.getPlantManager(),
+        app.getParticleManager(), app.getLightManager(), sunLightID);
+
+    app.setSunLightID(sunLightID);
+    app.setScene(sceneObjects);
+
+    Debug::log(Debug::Category::MAIN, "Scene created, starting main loop...");
+
     app.run();
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
