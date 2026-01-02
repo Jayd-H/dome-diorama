@@ -114,26 +114,26 @@ void main() {
     fragNormal = mat3(transpose(inverse(push.model))) * inNormal;
     
     if (SHADING_MODE == 1) {
-        vec3 normal = normalize(fragNormal);
-        vec3 viewDir = normalize(ubo.eyePos - fragWorldPos);
+    vec3 normal = normalize(fragNormal);
+    vec3 viewDir = normalize(ubo.eyePos - fragWorldPos);
+    
+    vec3 albedo = inColor;
+    float roughness = material.roughness;
+    float metallic = material.metallic;
+    
+    vec3 ambient = vec3(0.03) * albedo;
+    vec3 lighting = ambient;
+    
+    for (int i = 0; i < lightBuffer.numLights && i < 8; i++) {
+        LightData light = lightBuffer.lights[i];
         
-        vec3 albedo = material.albedoColor.rgb;
-        float roughness = material.roughness;
-        float metallic = material.metallic;
-        
-        vec3 ambient = vec3(0.03) * albedo;
-        vec3 lighting = ambient;
-        
-        for (int i = 0; i < lightBuffer.numLights && i < 8; i++) {
-            LightData light = lightBuffer.lights[i];
-            
-            if (light.type == 0) {
-                lighting += calculatePointLight(light, normal, fragWorldPos, viewDir, albedo, roughness, metallic);
-            } else if (light.type == 1) {
-                lighting += calculateSunLight(light, normal, viewDir, albedo, roughness, metallic);
-            }
+        if (light.type == 0) {
+            lighting += calculatePointLight(light, normal, fragWorldPos, viewDir, albedo, roughness, metallic);
+        } else if (light.type == 1) {
+            lighting += calculateSunLight(light, normal, viewDir, albedo, roughness, metallic);
         }
-        
-        fragLighting = lighting;
     }
+    
+    fragLighting = lighting;
+}
 }
