@@ -6,41 +6,58 @@ class FireEmitter final : public ParticleEmitter {
   FireEmitter()
       : baseColor(1.0f, 0.9f, 0.1f),
         tipColor(1.0f, 0.3f, 0.0f),
-        waveFrequency(2.0f),
-        waveAmplitude(0.5f),
         upwardSpeed(2.0f),
         spawnRadius(0.2f),
-        particleScale(0.5f) {
+        particleScale(0.5f),
+        fadeInDuration(0.1f),
+        fadeOutDuration(0.5f),
+        velocityRandomness(0.5f),
+        scaleOverLifetime(0.3f),
+        rotationSpeed(1.0f) {
     FireEmitter::updateShaderParams();
   }
 
-  void setWaveFrequency(float frequency) { waveFrequency = frequency; }
-  void setWaveAmplitude(float amplitude) { waveAmplitude = amplitude; }
   void setBaseColor(const glm::vec3& color) { baseColor = color; }
   void setTipColor(const glm::vec3& color) { tipColor = color; }
   void setUpwardSpeed(float speed) { upwardSpeed = speed; }
   void setSpawnRadius(float radius) { spawnRadius = radius; }
   void setParticleScale(float scale) { particleScale = scale; }
+  void setFadeInDuration(float duration) { fadeInDuration = duration; }
+  void setFadeOutDuration(float duration) { fadeOutDuration = duration; }
+  void setVelocityRandomness(float randomness) {
+    velocityRandomness = randomness;
+  }
+  void setScaleOverLifetime(float scale) { scaleOverLifetime = scale; }
+  void setRotationSpeed(float speed) { rotationSpeed = speed; }
 
  protected:
   void updateShaderParams() final {
     shaderParams.baseColor = baseColor;
     shaderParams.tipColor = tipColor;
-    shaderParams.waveFrequency = waveFrequency;
-    shaderParams.waveAmplitude = waveAmplitude;
-    shaderParams.upwardSpeed = upwardSpeed;
-    shaderParams.particleScale = particleScale;
+    shaderParams.gravity = glm::vec3(0.0f);
+    shaderParams.initialVelocity = glm::vec3(0.0f, upwardSpeed, 0.0f);
     shaderParams.spawnRadius = spawnRadius;
+    shaderParams.particleScale = particleScale;
+    shaderParams.fadeInDuration = fadeInDuration;
+    shaderParams.fadeOutDuration = fadeOutDuration;
+    shaderParams.billboardMode = static_cast<int>(BillboardMode::Spherical);
+    shaderParams.colorMode = static_cast<int>(ColorMode::Gradient);
+    shaderParams.velocityRandomness = velocityRandomness;
+    shaderParams.scaleOverLifetime = scaleOverLifetime;
+    shaderParams.rotationSpeed = rotationSpeed;
   }
 
  private:
   glm::vec3 baseColor;
   glm::vec3 tipColor;
-  float waveFrequency;
-  float waveAmplitude;
   float upwardSpeed;
   float spawnRadius;
   float particleScale;
+  float fadeInDuration;
+  float fadeOutDuration;
+  float velocityRandomness;
+  float scaleOverLifetime;
+  float rotationSpeed;
 };
 
 class FireEmitterBuilder final : public ParticleEmitterBuilder {
@@ -89,16 +106,6 @@ class FireEmitterBuilder final : public ParticleEmitterBuilder {
     return *this;
   }
 
-  FireEmitterBuilder& waveFrequency(float frequency) {
-    fireEmitter->setWaveFrequency(frequency);
-    return *this;
-  }
-
-  FireEmitterBuilder& waveAmplitude(float amplitude) {
-    fireEmitter->setWaveAmplitude(amplitude);
-    return *this;
-  }
-
   FireEmitterBuilder& baseColor(const glm::vec3& color) {
     fireEmitter->setBaseColor(color);
     return *this;
@@ -131,6 +138,31 @@ class FireEmitterBuilder final : public ParticleEmitterBuilder {
 
   FireEmitterBuilder& particleScale(float scale) {
     fireEmitter->setParticleScale(scale);
+    return *this;
+  }
+
+  FireEmitterBuilder& fadeInDuration(float duration) {
+    fireEmitter->setFadeInDuration(duration);
+    return *this;
+  }
+
+  FireEmitterBuilder& fadeOutDuration(float duration) {
+    fireEmitter->setFadeOutDuration(duration);
+    return *this;
+  }
+
+  FireEmitterBuilder& velocityRandomness(float randomness) {
+    fireEmitter->setVelocityRandomness(randomness);
+    return *this;
+  }
+
+  FireEmitterBuilder& scaleOverLifetime(float scale) {
+    fireEmitter->setScaleOverLifetime(scale);
+    return *this;
+  }
+
+  FireEmitterBuilder& rotationSpeed(float speed) {
+    fireEmitter->setRotationSpeed(speed);
     return *this;
   }
 

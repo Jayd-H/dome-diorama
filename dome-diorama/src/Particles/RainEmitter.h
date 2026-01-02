@@ -9,7 +9,9 @@ class RainEmitter final : public ParticleEmitter {
         downwardSpeed(15.0f),
         windStrength(2.0f),
         spawnRadius(20.0f),
-        particleScale(0.1f) {
+        particleScale(0.1f),
+        fadeInDuration(0.0f),
+        fadeOutDuration(0.1f) {
     RainEmitter::updateShaderParams();
   }
 
@@ -19,16 +21,24 @@ class RainEmitter final : public ParticleEmitter {
   void setWindStrength(float strength) { windStrength = strength; }
   void setSpawnRadius(float radius) { spawnRadius = radius; }
   void setParticleScale(float scale) { particleScale = scale; }
+  void setFadeInDuration(float duration) { fadeInDuration = duration; }
+  void setFadeOutDuration(float duration) { fadeOutDuration = duration; }
 
  protected:
   void updateShaderParams() final {
     shaderParams.baseColor = baseColor;
     shaderParams.tipColor = tipColor;
-    shaderParams.waveFrequency = 1.0f;
-    shaderParams.waveAmplitude = windStrength;
-    shaderParams.upwardSpeed = -downwardSpeed;
-    shaderParams.particleScale = particleScale;
+    shaderParams.gravity = glm::vec3(0.0f, -downwardSpeed, 0.0f);
+    shaderParams.initialVelocity = glm::vec3(windStrength, 0.0f, 0.0f);
     shaderParams.spawnRadius = spawnRadius;
+    shaderParams.particleScale = particleScale;
+    shaderParams.fadeInDuration = fadeInDuration;
+    shaderParams.fadeOutDuration = fadeOutDuration;
+    shaderParams.billboardMode = static_cast<int>(BillboardMode::Cylindrical);
+    shaderParams.colorMode = static_cast<int>(ColorMode::BaseOnly);
+    shaderParams.velocityRandomness = 0.2f;
+    shaderParams.scaleOverLifetime = 1.0f;
+    shaderParams.rotationSpeed = 0.0f;
   }
 
  private:
@@ -38,6 +48,8 @@ class RainEmitter final : public ParticleEmitter {
   float windStrength;
   float spawnRadius;
   float particleScale;
+  float fadeInDuration;
+  float fadeOutDuration;
 };
 
 class RainEmitterBuilder final : public ParticleEmitterBuilder {
@@ -123,6 +135,16 @@ class RainEmitterBuilder final : public ParticleEmitterBuilder {
 
   RainEmitterBuilder& particleScale(float scale) {
     rainEmitter->setParticleScale(scale);
+    return *this;
+  }
+
+  RainEmitterBuilder& fadeInDuration(float duration) {
+    rainEmitter->setFadeInDuration(duration);
+    return *this;
+  }
+
+  RainEmitterBuilder& fadeOutDuration(float duration) {
+    rainEmitter->setFadeOutDuration(duration);
     return *this;
   }
 

@@ -16,15 +16,21 @@ layout(set = 2, binding = 0) uniform ParticleParams {
     vec3 emitterPosition;
     float time;
     vec3 baseColor;
-    float waveFrequency;
-    vec3 tipColor;
-    float waveAmplitude;
-    vec3 velocityBase;
     float particleLifetime;
-    float upwardSpeed;
-    float particleScale;
-    float spawnRadius;
+    vec3 tipColor;
     float maxParticles;
+    vec3 gravity;
+    float spawnRadius;
+    vec3 initialVelocity;
+    float particleScale;
+    float fadeInDuration;
+    float fadeOutDuration;
+    int billboardMode;
+    int colorMode;
+    float velocityRandomness;
+    float scaleOverLifetime;
+    float rotationSpeed;
+    float padding;
 } params;
 
 layout(location = 0) out vec3 fragColor;
@@ -46,6 +52,14 @@ float random(uint seed) {
     return float(hash(seed)) / 4294967295.0;
 }
 
+vec3 randomVec3(uint seed) {
+    return vec3(
+        random(seed) * 2.0 - 1.0,
+        random(seed + 1u) * 2.0 - 1.0,
+        random(seed + 2u) * 2.0 - 1.0
+    );
+}
+
 void main() {
     uint particleId = uint(inParticleIndex);
     
@@ -53,36 +67,63 @@ void main() {
     float particleTime = mod(params.time + particleOffset, params.particleLifetime);
     float lifeRatio = particleTime / params.particleLifetime;
     
-    uint seed1 = particleId * 2u + 1u;
-    uint seed2 = particleId * 2u + 2u;
+    uint seedPos = particleId * 3u;
+    uint seedVel = particleId * 3u + 100u;
     
-    float spawnX = (random(seed1) - 0.5) * params.spawnRadius * 2.0;
-    float spawnZ = (random(seed2) - 0.5) * params.spawnRadius * 2.0;
+    float spawnAngle = random(seedPos) * 2.0 * PI;
+    float spawnDist = random(seedPos + 1u) * params.spawnRadius;
+    vec3 spawnOffset = vec3(
+        cos(spawnAngle) * spawnDist,
+        (random(seedPos + 2u) - 0.5) * params.spawnRadius * 0.5,
+        sin(spawnAngle) * spawnDist
+    );
     
-    vec3 particlePos = params.emitterPosition + vec3(spawnX, 0.0, spawnZ);
+    vec3 randomVel = randomVec3(seedVel) * params.velocityRandomness;
+    vec3 velocity = params.initialVelocity + randomVel;
     
-    float sineWave = sin(particleTime * params.waveFrequency + spawnX * 2.0);
-    particlePos.x += sineWave * params.waveAmplitude * lifeRatio;
+    vec3 particlePos = params.emitterPosition + spawnOffset;
+    particlePos += velocity * particleTime;
+    particlePos += params.gravity * particleTime * particleTime * 0.5;
     
-    float velocityX = (random(seed1 + 100u) - 0.5) * 0.5;
-    float velocityZ = (random(seed2 + 100u) - 0.5) * 0.5;
-    
-    particlePos.y += particleTime * params.upwardSpeed;
-    particlePos.x += particleTime * velocityX;
-    particlePos.z += particleTime * velocityZ;
-    
-    float scale = params.particleScale * (1.0 - lifeRatio * 0.5);
+    float scaleModifier = mix(1.0, params.scaleOverLifetime, lifeRatio);
+    float scale = params.particleScale * scaleModifier;
     
     vec3 toCamera = normalize(camera.eyePos - particlePos);
-    vec3 up = vec3(0.0, 1.0, 0.0);
-    vec3 right = normalize(cross(up, toCamera));
-    up = cross(toCamera, right);
+    vec3 right, up;
     
-    vec3 billboardPos = particlePos + (right * inPosition.x + up * inPosition.y) * scale;
+    if (params.billboardMode == 0) {
+        vec3 worldUp = vec3(0.0, 1.0, 0.0);
+        right = normalize(cross(worldUp, toCamera));
+        up = cross(toCamera, right);
+    } else if (params.billboardMode == 1) {
+        up = vec3(0.0, 1.0, 0.0);
+        right = normalize(cross(up, toCamera));
+    } else {
+        right = vec3(1.0, 0.0, 0.0);
+        up = vec3(0.0, 1.0, 0.0);
+    }
+    
+    float rotation = params.rotationSpeed * particleTime + random(particleId + 200u) * 2.0 * PI;
+    float cosRot = cos(rotation);
+    float sinRot = sin(rotation);
+    
+    vec2 rotatedPos = vec2(
+        inPosition.x * cosRot - inPosition.y * sinRot,
+        inPosition.x * sinRot + inPosition.y * cosRot
+    );
+    
+    vec3 billboardPos = particlePos + (right * rotatedPos.x + up * rotatedPos.y) * scale;
     
     gl_Position = camera.proj * camera.view * vec4(billboardPos, 1.0);
     
-    fragColor = mix(params.baseColor, params.tipColor, lifeRatio);
+    if (params.colorMode == 0) {
+        fragColor = mix(params.baseColor, params.tipColor, lifeRatio);
+    } else if (params.colorMode == 1) {
+        fragColor = params.baseColor;
+    } else {
+        fragColor = params.tipColor;
+    }
+    
     fragTexCoord = inTexCoord;
     fragLifeRatio = lifeRatio;
 }

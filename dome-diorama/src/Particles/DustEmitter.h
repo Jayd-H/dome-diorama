@@ -7,40 +7,55 @@ class DustEmitter final : public ParticleEmitter {
       : baseColor(0.7f, 0.6f, 0.5f),
         tipColor(0.5f, 0.4f, 0.3f),
         swirlingSpeed(1.0f),
-        swirlingRadius(3.0f),
         driftSpeed(0.5f),
         spawnRadius(5.0f),
-        particleScale(0.3f) {
+        particleScale(0.3f),
+        fadeInDuration(0.3f),
+        fadeOutDuration(0.5f),
+        scaleOverLifetime(1.2f),
+        rotationSpeed(0.3f) {
     DustEmitter::updateShaderParams();
   }
 
   void setBaseColor(const glm::vec3& color) { baseColor = color; }
   void setTipColor(const glm::vec3& color) { tipColor = color; }
   void setSwirlingSpeed(float speed) { swirlingSpeed = speed; }
-  void setSwirlingRadius(float radius) { swirlingRadius = radius; }
   void setDriftSpeed(float speed) { driftSpeed = speed; }
   void setSpawnRadius(float radius) { spawnRadius = radius; }
   void setParticleScale(float scale) { particleScale = scale; }
+  void setFadeInDuration(float duration) { fadeInDuration = duration; }
+  void setFadeOutDuration(float duration) { fadeOutDuration = duration; }
+  void setScaleOverLifetime(float scale) { scaleOverLifetime = scale; }
+  void setRotationSpeed(float speed) { rotationSpeed = speed; }
 
  protected:
   void updateShaderParams() final {
     shaderParams.baseColor = baseColor;
     shaderParams.tipColor = tipColor;
-    shaderParams.waveFrequency = swirlingSpeed;
-    shaderParams.waveAmplitude = swirlingRadius;
-    shaderParams.upwardSpeed = driftSpeed;
-    shaderParams.particleScale = particleScale;
+    shaderParams.gravity = glm::vec3(0.0f);
+    shaderParams.initialVelocity = glm::vec3(swirlingSpeed, driftSpeed, 0.0f);
     shaderParams.spawnRadius = spawnRadius;
+    shaderParams.particleScale = particleScale;
+    shaderParams.fadeInDuration = fadeInDuration;
+    shaderParams.fadeOutDuration = fadeOutDuration;
+    shaderParams.billboardMode = static_cast<int>(BillboardMode::Spherical);
+    shaderParams.colorMode = static_cast<int>(ColorMode::Gradient);
+    shaderParams.velocityRandomness = 1.0f;
+    shaderParams.scaleOverLifetime = scaleOverLifetime;
+    shaderParams.rotationSpeed = rotationSpeed;
   }
 
  private:
   glm::vec3 baseColor;
   glm::vec3 tipColor;
   float swirlingSpeed;
-  float swirlingRadius;
   float driftSpeed;
   float spawnRadius;
   float particleScale;
+  float fadeInDuration;
+  float fadeOutDuration;
+  float scaleOverLifetime;
+  float rotationSpeed;
 };
 
 class DustEmitterBuilder final : public ParticleEmitterBuilder {
@@ -114,11 +129,6 @@ class DustEmitterBuilder final : public ParticleEmitterBuilder {
     return *this;
   }
 
-  DustEmitterBuilder& swirlingRadius(float radius) {
-    dustEmitter->setSwirlingRadius(radius);
-    return *this;
-  }
-
   DustEmitterBuilder& driftSpeed(float speed) {
     dustEmitter->setDriftSpeed(speed);
     return *this;
@@ -131,6 +141,26 @@ class DustEmitterBuilder final : public ParticleEmitterBuilder {
 
   DustEmitterBuilder& particleScale(float scale) {
     dustEmitter->setParticleScale(scale);
+    return *this;
+  }
+
+  DustEmitterBuilder& fadeInDuration(float duration) {
+    dustEmitter->setFadeInDuration(duration);
+    return *this;
+  }
+
+  DustEmitterBuilder& fadeOutDuration(float duration) {
+    dustEmitter->setFadeOutDuration(duration);
+    return *this;
+  }
+
+  DustEmitterBuilder& scaleOverLifetime(float scale) {
+    dustEmitter->setScaleOverLifetime(scale);
+    return *this;
+  }
+
+  DustEmitterBuilder& rotationSpeed(float speed) {
+    dustEmitter->setRotationSpeed(speed);
     return *this;
   }
 

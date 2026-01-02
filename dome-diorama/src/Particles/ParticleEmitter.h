@@ -21,21 +21,31 @@ struct ParticleInstanceData {
 
 struct ParticleShaderParams {
   alignas(16) glm::vec3 emitterPosition;
-  alignas(16) glm::vec3 baseColor;
-  alignas(16) glm::vec3 tipColor;
-  alignas(16) glm::vec3 velocityBase;
   alignas(4) float time;
-  alignas(4) float waveFrequency;
-  alignas(4) float waveAmplitude;
+  alignas(16) glm::vec3 baseColor;
   alignas(4) float particleLifetime;
-  alignas(4) float upwardSpeed;
-  alignas(4) float particleScale;
-  alignas(4) float spawnRadius;
+  alignas(16) glm::vec3 tipColor;
   alignas(4) float maxParticles;
+  alignas(16) glm::vec3 gravity;
+  alignas(4) float spawnRadius;
+  alignas(16) glm::vec3 initialVelocity;
+  alignas(4) float particleScale;
+  alignas(4) float fadeInDuration;
+  alignas(4) float fadeOutDuration;
+  alignas(4) int billboardMode;
+  alignas(4) int colorMode;
+  alignas(4) float velocityRandomness;
+  alignas(4) float scaleOverLifetime;
+  alignas(4) float rotationSpeed;
+  alignas(4) float padding;
 };
 
 class ParticleEmitter {
  public:
+  enum class BillboardMode { Spherical = 0, Cylindrical = 1, None = 2 };
+
+  enum class ColorMode { Gradient = 0, BaseOnly = 1, TipOnly = 2 };
+
   ParticleEmitter()
       : maxParticles(1000),
         particleLifetime(2.0f),
@@ -49,6 +59,17 @@ class ParticleEmitter {
     shaderParams.time = 0.0f;
     shaderParams.particleLifetime = particleLifetime;
     shaderParams.maxParticles = static_cast<float>(maxParticles);
+    shaderParams.gravity = glm::vec3(0.0f);
+    shaderParams.spawnRadius = 1.0f;
+    shaderParams.initialVelocity = glm::vec3(0.0f);
+    shaderParams.particleScale = 1.0f;
+    shaderParams.fadeInDuration = 0.1f;
+    shaderParams.fadeOutDuration = 0.3f;
+    shaderParams.billboardMode = static_cast<int>(BillboardMode::Spherical);
+    shaderParams.colorMode = static_cast<int>(ColorMode::Gradient);
+    shaderParams.velocityRandomness = 0.5f;
+    shaderParams.scaleOverLifetime = 1.0f;
+    shaderParams.rotationSpeed = 0.0f;
   }
 
   virtual ~ParticleEmitter() = default;

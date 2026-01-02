@@ -9,7 +9,11 @@ class SmokeEmitter final : public ParticleEmitter {
         upwardSpeed(1.5f),
         horizontalSpread(0.8f),
         spawnRadius(0.3f),
-        particleScale(1.5f) {
+        particleScale(1.5f),
+        fadeInDuration(0.2f),
+        fadeOutDuration(0.8f),
+        scaleOverLifetime(2.5f),
+        rotationSpeed(0.5f) {
     SmokeEmitter::updateShaderParams();
   }
 
@@ -19,16 +23,26 @@ class SmokeEmitter final : public ParticleEmitter {
   void setHorizontalSpread(float spread) { horizontalSpread = spread; }
   void setSpawnRadius(float radius) { spawnRadius = radius; }
   void setParticleScale(float scale) { particleScale = scale; }
+  void setFadeInDuration(float duration) { fadeInDuration = duration; }
+  void setFadeOutDuration(float duration) { fadeOutDuration = duration; }
+  void setScaleOverLifetime(float scale) { scaleOverLifetime = scale; }
+  void setRotationSpeed(float speed) { rotationSpeed = speed; }
 
  protected:
   void updateShaderParams() final {
     shaderParams.baseColor = baseColor;
     shaderParams.tipColor = tipColor;
-    shaderParams.waveFrequency = 0.5f;
-    shaderParams.waveAmplitude = horizontalSpread;
-    shaderParams.upwardSpeed = upwardSpeed;
-    shaderParams.particleScale = particleScale;
+    shaderParams.gravity = glm::vec3(0.0f);
+    shaderParams.initialVelocity = glm::vec3(0.0f, upwardSpeed, 0.0f);
     shaderParams.spawnRadius = spawnRadius;
+    shaderParams.particleScale = particleScale;
+    shaderParams.fadeInDuration = fadeInDuration;
+    shaderParams.fadeOutDuration = fadeOutDuration;
+    shaderParams.billboardMode = static_cast<int>(BillboardMode::Spherical);
+    shaderParams.colorMode = static_cast<int>(ColorMode::Gradient);
+    shaderParams.velocityRandomness = horizontalSpread;
+    shaderParams.scaleOverLifetime = scaleOverLifetime;
+    shaderParams.rotationSpeed = rotationSpeed;
   }
 
  private:
@@ -38,6 +52,10 @@ class SmokeEmitter final : public ParticleEmitter {
   float horizontalSpread;
   float spawnRadius;
   float particleScale;
+  float fadeInDuration;
+  float fadeOutDuration;
+  float scaleOverLifetime;
+  float rotationSpeed;
 };
 
 class SmokeEmitterBuilder final : public ParticleEmitterBuilder {
@@ -123,6 +141,26 @@ class SmokeEmitterBuilder final : public ParticleEmitterBuilder {
 
   SmokeEmitterBuilder& particleScale(float scale) {
     smokeEmitter->setParticleScale(scale);
+    return *this;
+  }
+
+  SmokeEmitterBuilder& fadeInDuration(float duration) {
+    smokeEmitter->setFadeInDuration(duration);
+    return *this;
+  }
+
+  SmokeEmitterBuilder& fadeOutDuration(float duration) {
+    smokeEmitter->setFadeOutDuration(duration);
+    return *this;
+  }
+
+  SmokeEmitterBuilder& scaleOverLifetime(float scale) {
+    smokeEmitter->setScaleOverLifetime(scale);
+    return *this;
+  }
+
+  SmokeEmitterBuilder& rotationSpeed(float speed) {
+    smokeEmitter->setRotationSpeed(speed);
     return *this;
   }
 
