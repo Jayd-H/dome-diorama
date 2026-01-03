@@ -44,8 +44,9 @@ struct WorldConfig {
   float minWindSpeed = 0.5f;
   float maxWindSpeed = 10.0f;
 
-  float parameterUpdateInterval = 30.0f;
+  float parameterUpdateInterval = 60.0f;
   float dayNightTempVariation = 8.0f;
+  float transitionSmoothness = 0.05f;
 };
 
 class WorldState final {
@@ -60,6 +61,7 @@ class WorldState final {
         targetHumidity(config.startingHumidity),
         windSpeed(config.startingWindSpeed),
         targetWindSpeed(config.startingWindSpeed),
+        targetWindDirection(1.0f, 0.0f, 0.0f),
         precipitationIntensity(0.0f),
         minTemperature(config.minTemperature),
         maxTemperature(config.maxTemperature),
@@ -68,7 +70,8 @@ class WorldState final {
         minWindSpeed(config.minWindSpeed),
         maxWindSpeed(config.maxWindSpeed),
         parameterUpdateInterval(config.parameterUpdateInterval),
-        dayNightTempVariation(config.dayNightTempVariation) {
+        dayNightTempVariation(config.dayNightTempVariation),
+        transitionSmoothness(config.transitionSmoothness) {
     time.hours = config.startingHour;
     time.minutes = config.startingMinute;
     time.normalizedTime =
@@ -98,12 +101,18 @@ class WorldState final {
 
   inline glm::vec3 getSunDirection() const {
     const float angle = time.normalizedTime * glm::two_pi<float>();
-    return glm::normalize(glm::vec3(cos(angle), sin(angle), 0.2f));
+    const float x = cos(angle) * 0.3f;
+    const float y = sin(angle);
+    const float z = 0.0f;
+    return glm::normalize(glm::vec3(x, y, z));
   }
 
   inline glm::vec3 getMoonDirection() const {
     const float angle = (time.normalizedTime + 0.5f) * glm::two_pi<float>();
-    return glm::normalize(glm::vec3(cos(angle), sin(angle), 0.2f));
+    const float x = cos(angle) * 0.3f;
+    const float y = sin(angle);
+    const float z = 0.0f;
+    return glm::normalize(glm::vec3(x, y, z));
   }
 
   inline float getSunIntensity() const {
@@ -137,6 +146,7 @@ class WorldState final {
  private:
   mutable std::mt19937 rng;
   glm::vec3 windDirection;
+  glm::vec3 targetWindDirection;
   TimeOfDay time;
   WeatherState currentWeather = WeatherState::Clear;
 
@@ -157,7 +167,15 @@ class WorldState final {
   float maxWindSpeed;
   float parameterUpdateInterval;
   float dayNightTempVariation;
+  float transitionSmoothness;
   float parameterUpdateTimer = 0.0f;
+
+  inline float smoothStep(float t) const { return t * t * (3.0f - 2.0f * t); }
+
+  inline float easeInOutCubic(float t) const {
+    return t < 0.5f ? 4.0f * t * t * t
+                    : 1.0f - pow(-2.0f * t + 2.0f, 3.0f) / 2.0f;
+  }
 
   inline void updateTime(float deltaTime) {
     time.totalSeconds += deltaTime;
@@ -180,24 +198,38 @@ class WorldState final {
       updateTargets();
     }
 
-    const float transitionSpeed = 0.3f;
-    currentTemperature +=
-        (targetTemperature - currentTemperature) * deltaTime * transitionSpeed;
-    humidity += (targetHumidity - humidity) * deltaTime * transitionSpeed;
-    windSpeed += (targetWindSpeed - windSpeed) * deltaTime * transitionSpeed;
+    const float progress = parameterUpdateTimer / parameterUpdateInterval;
+    const float smoothProgress = easeInOutCubic(progress);
+
+    const float baseTransitionSpeed = transitionSmoothness;
+    currentTemperature += (targetTemperature - currentTemperature) * deltaTime *
+                          baseTransitionSpeed;
+    humidity +=
+        (targetHumidity - humidity) * deltaTime * baseTransitionSpeed * 0.8f;
+    windSpeed +=
+        (targetWindSpeed - windSpeed) * deltaTime * baseTransitionSpeed * 1.2f;
+
+    const float windTransitionSpeed = baseTransitionSpeed * 0.5f;
+    windDirection =
+        glm::normalize(windDirection + (targetWindDirection - windDirection) *
+                                           deltaTime * windTransitionSpeed);
 
     const float dayNightTempModifier = calculateDayNightTemperature();
-    currentTemperature += dayNightTempModifier * deltaTime * 0.5f;
+    currentTemperature += dayNightTempModifier * deltaTime * 0.3f;
   }
 
   inline void updateTargets() {
-    targetTemperature = randomFloat(minTemperature, maxTemperature);
-    targetHumidity = randomFloat(minHumidity, maxHumidity);
-    targetWindSpeed = randomFloat(minWindSpeed, maxWindSpeed);
+    const float tempRange = maxTemperature - minTemperature;
+    const float humidityRange = maxHumidity - minHumidity;
+    const float windRange = maxWindSpeed - minWindSpeed;
+
+    targetTemperature = minTemperature + randomFloat(0.3f, 0.7f) * tempRange;
+    targetHumidity = minHumidity + randomFloat(0.2f, 0.8f) * humidityRange;
+    targetWindSpeed = minWindSpeed + randomFloat(0.2f, 0.6f) * windRange;
 
     const float angle = randomFloat(0.0f, glm::two_pi<float>());
-    windDirection = glm::normalize(
-        glm::vec3(cos(angle), randomFloat(-0.2f, 0.2f), sin(angle)));
+    targetWindDirection = glm::normalize(
+        glm::vec3(cos(angle), randomFloat(-0.1f, 0.1f), sin(angle)));
   }
 
   inline float calculateDayNightTemperature() const {
@@ -269,7 +301,7 @@ class WorldState final {
     }
 
     const float transitionSpeed =
-        targetPrecipitation > precipitationIntensity ? 2.0f : 3.0f;
+        targetPrecipitation > precipitationIntensity ? 1.0f : 1.5f;
     precipitationIntensity += (targetPrecipitation - precipitationIntensity) *
                               deltaTime * transitionSpeed;
   }

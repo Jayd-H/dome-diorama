@@ -10,6 +10,7 @@
 #include "../Rendering/RenderDevice.h"
 #include "../Util/Debug.h"
 #include "Light.h"
+#include "Scene/WeatherSystem.h"
 
 constexpr uint32_t SHADOW_MAP_SIZE = 16384;
 constexpr uint32_t MAX_SHADOW_CASTERS = 4;

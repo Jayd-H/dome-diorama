@@ -154,6 +154,7 @@
     <ClCompile Include="src\Resources\TextureManager.cpp" />
     <ClCompile Include="src\Scene\Shadow.cpp" />
     <ClCompile Include="src\Scene\Skybox.cpp" />
+    <ClCompile Include="src\Scene\WeatherSystem.cpp" />
     <ClCompile Include="src\Util\ConfigParser.cpp" />
     <ClCompile Include="src\Util\PerlinNoise.cpp" />
     <ClCompile Include="src\Vulkan\VulkanDepthBuffer.cpp" />
@@ -193,6 +194,7 @@
     <ClInclude Include="src\Rendering\PushConstants.h" />
     <ClInclude Include="src\Scene\Shadow.h" />
     <ClInclude Include="src\Scene\Skybox.h" />
+    <ClInclude Include="src\Scene\WeatherSystem.h" />
     <ClInclude Include="src\Util\Camera.h" />
     <ClInclude Include="src\Util\ConfigParser.h" />
     <ClInclude Include="src\Util\Debug.h" />

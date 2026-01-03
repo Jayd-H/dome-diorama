@@ -137,6 +137,9 @@ void Application::initVulkan() {
   Debug::log(Debug::Category::VULKAN, "Creating particle pipeline...");
   createParticlePipeline();
 
+  Debug::log(Debug::Category::VULKAN, "Creating weather system...");
+  weatherSystem = new WeatherSystem(particleManager, materialManager);
+
   Debug::log(Debug::Category::VULKAN, "Creating shadow pipeline...");
   createShadowPipeline();
 
@@ -239,6 +242,9 @@ void Application::cleanup() {
   if (particleManager) {
     particleManager->cleanup();
     delete particleManager;
+  }
+  if (weatherSystem) {
+    delete weatherSystem;
   }
   if (shadowPipeline != VK_NULL_HANDLE) {
     vkDestroyPipeline(device, shadowPipeline, nullptr);
@@ -459,28 +465,46 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   particleManager->update(deltaTime, worldState.getWindDirection(),
                           worldState.getWindSpeed());
 
+  if (weatherSystem) {
+    weatherSystem->update(worldState, deltaTime);
+    weatherSystem->updateCelestialBodies(worldState);
+  }
 
-  const glm::vec3 sunDirection = glm::normalize(glm::vec3(0.5f, -1.0f, 0.3f));
-  const float sunOrbitRadius = 150.0f;
-  const glm::vec3 sunPosition = -sunDirection * sunOrbitRadius;
-  sceneObjects[0].setPosition(sunPosition);
+  const glm::vec3 sunDirection = worldState.getSunDirection();
 
   Light* const sunLight = lightManager->getLight(sunLightID);
   if (sunLight) {
     sunLight->direction = sunDirection;
-    sunLight->intensity = 5.0f;
-    sunLight->color = glm::vec3(1.0f, 0.95f, 0.85f);
+    sunLight->position = -sunDirection * 2000.0f;
+
+    const float sunHeight = sunDirection.y;
+
+    if (sunHeight > 0.0f) {
+      const float sunIntensity = worldState.getSunIntensity();
+      sunLight->intensity = glm::mix(2.0f, 10.0f, sunIntensity);
+
+      const float sunBrightness = glm::clamp(sunHeight, 0.0f, 1.0f);
+      sunLight->color = glm::mix(glm::vec3(1.0f, 0.5f, 0.3f),
+                                 glm::vec3(1.0f, 0.98f, 0.9f), sunBrightness);
+    } else {
+      sunLight->intensity = 0.1f;
+      sunLight->color = glm::vec3(0.3f, 0.3f, 0.5f);
+    }
 
     const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
     const float orthoSize = 500.0f;
     const float nearPlane = 0.1f;
-    const float farPlane = 3000.0f;
+    const float farPlane = 4000.0f;
 
-    const float shadowDistance = 1500.0f;
+    const float shadowDistance = 2500.0f;
     const glm::vec3 lightEye = sceneCenter - sunDirection * shadowDistance;
 
-    const glm::mat4 lightView =
-        glm::lookAt(lightEye, sceneCenter, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
+    if (glm::abs(glm::dot(sunDirection, upVector)) > 0.99f) {
+      upVector = glm::vec3(1.0f, 0.0f, 0.0f);
+    }
+
+    const glm::mat4 lightView = glm::lookAt(lightEye, sceneCenter, upVector);
 
     glm::mat4 lightProjection = glm::ortho(-orthoSize, orthoSize, -orthoSize,
                                            orthoSize, nearPlane, farPlane);
@@ -492,6 +516,19 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     if (sunLight->shadowMapIndex != UINT32_MAX) {
       lightManager->getShadowSystem()->updateLightSpaceMatrix(
           sunLight->shadowMapIndex, lightSpaceMatrix);
+    }
+  }
+
+  static float lightDebugTimer = 0.0f;
+  lightDebugTimer += deltaTime;
+  if (lightDebugTimer >= 2.0f) {
+    lightDebugTimer = 0.0f;
+    if (sunLight) {
+      Debug::log(Debug::Category::LIGHTS, "Sun Light - Dir: (",
+                 sunLight->direction.x, ", ", sunLight->direction.y, ", ",
+                 sunLight->direction.z, ") Intensity: ", sunLight->intensity,
+                 " Pos: (", sunLight->position.x, ", ", sunLight->position.y,
+                 ", ", sunLight->position.z, ")");
     }
   }
 

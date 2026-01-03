@@ -28,22 +28,45 @@ std::vector<Object> createScene(const ConfigParser& config,
 
   std::vector<Object> sceneObjects;
 
-  const MaterialID particleMaterialID =
-      materialManager->registerMaterial(MaterialBuilder()
-                                            .name("Particle Material")
-                                            .albedoColor(1.0f, 1.0f, 1.0f)
-                                            .roughness(0.0f)
-                                            .metallic(0.0f)
-                                            .transparent(true));
-
+  // Creating the celestial bodies!
   const MaterialID sunMaterialID =
       materialManager->registerMaterial(MaterialBuilder()
                                             .name("Sun Material")
                                             .albedoColor(1.0f, 0.9f, 0.6f)
-                                            .emissiveIntensity(1.0f)
+                                            .emissiveIntensity(10.0f)
                                             .roughness(1.0f)
                                             .metallic(0.0f));
 
+  const MaterialID moonMaterialID =
+      materialManager->registerMaterial(MaterialBuilder()
+                                            .name("Moon Material")
+                                            .albedoColor(0.8f, 0.8f, 0.9f)
+                                            .emissiveIntensity(2.0f)
+                                            .roughness(1.0f)
+                                            .metallic(0.0f));
+
+  const MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
+
+  const Object sun = ObjectBuilder()
+                         .name("Sun")
+                         .position(0.0f, 500.0f, 0.0f)
+                         .mesh(sphereMesh)
+                         .material(sunMaterialID)
+                         .scale(1.5f)
+                         .build();
+
+  const Object moon = ObjectBuilder()
+                          .name("Moon")
+                          .position(0.0f, -450.0f, 0.0f)
+                          .mesh(sphereMesh)
+                          .material(moonMaterialID)
+                          .scale(0.7f)
+                          .build();
+
+  sceneObjects.push_back(sun);
+  sceneObjects.push_back(moon);
+
+  // Creating the sand terrain
   const MaterialID sandMaterialID = materialManager->registerMaterial(
       MaterialBuilder()
           .name("Sand Material")
@@ -55,8 +78,6 @@ std::vector<Object> createScene(const ConfigParser& config,
           .heightScale(1.0f)
           .textureScale(50.0f));
 
-  const MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
-
   const MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
       config.getFloat("Terrain.terrain_size", 300.0f),
       config.getInt("Terrain.terrain_resolution", 100),
@@ -66,14 +87,6 @@ std::vector<Object> createScene(const ConfigParser& config,
       config.getFloat("Terrain.terrain_persistence", 0.6f),
       config.getInt("Terrain.terrain_seed", 42));
 
-  const Object sun = ObjectBuilder()
-                         .name("Sun")
-                         .position(0.0f, 0.0f, 0.0f)
-                         .mesh(sphereMesh)
-                         .material(sunMaterialID)
-                         .scale(1.0f)
-                         .build();
-
   const Object sandPlane = ObjectBuilder()
                                .name("Sand Terrain")
                                .position(0.0f, 0.0f, 0.0f)
@@ -81,9 +94,9 @@ std::vector<Object> createScene(const ConfigParser& config,
                                .material(sandMaterialID)
                                .build();
 
-  sceneObjects.push_back(sun);
   sceneObjects.push_back(sandPlane);
 
+  // Creating skybox sphere
   const MeshID skyboxSphereMesh = meshManager->createSphere(100.0f, 64);
 
   const MaterialID skyboxMaterialID = materialManager->registerMaterial(
@@ -104,6 +117,8 @@ std::vector<Object> createScene(const ConfigParser& config,
                                   .build();
 
   sceneObjects.push_back(skyboxSphere);
+
+  // Creating pokeball
 
   const MeshID pokeballWhiteMesh =
       meshManager->loadFromOBJ("./Models/PokeWhite.obj");
@@ -134,6 +149,8 @@ std::vector<Object> createScene(const ConfigParser& config,
   sceneObjects.push_back(pokeballWhite);
   sceneObjects.push_back(pokeballBlack);
 
+  // Spawning plants on the terrain
+
   const Mesh* const terrainMesh = meshManager->getMesh(sandTerrainMesh);
 
   PlantSpawnConfig plantConfig;
@@ -149,10 +166,11 @@ std::vector<Object> createScene(const ConfigParser& config,
       config.getFloat("Plants.rotation_variance", 0.8f);
 
   plantManager->setParticleManager(particleManager);
-  plantManager->setFireMaterialID(particleMaterialID);
   plantManager->setTerrainMesh(terrainMesh);
 
   plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
+
+  // Creating the sun light
 
   const Light sunLight = LightBuilder()
                              .type(LightType::Sun)
@@ -160,72 +178,11 @@ std::vector<Object> createScene(const ConfigParser& config,
                              .direction(0.0f, -1.0f, 0.0f)
                              .color(1.0f, 0.95f, 0.8f)
                              .intensity(5.0f)
-                             .castsShadows(true)
+                             .castsShadows(false)
                              .build();
 
   sunLightID = lightManager->addLight(sunLight);
 
-  FireEmitter* const fireEmitter = FireEmitterBuilder()
-                                       .name("Fire Emitter")
-                                       .position(-5.0f, 0.5f, 0.0f)
-                                       .maxParticles(800)
-                                       .particleLifetime(2.0f)
-                                       .material(particleMaterialID)
-                                       .baseColor(1.0f, 0.9f, 0.1f)
-                                       .tipColor(1.0f, 0.3f, 0.0f)
-                                       .upwardSpeed(2.0f)
-                                       .spawnRadius(0.2f)
-                                       .particleScale(0.5f)
-                                       .build();
-
-  SmokeEmitter* const smokeEmitter = SmokeEmitterBuilder()
-                                         .name("Smoke Emitter")
-                                         .position(5.0f, 0.5f, 0.0f)
-                                         .maxParticles(600)
-                                         .particleLifetime(3.0f)
-                                         .material(particleMaterialID)
-                                         .baseColor(0.3f, 0.3f, 0.3f)
-                                         .tipColor(0.6f, 0.6f, 0.6f)
-                                         .upwardSpeed(1.5f)
-                                         .horizontalSpread(0.8f)
-                                         .spawnRadius(0.3f)
-                                         .particleScale(1.5f)
-                                         .build();
-
-  RainEmitter* const rainEmitter = RainEmitterBuilder()
-                                       .name("Rain Emitter")
-                                       .position(0.0f, 30.0f, 10.0f)
-                                       .maxParticles(1000)
-                                       .particleLifetime(2.0f)
-                                       .material(particleMaterialID)
-                                       .baseColor(0.6f, 0.7f, 0.9f)
-                                       .tipColor(0.8f, 0.9f, 1.0f)
-                                       .downwardSpeed(15.0f)
-                                       .windStrength(2.0f)
-                                       .spawnRadius(15.0f)
-                                       .particleScale(0.1f)
-                                       .build();
-
-  DustEmitter* const dustEmitter = DustEmitterBuilder()
-                                       .name("Dust Emitter")
-                                       .position(0.0f, 5.0f, -10.0f)
-                                       .maxParticles(500)
-                                       .particleLifetime(4.0f)
-                                       .material(particleMaterialID)
-                                       .baseColor(0.7f, 0.6f, 0.5f)
-                                       .tipColor(0.5f, 0.4f, 0.3f)
-                                       .swirlingSpeed(1.0f)
-                                       .driftSpeed(0.5f)
-                                       .spawnRadius(5.0f)
-                                       .particleScale(0.3f)
-                                       .build();
-
-  particleManager->registerEmitter(fireEmitter);
-  particleManager->registerEmitter(smokeEmitter);
-  particleManager->registerEmitter(rainEmitter);
-  particleManager->registerEmitter(dustEmitter);
-
-  Debug::log(Debug::Category::MAIN, "Created 4 particle emitters");
   Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
              " scene objects and ", lightManager->getLightCount(), " lights");
   Debug::log(Debug::Category::MAIN, "Spawned ",
@@ -288,13 +245,30 @@ int main() {
 
     Debug::log(Debug::Category::MAIN, "Creating scene...");
     LightID sunLightID = INVALID_LIGHT_ID;
-    std::vector<Object> const sceneObjects =
+    std::vector<Object> sceneObjects =
         createScene(config, app.getMeshManager(), app.getMaterialManager(),
                     app.getPlantManager(), app.getParticleManager(),
                     app.getLightManager(), sunLightID);
 
     app.setSunLightID(sunLightID);
     app.setScene(sceneObjects);
+
+    app.getWeatherSystem()->init();
+    app.getWeatherSystem()->setSunObject(&sceneObjects[0]);
+    app.getWeatherSystem()->setMoonObject(&sceneObjects[1]);
+
+    Debug::log(Debug::Category::MAIN,
+               "Sun object at index 0: ", sceneObjects[0].getName(),
+               " at position (", sceneObjects[0].getPosition().x, ", ",
+               sceneObjects[0].getPosition().y, ", ",
+               sceneObjects[0].getPosition().z, ")");
+    Debug::log(Debug::Category::MAIN,
+               "Moon object at index 1: ", sceneObjects[1].getName(),
+               " at position (", sceneObjects[1].getPosition().x, ", ",
+               sceneObjects[1].getPosition().y, ", ",
+               sceneObjects[1].getPosition().z, ")");
+    Debug::log(Debug::Category::MAIN,
+               "Total scene objects: ", sceneObjects.size());
 
     WorldConfig worldConfig;
     worldConfig.dayLengthInSeconds =

@@ -8,6 +8,7 @@
 #include "Particles/ParticleManager.h"
 #include "Rendering/MainPipeline.h"
 #include "Rendering/PostProcessing.h"
+#include "Rendering/PushConstants.h"
 #include "Rendering/RenderDevice.h"
 #include "Rendering/Window.h"
 #include "Resources/MaterialManager.h"
@@ -16,12 +17,11 @@
 #include "Resources/TextureManager.h"
 #include "Scene/LightManager.h"
 #include "Scene/PlantManager.h"
+#include "Scene/PlantState.h"
 #include "Scene/Skybox.h"
 #include "Scene/WorldState.h"
 #include "Util/Camera.h"
 #include "Util/Input.h"
-#include "Rendering/PushConstants.h"
-#include "Scene/PlantState.h"
 
 constexpr uint32_t WIDTH = 800;
 constexpr uint32_t HEIGHT = 600;
@@ -70,6 +70,8 @@ class Application final {
   void setWorldConfig(const WorldConfig& config) {
     worldState = WorldState(config);
   }
+
+  WeatherSystem* getWeatherSystem() const { return weatherSystem; }
 
  private:
   std::unique_ptr<Window> window;
@@ -166,6 +168,7 @@ class Application final {
   VkPipelineLayout plantPipelineLayout = VK_NULL_HANDLE;
   void createPlantPipeline();
 
+  WeatherSystem* weatherSystem = nullptr;
 
   void recreateTextureSamplers(VkFilter magFilter, VkFilter minFilter);
   void toggleShadingMode();
