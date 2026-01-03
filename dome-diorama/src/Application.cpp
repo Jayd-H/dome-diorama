@@ -456,7 +456,9 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
                "%, Plants alive: ", alivePlants, ", Burning: ", burningPlants);
   }
 
-  particleManager->update(deltaTime);
+  particleManager->update(deltaTime, worldState.getWindDirection(),
+                          worldState.getWindSpeed());
+
 
   const glm::vec3 sunDirection = glm::normalize(glm::vec3(0.5f, -1.0f, 0.3f));
   const float sunOrbitRadius = 150.0f;

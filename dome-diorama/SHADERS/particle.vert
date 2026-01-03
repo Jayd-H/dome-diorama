@@ -30,7 +30,9 @@ layout(set = 2, binding = 0) uniform ParticleParams {
     float velocityRandomness;
     float scaleOverLifetime;
     float rotationSpeed;
-    float padding;
+    vec3 windDirection;
+    float windStrength;
+    float windInfluence;
 } params;
 
 layout(location = 0) out vec3 fragColor;
@@ -82,9 +84,12 @@ void main() {
     vec3 randomVel = randomVec3(seedVel) * params.velocityRandomness;
     vec3 velocity = params.initialVelocity + randomVel;
     
+    vec3 windForce = params.windDirection * params.windStrength * params.windInfluence;
+    
     vec3 particlePos = params.emitterPosition + spawnOffset;
     particlePos += velocity * particleTime;
     particlePos += params.gravity * particleTime * particleTime * 0.5;
+    particlePos += windForce * particleTime * particleTime * 0.5;
     
     float scaleModifier = mix(1.0, params.scaleOverLifetime, lifeRatio);
     float scale = params.particleScale * scaleModifier;

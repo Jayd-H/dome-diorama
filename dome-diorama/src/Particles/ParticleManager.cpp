@@ -95,9 +95,11 @@ ParticleEmitter* ParticleManager::getEmitter(EmitterID id) {
   return emitters[id].get();
 }
 
-void ParticleManager::update(float deltaTime) {
+void ParticleManager::update(float deltaTime, const glm::vec3& windDirection,
+                             float windSpeed) {
   for (auto& emitter : emitters) {
     if (emitter) {
+      emitter->setWind(windDirection, windSpeed);
       emitter->update(deltaTime);
     }
   }

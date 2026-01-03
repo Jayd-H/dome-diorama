@@ -159,6 +159,11 @@ class SmokeEmitterBuilder final : public ParticleEmitterBuilder {
     return *this;
   }
 
+  SmokeEmitterBuilder& windInfluence(float influence) {
+    smokeEmitter->setWindInfluence(influence);
+    return *this;
+  }
+
   SmokeEmitterBuilder& rotationSpeed(float speed) {
     smokeEmitter->setRotationSpeed(speed);
     return *this;

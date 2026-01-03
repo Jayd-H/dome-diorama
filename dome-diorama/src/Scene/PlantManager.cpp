@@ -715,6 +715,7 @@ void PlantManager::startFire(Plant& plant, const glm::vec3& position) {
             .velocityRandomness(0.8f)
             .scaleOverLifetime(2.5f)
             .rotationSpeed(1.5f)
+            .windInfluence(0.4f)
             .build();
 
     state.fireEmitterID = particleManager->registerEmitter(fireEmitter);

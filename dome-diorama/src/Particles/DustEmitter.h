@@ -164,6 +164,11 @@ class DustEmitterBuilder final : public ParticleEmitterBuilder {
     return *this;
   }
 
+  DustEmitterBuilder& windInfluence(float influence) {
+    dustEmitter->setWindInfluence(influence);
+    return *this;
+  }
+
   DustEmitter* build() {
     DustEmitter* const result = dustEmitter;
     dustEmitter = nullptr;

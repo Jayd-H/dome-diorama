@@ -1,9 +1,11 @@
-﻿  Performing Custom Build Tools
-  Performing Custom Build Tools
+﻿  Application.cpp
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Application.cpp(654,15): warning C4114: same type qualifier used more than once
+  ParticleManager.cpp
   PlantManager.cpp
+  main.cpp
   Generating code
-  1 of 4650 functions (<0.1%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    16 functions had inline decision re-evaluated but remain unchanged
+  112 of 4653 functions ( 2.4%) were compiled, the rest were copied from previous compilation.
+    4 functions were new in current compilation
+    219 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   dome-diorama.vcxproj -> D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\x64\Release\dome-diorama.exe

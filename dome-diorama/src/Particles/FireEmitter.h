@@ -166,6 +166,11 @@ class FireEmitterBuilder final : public ParticleEmitterBuilder {
     return *this;
   }
 
+  FireEmitterBuilder& windInfluence(float influence) {
+    fireEmitter->setWindInfluence(influence);
+    return *this;
+  }
+
   FireEmitter* build() {
     FireEmitter* const result = fireEmitter;
     fireEmitter = nullptr;

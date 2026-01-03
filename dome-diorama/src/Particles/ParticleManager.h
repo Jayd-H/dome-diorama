@@ -21,7 +21,7 @@ class ParticleManager {
   EmitterID registerEmitter(ParticleEmitter* emitter);
   ParticleEmitter* getEmitter(EmitterID id);
 
-  void update(float deltaTime);
+  void update(float deltaTime, const glm::vec3& windDirection, float windSpeed);
   void render(VkCommandBuffer commandBuffer,
               VkDescriptorSet cameraDescriptorSet,
               VkPipelineLayout pipelineLayout, uint32_t currentFrame,

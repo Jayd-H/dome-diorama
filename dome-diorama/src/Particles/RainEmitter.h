@@ -148,6 +148,11 @@ class RainEmitterBuilder final : public ParticleEmitterBuilder {
     return *this;
   }
 
+  RainEmitterBuilder& windInfluence(float influence) {
+    rainEmitter->setWindInfluence(influence);
+    return *this;
+  }
+
   RainEmitter* build() {
     RainEmitter* const result = rainEmitter;
     rainEmitter = nullptr;

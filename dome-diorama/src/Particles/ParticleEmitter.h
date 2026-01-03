@@ -37,7 +37,12 @@ struct ParticleShaderParams {
   alignas(4) float velocityRandomness;
   alignas(4) float scaleOverLifetime;
   alignas(4) float rotationSpeed;
-  alignas(4) float padding;
+  alignas(16) glm::vec3 windDirection;
+  alignas(4) float windStrength;
+  alignas(4) float windInfluence;
+  alignas(4) float padding1;
+  alignas(4) float padding2;
+  alignas(4) float padding3;
 };
 
 class ParticleEmitter {
@@ -54,7 +59,8 @@ class ParticleEmitter {
         shaderParams{},
         name("Unnamed Emitter"),
         position(0.0f),
-        active(true) {
+        active(true),
+        windInfluence(0.0f) {
     shaderParams.emitterPosition = position;
     shaderParams.time = 0.0f;
     shaderParams.particleLifetime = particleLifetime;
@@ -70,6 +76,9 @@ class ParticleEmitter {
     shaderParams.velocityRandomness = 0.5f;
     shaderParams.scaleOverLifetime = 1.0f;
     shaderParams.rotationSpeed = 0.0f;
+    shaderParams.windDirection = glm::vec3(0.0f);
+    shaderParams.windStrength = 0.0f;
+    shaderParams.windInfluence = 1.0f;
   }
 
   virtual ~ParticleEmitter() = default;
@@ -82,22 +91,32 @@ class ParticleEmitter {
     updateShaderParams();
   }
 
-  void setPosition(const glm::vec3& pos) {
+  inline void setPosition(const glm::vec3& pos) {
     position = pos;
     shaderParams.emitterPosition = pos;
   }
 
-  void setActive(bool isActive) { active = isActive; }
+  inline void setActive(bool isActive) { active = isActive; }
 
-  const std::string& getName() const { return name; }
-  void setName(const std::string& n) { name = n; }
+  inline void setWind(const glm::vec3& direction, float strength) {
+    shaderParams.windDirection = direction;
+    shaderParams.windStrength = strength;
+  }
 
-  const glm::vec3& getPosition() const { return position; }
-  bool isActive() const { return active; }
+  inline void setWindInfluence(float influence) {
+    windInfluence = influence;
+    shaderParams.windInfluence = influence;
+  }
 
-  size_t getMaxParticles() const { return maxParticles; }
-  MaterialID getMaterialID() const { return materialID; }
-  ParticleShaderParams getShaderParams() const { return shaderParams; }
+  inline const std::string& getName() const { return name; }
+  inline void setName(const std::string& n) { name = n; }
+
+  inline const glm::vec3& getPosition() const { return position; }
+  inline bool isActive() const { return active; }
+
+  inline size_t getMaxParticles() const { return maxParticles; }
+  inline MaterialID getMaterialID() const { return materialID; }
+  inline ParticleShaderParams getShaderParams() const { return shaderParams; }
 
  protected:
   size_t maxParticles;
@@ -105,6 +124,7 @@ class ParticleEmitter {
   MaterialID materialID;
   float time;
   ParticleShaderParams shaderParams;
+  float windInfluence;
 
   virtual void updateShaderParams() = 0;
 
@@ -170,6 +190,14 @@ class ParticleEmitterBuilder {
 
   ParticleEmitterBuilder& active(bool isActive) {
     if (emitter) emitter->active = isActive;
+    return *this;
+  }
+
+  ParticleEmitterBuilder& windInfluence(float influence) {
+    if (emitter) {
+      emitter->windInfluence = influence;
+      emitter->shaderParams.windInfluence = influence;
+    }
     return *this;
   }
 
