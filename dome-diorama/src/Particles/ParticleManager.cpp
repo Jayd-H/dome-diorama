@@ -130,23 +130,20 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
     const auto& emitter = emitters[i];
     if (!emitter || !emitter->isActive()) continue;
 
-    if (i >= particleDescriptorSets.size()) {
-      Debug::log(Debug::Category::PARTICLES,
-                 "ParticleManager: Invalid descriptor set index for emitter ",
-                 i);
+    if (i >= particleDescriptorSets.size() ||
+        particleDescriptorSets[i].empty()) {
       continue;
     }
 
     if (currentFrame >= particleDescriptorSets[i].size()) {
-      Debug::log(Debug::Category::PARTICLES,
-                 "ParticleManager: Invalid frame index for emitter ", i);
+      continue;
+    }
+
+    if (particleDescriptorSets[i][currentFrame] == VK_NULL_HANDLE) {
       continue;
     }
 
     if (i >= shaderParamsMapped[currentFrame].size()) {
-      Debug::log(Debug::Category::PARTICLES,
-                 "ParticleManager: Invalid shader params index for emitter ",
-                 i);
       continue;
     }
 
@@ -155,16 +152,7 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
            sizeof(ParticleShaderParams));
 
     Material* material = materialManager->getMaterial(emitter->getMaterialID());
-    if (!material) {
-      Debug::log(Debug::Category::PARTICLES,
-                 "ParticleManager: Invalid material for emitter ", i);
-      continue;
-    }
-
-    if (material->getDescriptorSet() == VK_NULL_HANDLE) {
-      Debug::log(
-          Debug::Category::PARTICLES,
-          "ParticleManager: Material descriptor set is null for emitter ", i);
+    if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) {
       continue;
     }
 
@@ -318,15 +306,17 @@ void ParticleManager::createParticleDescriptorPool(size_t frameCount) {
   Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Creating particle descriptor pool");
 
+  const uint32_t maxEmitters = 500;
+
   VkDescriptorPoolSize poolSize{};
   poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  poolSize.descriptorCount = static_cast<uint32_t>(frameCount * 10);
+  poolSize.descriptorCount = static_cast<uint32_t>(frameCount * maxEmitters);
 
   VkDescriptorPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   poolInfo.poolSizeCount = 1;
   poolInfo.pPoolSizes = &poolSize;
-  poolInfo.maxSets = static_cast<uint32_t>(frameCount * 10);
+  poolInfo.maxSets = static_cast<uint32_t>(frameCount * maxEmitters);
 
   if (vkCreateDescriptorPool(renderDevice->getDevice(), &poolInfo, nullptr,
                              &particleDescriptorPool) != VK_SUCCESS) {
@@ -334,7 +324,8 @@ void ParticleManager::createParticleDescriptorPool(size_t frameCount) {
   }
 
   Debug::log(Debug::Category::PARTICLES,
-             "ParticleManager: Particle descriptor pool created");
+             "ParticleManager: Particle descriptor pool created with max ",
+             maxEmitters, " emitters");
 }
 
 void ParticleManager::createParticleDescriptorSets(size_t emitterIndex,
@@ -357,10 +348,17 @@ void ParticleManager::createParticleDescriptorSets(size_t emitterIndex,
   allocInfo.descriptorSetCount = static_cast<uint32_t>(frameCount);
   allocInfo.pSetLayouts = layouts.data();
 
-  if (vkAllocateDescriptorSets(renderDevice->getDevice(), &allocInfo,
-                               particleDescriptorSets[emitterIndex].data()) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate particle descriptor sets!");
+  VkResult result =
+      vkAllocateDescriptorSets(renderDevice->getDevice(), &allocInfo,
+                               particleDescriptorSets[emitterIndex].data());
+
+  if (result != VK_SUCCESS) {
+    Debug::log(
+        Debug::Category::PARTICLES,
+        "ParticleManager: Failed to allocate descriptor sets for emitter ",
+        emitterIndex, " - pool may be exhausted");
+    particleDescriptorSets[emitterIndex].clear();
+    return;
   }
 
   for (size_t i = 0; i < frameCount; ++i) {

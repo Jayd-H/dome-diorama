@@ -301,11 +301,11 @@ int main() {
     worldConfig.startingHour = config.getInt("World.starting_hour", 12);
     worldConfig.startingMinute = config.getInt("World.starting_minute", 0);
     worldConfig.startingTemperature =
-        config.getFloat("World.starting_temperature", 20.0f);
+        config.getFloat("World.starting_temperature", 80.0f);
     worldConfig.minTemperature =
-        config.getFloat("World.min_temperature", -15.0f);
+        config.getFloat("World.min_temperature", 70.0f);
     worldConfig.maxTemperature =
-        config.getFloat("World.max_temperature", 40.0f);
+        config.getFloat("World.max_temperature", 80.0f);
     worldConfig.startingHumidity =
         config.getFloat("World.starting_humidity", 0.3f);
     worldConfig.minHumidity = config.getFloat("World.min_humidity", 0.1f);
