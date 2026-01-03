@@ -13,7 +13,7 @@
 void Skybox::render(VkCommandBuffer const commandBuffer,
                     VkDescriptorSet cameraDescriptorSet,
                     const VkExtent2D& extent, const Object* domeObject) const {
-  if (!domeObject || !domeObject->visible) return;
+  if (domeObject && !domeObject->isVisible()) return;
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 

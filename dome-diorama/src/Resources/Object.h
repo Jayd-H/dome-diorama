@@ -5,22 +5,14 @@
 #include <string>
 #include <utility>
 
-#include "Util/Debug.h"
 #include "Resources/Material.h"
+#include "Util/Debug.h"
 
 using MeshID = uint32_t;
 constexpr MeshID INVALID_MESH_ID = 0;
 
 class Object final {
  public:
-  std::string name;
-  glm::vec3 position;
-  glm::quat rotation;
-  glm::vec3 scale;
-  MeshID meshID;
-  MaterialID materialID;
-  bool visible;
-
   Object()
       : name("Unnamed Object"),
         position(0.0f, 0.0f, 0.0f),
@@ -38,30 +30,45 @@ class Object final {
     return model;
   }
 
-  void setPosition(const glm::vec3& pos) { position = pos; }
+  void setName(const std::string& n) { name = n; }
+  const std::string& getName() const { return name; }
 
+  void setPosition(const glm::vec3& pos) { position = pos; }
   void setPosition(float x, float y, float z) { position = glm::vec3(x, y, z); }
+  const glm::vec3& getPosition() const { return position; }
 
   void setRotation(const glm::quat& rot) { rotation = rot; }
-
   void setRotationEuler(float pitch, float yaw, float roll) {
     rotation = glm::quat(
         glm::vec3(glm::radians(pitch), glm::radians(yaw), glm::radians(roll)));
   }
-
   void setRotationEuler(const glm::vec3& euler) {
     rotation = glm::quat(glm::radians(euler));
   }
+  const glm::quat& getRotation() const { return rotation; }
 
   void setScale(const glm::vec3& s) { scale = s; }
-
   void setScale(float x, float y, float z) { scale = glm::vec3(x, y, z); }
-
   void setScale(float uniform) { scale = glm::vec3(uniform); }
+  const glm::vec3& getScale() const { return scale; }
 
   void setMesh(MeshID mesh) { meshID = mesh; }
+  MeshID getMeshID() const { return meshID; }
 
   void setMaterial(MaterialID material) { materialID = material; }
+  MaterialID getMaterialID() const { return materialID; }
+
+  void setVisible(bool v) { visible = v; }
+  bool isVisible() const { return visible; }
+
+ private:
+  std::string name;
+  glm::vec3 position;
+  glm::quat rotation;
+  glm::vec3 scale;
+  MeshID meshID;
+  MaterialID materialID;
+  bool visible;
 };
 
 class ObjectBuilder final {
@@ -69,80 +76,79 @@ class ObjectBuilder final {
   ObjectBuilder() : object() {}
 
   ObjectBuilder& name(const std::string& n) {
-    object.name = n;
+    object.setName(n);
     return *this;
   }
 
   ObjectBuilder& position(const glm::vec3& pos) {
-    object.position = pos;
+    object.setPosition(pos);
     return *this;
   }
 
   ObjectBuilder& position(float x, float y, float z) {
-    object.position = glm::vec3(x, y, z);
+    object.setPosition(x, y, z);
     return *this;
   }
 
   ObjectBuilder& rotation(const glm::quat& rot) {
-    object.rotation = rot;
+    object.setRotation(rot);
     return *this;
   }
 
   ObjectBuilder& rotationEuler(float pitch, float yaw, float roll) {
-    object.rotation = glm::quat(
-        glm::vec3(glm::radians(pitch), glm::radians(yaw), glm::radians(roll)));
+    object.setRotationEuler(pitch, yaw, roll);
     return *this;
   }
 
   ObjectBuilder& rotationEuler(const glm::vec3& euler) {
-    object.rotation = glm::quat(glm::radians(euler));
+    object.setRotationEuler(euler);
     return *this;
   }
 
   ObjectBuilder& scale(const glm::vec3& s) {
-    object.scale = s;
+    object.setScale(s);
     return *this;
   }
 
   ObjectBuilder& scale(float x, float y, float z) {
-    object.scale = glm::vec3(x, y, z);
+    object.setScale(x, y, z);
     return *this;
   }
 
   ObjectBuilder& scale(float uniform) {
-    object.scale = glm::vec3(uniform);
+    object.setScale(uniform);
     return *this;
   }
 
   ObjectBuilder& mesh(MeshID meshID) {
-    object.meshID = meshID;
+    object.setMesh(meshID);
     return *this;
   }
 
   ObjectBuilder& material(MaterialID materialID) {
-    object.materialID = materialID;
+    object.setMaterial(materialID);
     return *this;
   }
 
   ObjectBuilder& visible(bool isVisible) {
-    object.visible = isVisible;
+    object.setVisible(isVisible);
     return *this;
   }
 
   Object build() {
-    if (object.meshID == INVALID_MESH_ID) {
+    if (object.getMeshID() == INVALID_MESH_ID) {
       Debug::log(Debug::Category::OBJECTS,
-                 "ObjectBuilder: Warning - building object '", object.name,
+                 "ObjectBuilder: Warning - building object '", object.getName(),
                  "' with invalid mesh ID");
     }
-    if (object.materialID == INVALID_MATERIAL_ID) {
+    if (object.getMaterialID() == INVALID_MATERIAL_ID) {
       Debug::log(Debug::Category::OBJECTS,
-                 "ObjectBuilder: Warning - building object '", object.name,
+                 "ObjectBuilder: Warning - building object '", object.getName(),
                  "' with invalid material ID");
     }
     Debug::log(Debug::Category::OBJECTS, "ObjectBuilder: Built object '",
-               object.name, "' (Mesh: ", object.meshID,
-               ", Material: ", object.materialID, ")");
+               object.getName(), "' (Mesh: ", object.getMeshID(),
+               ", Material: ", object.getMaterialID(), ")");
     return std::move(object);
   }
 

@@ -513,7 +513,7 @@ void PlantManager::updatePlantFire(Plant& plant,
                    ", Water: ", state.waterLevel, ", Chance was: ", fireChance,
                    ", Roll was: ", roll);
         const Object& obj = sceneObjects[plant.getObjectIndex()];
-        startFire(plant, obj.position);
+        startFire(plant, obj.getPosition());
       }
     }
     return;
@@ -570,7 +570,8 @@ void PlantManager::checkFireSpread(std::vector<Object>& sceneObjects) {
 
       const Object& otherObj = sceneObjects[otherPlant.getObjectIndex()];
 
-      float distance = glm::length(burningObj.position - otherObj.position);
+      float distance =
+          glm::length(burningObj.getPosition() - otherObj.getPosition());
 
       if (distance < PlantState::FIRE_SPREAD_RADIUS) {
         float spreadChance =
@@ -591,7 +592,7 @@ void PlantManager::checkFireSpread(std::vector<Object>& sceneObjects) {
       const Object& obj = sceneObjects[plant.getObjectIndex()];
       Debug::log(Debug::Category::PLANTMANAGER,
                  "PlantManager: Fire spread to plant ", idx);
-      startFire(plant, obj.position);
+      startFire(plant, obj.getPosition());
     }
   }
 }
@@ -663,7 +664,7 @@ void PlantManager::killPlant(Plant& plant, std::vector<Object>& sceneObjects) {
   extinguishFire(plant);
 
   Object& obj = sceneObjects[plant.getObjectIndex()];
-  obj.visible = false;
+  obj.setVisible(false);
 
   Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Plant at index ",
              plant.getObjectIndex(), " died and was hidden");

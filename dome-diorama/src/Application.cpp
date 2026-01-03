@@ -1048,10 +1048,10 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     shadowPush.lightSpaceMatrix = shadowMap.lightSpaceMatrix;
 
     for (const auto& object : sceneObjects) {
-      if (!object.visible) continue;
-      if (object.meshID == INVALID_MESH_ID) continue;
+      if (!object.isVisible()) continue;
+      if (object.getMeshID() == INVALID_MESH_ID) continue;
 
-      const Mesh* const mesh = meshManager->getMesh(object.meshID);
+      const Mesh* const mesh = meshManager->getMesh(object.getMeshID());
       if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
 
       shadowPush.model = object.getModelMatrix();
@@ -1123,13 +1123,13 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     }
 
     const auto& object = sceneObjects[i];
-    if (!object.visible) continue;
-    if (object.meshID == INVALID_MESH_ID) continue;
-    if (object.materialID == INVALID_MATERIAL_ID) continue;
+    if (!object.isVisible()) continue;
+    if (object.getMeshID() == INVALID_MESH_ID) continue;
+    if (object.getMaterialID() == INVALID_MATERIAL_ID) continue;
 
-    const Mesh* const mesh = meshManager->getMesh(object.meshID);
+    const Mesh* const mesh = meshManager->getMesh(object.getMeshID());
     const Material* const material =
-        materialManager->getMaterial(object.materialID);
+        materialManager->getMaterial(object.getMaterialID());
 
     if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
@@ -1251,13 +1251,13 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
     if (idx >= sceneObjects.size()) continue;
 
     const Object& object = sceneObjects[idx];
-    if (!object.visible) continue;
-    if (object.meshID == INVALID_MESH_ID) continue;
-    if (object.materialID == INVALID_MATERIAL_ID) continue;
+    if (!object.isVisible()) continue;
+    if (object.getMeshID() == INVALID_MESH_ID) continue;
+    if (object.getMaterialID() == INVALID_MATERIAL_ID) continue;
 
-    const Mesh* const mesh = meshManager->getMesh(object.meshID);
+    const Mesh* const mesh = meshManager->getMesh(object.getMeshID());
     const Material* const material =
-        materialManager->getMaterial(object.materialID);
+        materialManager->getMaterial(object.getMaterialID());
 
     if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
