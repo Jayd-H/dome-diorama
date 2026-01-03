@@ -434,14 +434,18 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     sunLight->color = glm::vec3(1.0f, 0.95f, 0.85f);
 
     const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
-    const glm::vec3 lightEye = sceneCenter - sunDirection * 500.0f;
+    const float orthoSize = 500.0f;
+    const float nearPlane = 0.1f;
+    const float farPlane = 3000.0f;
+
+    const float shadowDistance = 1500.0f;
+    const glm::vec3 lightEye = sceneCenter - sunDirection * shadowDistance;
 
     const glm::mat4 lightView =
         glm::lookAt(lightEye, sceneCenter, glm::vec3(0.0f, 1.0f, 0.0f));
 
-    const float orthoSize = 800.0f;
-    glm::mat4 lightProjection =
-        glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, 0.1f, 1000.0f);
+    glm::mat4 lightProjection = glm::ortho(-orthoSize, orthoSize, -orthoSize,
+                                           orthoSize, nearPlane, farPlane);
 
     lightProjection[1][1] *= -1;
 
@@ -449,6 +453,34 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
 
     static bool matrixLogged = false;
     if (!matrixLogged) {
+      Debug::log(Debug::Category::SHADOWS, "Ortho size: ", orthoSize);
+      Debug::log(Debug::Category::SHADOWS, "Near plane: ", nearPlane);
+      Debug::log(Debug::Category::SHADOWS, "Far plane: ", farPlane);
+      Debug::log(Debug::Category::SHADOWS, "Shadow distance: ", shadowDistance);
+      Debug::log(Debug::Category::SHADOWS, "Light eye: ", lightEye.x, ", ",
+                 lightEye.y, ", ", lightEye.z);
+
+      glm::vec4 testPoint =
+          lightSpaceMatrix * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+      testPoint /= testPoint.w;
+      Debug::log(Debug::Category::SHADOWS,
+                 "Scene center in light space: ", testPoint.x, ", ",
+                 testPoint.y, ", ", testPoint.z);
+
+      glm::vec4 cornerPoint =
+          lightSpaceMatrix * glm::vec4(300.0f, 0.0f, 300.0f, 1.0f);
+      cornerPoint /= cornerPoint.w;
+      Debug::log(Debug::Category::SHADOWS,
+                 "Corner (300,0,300) in light space: ", cornerPoint.x, ", ",
+                 cornerPoint.y, ", ", cornerPoint.z);
+
+      glm::vec4 negCornerPoint =
+          lightSpaceMatrix * glm::vec4(-300.0f, 0.0f, -300.0f, 1.0f);
+      negCornerPoint /= negCornerPoint.w;
+      Debug::log(Debug::Category::SHADOWS,
+                 "Corner (-300,0,-300) in light space: ", negCornerPoint.x,
+                 ", ", negCornerPoint.y, ", ", negCornerPoint.z);
+
       Debug::log(Debug::Category::SHADOWS,
                  "Light space matrix column 0: ", lightSpaceMatrix[0][0], ", ",
                  lightSpaceMatrix[0][1], ", ", lightSpaceMatrix[0][2], ", ",
@@ -457,6 +489,14 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
                  "Light space matrix column 1: ", lightSpaceMatrix[1][0], ", ",
                  lightSpaceMatrix[1][1], ", ", lightSpaceMatrix[1][2], ", ",
                  lightSpaceMatrix[1][3]);
+      Debug::log(Debug::Category::SHADOWS,
+                 "Light space matrix column 2: ", lightSpaceMatrix[2][0], ", ",
+                 lightSpaceMatrix[2][1], ", ", lightSpaceMatrix[2][2], ", ",
+                 lightSpaceMatrix[2][3]);
+      Debug::log(Debug::Category::SHADOWS,
+                 "Light space matrix column 3: ", lightSpaceMatrix[3][0], ", ",
+                 lightSpaceMatrix[3][1], ", ", lightSpaceMatrix[3][2], ", ",
+                 lightSpaceMatrix[3][3]);
       matrixLogged = true;
     }
 

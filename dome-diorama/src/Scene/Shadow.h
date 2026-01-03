@@ -139,6 +139,12 @@ class ShadowSystem {
 
     Debug::log(Debug::Category::SHADOWS, "  - Created shadow map sampler");
 
+    transitionImageLayout(shadowMap.image, VK_IMAGE_LAYOUT_UNDEFINED,
+                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+
+    Debug::log(Debug::Category::SHADOWS,
+               "  - Transitioned to read-only layout");
+
     shadowMaps.push_back(shadowMap);
     updateDescriptorSet();
 
@@ -243,7 +249,46 @@ class ShadowSystem {
   void createDescriptorSet();
   void createDummyShadowMap();
   void updateDescriptorSet();
+  void transitionImageLayout(VkImage image, VkImageLayout oldLayout,
+                             VkImageLayout newLayout);
 };
+
+inline void ShadowSystem::transitionImageLayout(VkImage image,
+                                                VkImageLayout oldLayout,
+                                                VkImageLayout newLayout) {
+  VkCommandBuffer commandBuffer = renderDevice->beginSingleTimeCommands();
+
+  VkImageMemoryBarrier barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout = oldLayout;
+  barrier.newLayout = newLayout;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = image;
+  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+
+  VkPipelineStageFlags sourceStage;
+  VkPipelineStageFlags destinationStage;
+
+  if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+      newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  } else {
+    throw std::runtime_error("Unsupported layout transition!");
+  }
+
+  vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0,
+                       nullptr, 0, nullptr, 1, &barrier);
+
+  renderDevice->endSingleTimeCommands(commandBuffer);
+}
 
 inline void ShadowSystem::createDescriptorSetLayout() {
   Debug::log(Debug::Category::SHADOWS,
@@ -383,6 +428,9 @@ inline void ShadowSystem::createDummyShadowMap() {
                       &dummyShadowMap.sampler) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create dummy shadow map sampler!");
   }
+
+  transitionImageLayout(dummyShadowMap.image, VK_IMAGE_LAYOUT_UNDEFINED,
+                        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 
   Debug::log(Debug::Category::SHADOWS,
              "ShadowSystem: Dummy shadow map created");

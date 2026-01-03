@@ -89,35 +89,28 @@ vec2 getShadowMapTexelSize(int index) {
 
 float calculateShadow(int lightIndex, vec3 fragPos, vec3 normal, vec3 lightDir) {
     if (lightBuffer.lights[lightIndex].castsShadows == 0) {
-        outColor = vec4(1.0, 0.0, 0.0, 1.0); // RED: castsShadows is 0
         return 1.0;
     }
     
     int shadowMapIndex = lightBuffer.lights[lightIndex].shadowMapIndex;
     if (shadowMapIndex < 0 || shadowMapIndex >= 4) {
-        outColor = vec4(0.0, 1.0, 0.0, 1.0); // GREEN: invalid shadow map index
         return 1.0;
     }
     
     vec4 fragPosLightSpace = lightBuffer.lights[lightIndex].lightSpaceMatrix * vec4(fragPos, 1.0);
     
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
     
     if (projCoords.x < 0.0 || projCoords.x > 1.0 || 
         projCoords.y < 0.0 || projCoords.y > 1.0) {
-        outColor = vec4(0.0, 0.0, 1.0, 1.0); // BLUE: outside XY bounds
         return 1.0;
     }
     
-    if (projCoords.z > 1.0) {
-        outColor = vec4(1.0, 1.0, 0.0, 1.0); // YELLOW: beyond far plane
+    if (projCoords.z > 1.0 || projCoords.z < 0.0) {
         return 1.0;
     }
-    
-    // DEBUG: Visualize the shadow map depth value
-    float shadowMapDepth = texture(shadowMaps[shadowMapIndex], projCoords.xy).r;
-    outColor = vec4(shadowMapDepth, shadowMapDepth, shadowMapDepth, 1.0); // Grayscale depth visualization
     
     float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
     float bias = max(0.005 * (1.0 - cosTheta), 0.0005);
