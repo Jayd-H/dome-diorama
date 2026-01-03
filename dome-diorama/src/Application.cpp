@@ -919,7 +919,8 @@ void Application::createShadowPipeline() {
   Debug::log(Debug::Category::VULKAN, "Shadow pipeline created successfully");
 }
 
-void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
+                                      uint32_t imageIndex) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -932,37 +933,31 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
 
   for (size_t smIdx = 0; smIdx < shadowMaps.size(); smIdx++) {
     const auto& shadowMap = shadowMaps[smIdx];
-    const uint32_t lightIndex = shadowMap.lightIndex;
-    Light* const light = lightManager->getLight(lightIndex + 1);
 
-    VkImageMemoryBarrier2 shadowBarrier{};
-    shadowBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    shadowBarrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
-    shadowBarrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-    shadowBarrier.dstStageMask =
-        VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-        VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
-    shadowBarrier.dstAccessMask =
-        VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+    VkImageMemoryBarrier2 toWriteBarrier{};
+    toWriteBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    toWriteBarrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
+    toWriteBarrier.srcAccessMask = VK_ACCESS_2_NONE;
+    toWriteBarrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+                                  VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+    toWriteBarrier.dstAccessMask =
         VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    shadowBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    shadowBarrier.newLayout =
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    shadowBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    shadowBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    shadowBarrier.image = shadowMap.image;
-    shadowBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    shadowBarrier.subresourceRange.baseMipLevel = 0;
-    shadowBarrier.subresourceRange.levelCount = 1;
-    shadowBarrier.subresourceRange.baseArrayLayer = 0;
-    shadowBarrier.subresourceRange.layerCount = 1;
+    toWriteBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    toWriteBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    toWriteBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toWriteBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toWriteBarrier.image = shadowMap.image;
+    toWriteBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    toWriteBarrier.subresourceRange.baseMipLevel = 0;
+    toWriteBarrier.subresourceRange.levelCount = 1;
+    toWriteBarrier.subresourceRange.baseArrayLayer = 0;
+    toWriteBarrier.subresourceRange.layerCount = 1;
 
-    VkDependencyInfo depInfo{};
-    depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    depInfo.imageMemoryBarrierCount = 1;
-    depInfo.pImageMemoryBarriers = &shadowBarrier;
-
-    vkCmdPipelineBarrier2(commandBuffer, &depInfo);
+    VkDependencyInfo toWriteDep{};
+    toWriteDep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    toWriteDep.imageMemoryBarrierCount = 1;
+    toWriteDep.pImageMemoryBarriers = &toWriteBarrier;
+    vkCmdPipelineBarrier2(commandBuffer, &toWriteDep);
 
     VkRenderingAttachmentInfo depthAttachment{};
     depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -978,9 +973,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
     renderingInfo.renderArea = {{0, 0}, {SHADOW_MAP_SIZE, SHADOW_MAP_SIZE}};
     renderingInfo.layerCount = 1;
     renderingInfo.colorAttachmentCount = 0;
-    renderingInfo.pColorAttachments = nullptr;
     renderingInfo.pDepthAttachment = &depthAttachment;
-    renderingInfo.pStencilAttachment = nullptr;
 
     vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
@@ -1001,7 +994,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
     scissor.extent = {SHADOW_MAP_SIZE, SHADOW_MAP_SIZE};
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    vkCmdSetDepthBias(commandBuffer, 0.5f, 0.0f, 0.5f);
+    vkCmdSetDepthBias(commandBuffer, 1.25f, 0.0f, 1.75f);
 
     struct ShadowPushConstants {
       glm::mat4 lightSpaceMatrix;
@@ -1010,12 +1003,11 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
 
     shadowPush.lightSpaceMatrix = shadowMap.lightSpaceMatrix;
 
-    uint32_t shadowObjectCount = 0;
     for (const auto& object : sceneObjects) {
       if (!object.visible) continue;
       if (object.meshID == INVALID_MESH_ID) continue;
 
-      const Mesh* const mesh = meshManager->getMesh(object.meshID);
+      const Mesh* mesh = meshManager->getMesh(object.meshID);
       if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
 
       shadowPush.model = object.getModelMatrix();
@@ -1024,31 +1016,41 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
                          VK_SHADER_STAGE_VERTEX_BIT, 0,
                          sizeof(ShadowPushConstants), &shadowPush);
 
-      const std::array<VkBuffer, 1> vertexBuffersArr = {mesh->vertexBuffer};
-      const std::array<VkDeviceSize, 1> offsetsArr = {0};
-      vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersArr.data(),
-                             offsetsArr.data());
+      VkBuffer vertexBuffers[] = {mesh->vertexBuffer};
+      VkDeviceSize offsets[] = {0};
+      vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
       vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer, 0,
                            VK_INDEX_TYPE_UINT16);
 
       vkCmdDrawIndexed(commandBuffer,
-                       static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0,
-                       0);
-      shadowObjectCount++;
+                       static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
     }
 
     vkCmdEndRendering(commandBuffer);
 
-    shadowBarrier.srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
-    shadowBarrier.srcAccessMask =
+    VkImageMemoryBarrier2 toReadBarrier{};
+    toReadBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    toReadBarrier.srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+    toReadBarrier.srcAccessMask =
         VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    shadowBarrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
-    shadowBarrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-    shadowBarrier.oldLayout =
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    shadowBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    toReadBarrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+    toReadBarrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+    toReadBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    toReadBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    toReadBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toReadBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toReadBarrier.image = shadowMap.image;
+    toReadBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    toReadBarrier.subresourceRange.baseMipLevel = 0;
+    toReadBarrier.subresourceRange.levelCount = 1;
+    toReadBarrier.subresourceRange.baseArrayLayer = 0;
+    toReadBarrier.subresourceRange.layerCount = 1;
 
-    vkCmdPipelineBarrier2(commandBuffer, &depInfo);
+    VkDependencyInfo toReadDep{};
+    toReadDep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    toReadDep.imageMemoryBarrierCount = 1;
+    toReadDep.pImageMemoryBarriers = &toReadBarrier;
+    vkCmdPipelineBarrier2(commandBuffer, &toReadDep);
   }
 
   postProcessing->beginOffscreenPass(commandBuffer, depthImageView,
@@ -1071,15 +1073,13 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
   scissor.extent = swapChainExtent;
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-  uint32_t mainObjectCount = 0;
   for (const auto& object : sceneObjects) {
     if (!object.visible) continue;
     if (object.meshID == INVALID_MESH_ID) continue;
     if (object.materialID == INVALID_MATERIAL_ID) continue;
 
-    const Mesh* const mesh = meshManager->getMesh(object.meshID);
-    const Material* const material =
-        materialManager->getMaterial(object.materialID);
+    const Mesh* mesh = meshManager->getMesh(object.meshID);
+    const Material* material = materialManager->getMaterial(object.materialID);
 
     if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
@@ -1090,10 +1090,9 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
         sizeof(glm::mat4), &modelMatrix);
 
-    const std::array<VkBuffer, 1> vertexBuffersArr = {mesh->vertexBuffer};
-    const std::array<VkDeviceSize, 1> offsetsArr = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersArr.data(),
-                           offsetsArr.data());
+    VkBuffer vertexBuffers[] = {mesh->vertexBuffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer, 0,
                          VK_INDEX_TYPE_UINT16);
 
@@ -1101,14 +1100,13 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         descriptorSets[currentFrame], material->getDescriptorSet(),
         lightManager->getShadowDescriptorSet()};
 
-    vkCmdBindDescriptorSets(
-        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mainPipeline->getPipelineLayout(), 0,
-        static_cast<uint32_t>(descriptorSetsToBind.size()),
-        descriptorSetsToBind.data(), 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            mainPipeline->getPipelineLayout(), 0,
+                            static_cast<uint32_t>(descriptorSetsToBind.size()),
+                            descriptorSetsToBind.data(), 0, nullptr);
 
-    vkCmdDrawIndexed(commandBuffer,
-                     static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
-    mainObjectCount++;
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh->indices.size()),
+                     1, 0, 0, 0);
   }
 
   const Object* domeGlassObject = &sceneObjects[3];

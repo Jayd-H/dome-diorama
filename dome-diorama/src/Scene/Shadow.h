@@ -11,8 +11,6 @@
 #include "../Util/Debug.h"
 #include "Light.h"
 
-#define USE_SHADOW_MAPPING true
-
 constexpr uint32_t SHADOW_MAP_SIZE = 16384;
 constexpr uint32_t MAX_SHADOW_CASTERS = 4;
 
@@ -81,6 +79,9 @@ class ShadowSystem {
       throw std::runtime_error("Failed to create shadow map image!");
     }
 
+    Debug::log(Debug::Category::SHADOWS, "  - Created shadow map image (",
+               SHADOW_MAP_SIZE, "x", SHADOW_MAP_SIZE, ")");
+
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(renderDevice->getDevice(), shadowMap.image,
                                  &memRequirements);
@@ -99,6 +100,8 @@ class ShadowSystem {
     vkBindImageMemory(renderDevice->getDevice(), shadowMap.image,
                       shadowMap.memory, 0);
 
+    Debug::log(Debug::Category::SHADOWS, "  - Allocated shadow map memory");
+
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = shadowMap.image;
@@ -115,6 +118,8 @@ class ShadowSystem {
       throw std::runtime_error("Failed to create shadow map image view!");
     }
 
+    Debug::log(Debug::Category::SHADOWS, "  - Created shadow map image view");
+
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -125,14 +130,14 @@ class ShadowSystem {
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
     samplerInfo.compareEnable = VK_TRUE;
     samplerInfo.compareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
     if (vkCreateSampler(renderDevice->getDevice(), &samplerInfo, nullptr,
                         &shadowMap.sampler) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create shadow map sampler!");
     }
 
-    transitionImageLayout(shadowMap.image, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+    Debug::log(Debug::Category::SHADOWS, "  - Created shadow map sampler");
 
     shadowMaps.push_back(shadowMap);
     updateDescriptorSet();
@@ -147,6 +152,13 @@ class ShadowSystem {
                               const glm::mat4& matrix) {
     if (shadowMapIndex < shadowMaps.size()) {
       shadowMaps[shadowMapIndex].lightSpaceMatrix = matrix;
+      Debug::log(Debug::Category::SHADOWS,
+                 "ShadowSystem: Updated light space matrix for shadow map ",
+                 shadowMapIndex);
+    } else {
+      Debug::log(Debug::Category::SHADOWS,
+                 "ShadowSystem: WARNING - Invalid shadow map index ",
+                 shadowMapIndex, " for light space matrix update");
     }
   }
 
@@ -229,230 +241,192 @@ class ShadowSystem {
   VkDescriptorPool shadowDescriptorPool = VK_NULL_HANDLE;
   VkDescriptorSet shadowDescriptorSet = VK_NULL_HANDLE;
 
-  void createDescriptorSetLayout() {
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Creating descriptor set layout");
-
-    VkDescriptorSetLayoutBinding shadowMapBinding{};
-    shadowMapBinding.binding = 0;
-    shadowMapBinding.descriptorCount = MAX_SHADOW_CASTERS;
-    shadowMapBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    shadowMapBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &shadowMapBinding;
-
-    if (vkCreateDescriptorSetLayout(renderDevice->getDevice(), &layoutInfo,
-                                    nullptr,
-                                    &shadowDescriptorSetLayout) != VK_SUCCESS) {
-      throw std::runtime_error(
-          "Failed to create shadow descriptor set layout!");
-    }
-
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Descriptor set layout created");
-  }
-
-  void createDescriptorPool() {
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Creating descriptor pool");
-
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSize.descriptorCount = MAX_SHADOW_CASTERS;
-
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-    poolInfo.maxSets = 1;
-
-    if (vkCreateDescriptorPool(renderDevice->getDevice(), &poolInfo, nullptr,
-                               &shadowDescriptorPool) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create shadow descriptor pool!");
-    }
-
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Descriptor pool created");
-  }
-
-  void createDescriptorSet() {
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Creating descriptor set");
-
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = shadowDescriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &shadowDescriptorSetLayout;
-
-    if (vkAllocateDescriptorSets(renderDevice->getDevice(), &allocInfo,
-                                 &shadowDescriptorSet) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to allocate shadow descriptor set!");
-    }
-
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Descriptor set created");
-  }
-
-  void createDummyShadowMap() {
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Creating dummy shadow map");
-
-    VkImageCreateInfo imageInfo{};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = 1;
-    imageInfo.extent.height = 1;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = VK_FORMAT_D32_SFLOAT;
-    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-                      VK_IMAGE_USAGE_SAMPLED_BIT;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateImage(renderDevice->getDevice(), &imageInfo, nullptr,
-                      &dummyShadowMap.image) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create dummy shadow map image!");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(renderDevice->getDevice(),
-                                 dummyShadowMap.image, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = renderDevice->findMemoryType(
-        memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    if (vkAllocateMemory(renderDevice->getDevice(), &allocInfo, nullptr,
-                         &dummyShadowMap.memory) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to allocate dummy shadow map memory!");
-    }
-
-    vkBindImageMemory(renderDevice->getDevice(), dummyShadowMap.image,
-                      dummyShadowMap.memory, 0);
-
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = dummyShadowMap.image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = VK_FORMAT_D32_SFLOAT;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    if (vkCreateImageView(renderDevice->getDevice(), &viewInfo, nullptr,
-                          &dummyShadowMap.imageView) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create dummy shadow map image view!");
-    }
-
-    VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-
-    if (vkCreateSampler(renderDevice->getDevice(), &samplerInfo, nullptr,
-                        &dummyShadowMap.sampler) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create dummy shadow map sampler!");
-    }
-
-    transitionImageLayout(dummyShadowMap.image, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Dummy shadow map created");
-  }
-
-  void updateDescriptorSet() {
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Updating descriptor set with ", shadowMaps.size(),
-               " shadow maps");
-
-    std::vector<VkDescriptorImageInfo> imageInfos(MAX_SHADOW_CASTERS);
-
-    for (size_t i = 0; i < MAX_SHADOW_CASTERS; i++) {
-      if (i < shadowMaps.size()) {
-        imageInfos[i].imageLayout =
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        imageInfos[i].imageView = shadowMaps[i].imageView;
-        imageInfos[i].sampler = shadowMaps[i].sampler;
-      } else {
-        imageInfos[i].imageLayout =
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        imageInfos[i].imageView = dummyShadowMap.imageView;
-        imageInfos[i].sampler = dummyShadowMap.sampler;
-      }
-    }
-
-    VkWriteDescriptorSet descriptorWrite{};
-    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = shadowDescriptorSet;
-    descriptorWrite.dstBinding = 0;
-    descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrite.descriptorCount = MAX_SHADOW_CASTERS;
-    descriptorWrite.pImageInfo = imageInfos.data();
-
-    vkUpdateDescriptorSets(renderDevice->getDevice(), 1, &descriptorWrite, 0,
-                           nullptr);
-
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Descriptor set updated");
-  }
-
-  void transitionImageLayout(VkImage image, VkImageLayout oldLayout,
-                             VkImageLayout newLayout) {
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Transitioning image layout");
-
-    VkCommandBuffer commandBuffer = renderDevice->beginSingleTimeCommands();
-
-    VkImageMemoryBarrier2 barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-
-    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-        newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
-      barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-      barrier.srcAccessMask = 0;
-      barrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-                             VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
-      barrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-    }
-
-    VkDependencyInfo dependencyInfo{};
-    dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dependencyInfo.imageMemoryBarrierCount = 1;
-    dependencyInfo.pImageMemoryBarriers = &barrier;
-
-    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
-
-    renderDevice->endSingleTimeCommands(commandBuffer);
-
-    Debug::log(Debug::Category::SHADOWS,
-               "ShadowSystem: Image layout transitioned");
-  }
+  void createDescriptorSetLayout();
+  void createDescriptorPool();
+  void createDescriptorSet();
+  void createDummyShadowMap();
+  void updateDescriptorSet();
 };
+
+inline void ShadowSystem::createDescriptorSetLayout() {
+  Debug::log(Debug::Category::SHADOWS,
+             "ShadowSystem: Creating descriptor set layout");
+
+  VkDescriptorSetLayoutBinding shadowMapBinding{};
+  shadowMapBinding.binding = 0;
+  shadowMapBinding.descriptorCount = MAX_SHADOW_CASTERS;
+  shadowMapBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  shadowMapBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+  VkDescriptorSetLayoutCreateInfo layoutInfo{};
+  layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  layoutInfo.bindingCount = 1;
+  layoutInfo.pBindings = &shadowMapBinding;
+
+  if (vkCreateDescriptorSetLayout(renderDevice->getDevice(), &layoutInfo,
+                                  nullptr,
+                                  &shadowDescriptorSetLayout) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create shadow descriptor set layout!");
+  }
+
+  Debug::log(Debug::Category::SHADOWS,
+             "ShadowSystem: Descriptor set layout created");
+}
+
+inline void ShadowSystem::createDescriptorPool() {
+  Debug::log(Debug::Category::SHADOWS,
+             "ShadowSystem: Creating descriptor pool");
+
+  VkDescriptorPoolSize poolSize{};
+  poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  poolSize.descriptorCount = MAX_SHADOW_CASTERS;
+
+  VkDescriptorPoolCreateInfo poolInfo{};
+  poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  poolInfo.poolSizeCount = 1;
+  poolInfo.pPoolSizes = &poolSize;
+  poolInfo.maxSets = 1;
+
+  if (vkCreateDescriptorPool(renderDevice->getDevice(), &poolInfo, nullptr,
+                             &shadowDescriptorPool) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create shadow descriptor pool!");
+  }
+
+  Debug::log(Debug::Category::SHADOWS, "ShadowSystem: Descriptor pool created");
+}
+
+inline void ShadowSystem::createDescriptorSet() {
+  Debug::log(Debug::Category::SHADOWS, "ShadowSystem: Creating descriptor set");
+
+  VkDescriptorSetAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.descriptorPool = shadowDescriptorPool;
+  allocInfo.descriptorSetCount = 1;
+  allocInfo.pSetLayouts = &shadowDescriptorSetLayout;
+
+  if (vkAllocateDescriptorSets(renderDevice->getDevice(), &allocInfo,
+                               &shadowDescriptorSet) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate shadow descriptor set!");
+  }
+
+  Debug::log(Debug::Category::SHADOWS, "ShadowSystem: Descriptor set created");
+}
+
+inline void ShadowSystem::createDummyShadowMap() {
+  Debug::log(Debug::Category::SHADOWS,
+             "ShadowSystem: Creating dummy shadow map");
+
+  VkImageCreateInfo imageInfo{};
+  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageInfo.extent.width = 1;
+  imageInfo.extent.height = 1;
+  imageInfo.extent.depth = 1;
+  imageInfo.mipLevels = 1;
+  imageInfo.arrayLayers = 1;
+  imageInfo.format = VK_FORMAT_D32_SFLOAT;
+  imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  imageInfo.usage =
+      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+  imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  if (vkCreateImage(renderDevice->getDevice(), &imageInfo, nullptr,
+                    &dummyShadowMap.image) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create dummy shadow map image!");
+  }
+
+  VkMemoryRequirements memRequirements;
+  vkGetImageMemoryRequirements(renderDevice->getDevice(), dummyShadowMap.image,
+                               &memRequirements);
+
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memRequirements.size;
+  allocInfo.memoryTypeIndex = renderDevice->findMemoryType(
+      memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+  if (vkAllocateMemory(renderDevice->getDevice(), &allocInfo, nullptr,
+                       &dummyShadowMap.memory) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate dummy shadow map memory!");
+  }
+
+  vkBindImageMemory(renderDevice->getDevice(), dummyShadowMap.image,
+                    dummyShadowMap.memory, 0);
+
+  VkImageViewCreateInfo viewInfo{};
+  viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  viewInfo.image = dummyShadowMap.image;
+  viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  viewInfo.format = VK_FORMAT_D32_SFLOAT;
+  viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  viewInfo.subresourceRange.baseMipLevel = 0;
+  viewInfo.subresourceRange.levelCount = 1;
+  viewInfo.subresourceRange.baseArrayLayer = 0;
+  viewInfo.subresourceRange.layerCount = 1;
+
+  if (vkCreateImageView(renderDevice->getDevice(), &viewInfo, nullptr,
+                        &dummyShadowMap.imageView) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create dummy shadow map image view!");
+  }
+
+  VkSamplerCreateInfo samplerInfo{};
+  samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  samplerInfo.magFilter = VK_FILTER_LINEAR;
+  samplerInfo.minFilter = VK_FILTER_LINEAR;
+  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+  samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+  samplerInfo.compareEnable = VK_TRUE;
+  samplerInfo.compareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+
+  if (vkCreateSampler(renderDevice->getDevice(), &samplerInfo, nullptr,
+                      &dummyShadowMap.sampler) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create dummy shadow map sampler!");
+  }
+
+  Debug::log(Debug::Category::SHADOWS,
+             "ShadowSystem: Dummy shadow map created");
+}
+
+inline void ShadowSystem::updateDescriptorSet() {
+  Debug::log(Debug::Category::SHADOWS,
+             "ShadowSystem: Updating descriptor set with ", shadowMaps.size(),
+             " shadow maps");
+
+  std::vector<VkDescriptorImageInfo> imageInfos(MAX_SHADOW_CASTERS);
+
+  for (size_t i = 0; i < MAX_SHADOW_CASTERS; i++) {
+    if (i < shadowMaps.size()) {
+      imageInfos[i].imageLayout =
+          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+      imageInfos[i].imageView = shadowMaps[i].imageView;
+      imageInfos[i].sampler = shadowMaps[i].sampler;
+      Debug::log(Debug::Category::SHADOWS, "  - Binding shadow map ", i,
+                 " to descriptor set");
+    } else {
+      imageInfos[i].imageLayout =
+          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+      imageInfos[i].imageView = dummyShadowMap.imageView;
+      imageInfos[i].sampler = dummyShadowMap.sampler;
+      Debug::log(Debug::Category::SHADOWS,
+                 "  - Binding dummy shadow map to slot ", i);
+    }
+  }
+
+  VkWriteDescriptorSet descriptorWrite{};
+  descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrite.dstSet = shadowDescriptorSet;
+  descriptorWrite.dstBinding = 0;
+  descriptorWrite.dstArrayElement = 0;
+  descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  descriptorWrite.descriptorCount = MAX_SHADOW_CASTERS;
+  descriptorWrite.pImageInfo = imageInfos.data();
+
+  vkUpdateDescriptorSets(renderDevice->getDevice(), 1, &descriptorWrite, 0,
+                         nullptr);
+
+  Debug::log(Debug::Category::SHADOWS, "ShadowSystem: Descriptor set updated");
+}
