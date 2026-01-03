@@ -49,7 +49,7 @@ class Application final {
 
     plantObjectIndicesSet.clear();
     const auto& plantIndices = plantManager->getPlantObjectIndices();
-    for (size_t idx : plantIndices) {
+    for (size_t const idx : plantIndices) {
       plantObjectIndicesSet.insert(idx);
     }
 

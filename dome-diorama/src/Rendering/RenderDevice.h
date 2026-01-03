@@ -1,10 +1,13 @@
 #pragma once
 #include <vulkan/vulkan.h>
 
-class RenderDevice {
+class RenderDevice final {
  public:
-  RenderDevice(VkDevice device, VkPhysicalDevice physicalDevice,
-               VkCommandPool commandPool, VkQueue graphicsQueue);
+  RenderDevice(VkDevice inDevice, VkPhysicalDevice inPhysicalDevice,
+               VkCommandPool inCommandPool, VkQueue inGraphicsQueue);
+
+  RenderDevice(const RenderDevice&) = delete;
+  RenderDevice& operator=(const RenderDevice&) = delete;
 
   void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                     VkMemoryPropertyFlags properties, VkBuffer& buffer,
@@ -13,10 +16,10 @@ class RenderDevice {
   void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
   uint32_t findMemoryType(uint32_t typeFilter,
-                          VkMemoryPropertyFlags properties);
+                          VkMemoryPropertyFlags properties) const;
 
-  VkCommandBuffer beginSingleTimeCommands();
-  void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+  VkCommandBuffer beginSingleTimeCommands() const;
+  void endSingleTimeCommands(VkCommandBuffer commandBuffer) const;
 
   VkDevice getDevice() const { return device; }
   VkPhysicalDevice getPhysicalDevice() const { return physicalDevice; }

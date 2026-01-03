@@ -22,7 +22,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL
 debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
               VkDebugUtilsMessageTypeFlagsEXT messageType,
               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-              void* const pUserData) {
+              const void* pUserData) {
   std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
   return VK_FALSE;
 }
@@ -36,7 +36,8 @@ static void populateDebugMessengerCreateInfo(
   createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-  createInfo.pfnUserCallback = debugCallback;
+  createInfo.pfnUserCallback =
+      reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(debugCallback);
 }
 
 static VkResult CreateDebugUtilsMessengerEXT(
@@ -84,8 +85,8 @@ static bool checkValidationLayerSupport() {
 
 static void getRequiredExtensions(std::vector<const char*>& extensions) {
   uint32_t glfwExtensionCount = 0;
-  const char** glfwExtensions;
-  glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+  const char** glfwExtensions =
+      glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
   extensions.assign(glfwExtensions, glfwExtensions + glfwExtensionCount);
   if (enableValidationLayers) {
     extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -94,8 +95,7 @@ static void getRequiredExtensions(std::vector<const char*>& extensions) {
 
 static constexpr uint32_t makeVersion(uint32_t major, uint32_t minor,
                                       uint32_t patch) {
-  return (static_cast<uint32_t>(major) << 22) |
-         (static_cast<uint32_t>(minor) << 12) | static_cast<uint32_t>(patch);
+  return (major << 22) | (minor << 12) | patch;
 }
 
 static VkInstance createInstance() {
@@ -109,7 +109,7 @@ static VkInstance createInstance() {
   appInfo.applicationVersion = makeVersion(1, 0, 0);
   appInfo.pEngineName = "No Engine";
   appInfo.engineVersion = makeVersion(1, 0, 0);
-  appInfo.apiVersion = makeVersion(1, 3, 0);  // VK_API_VERSION_1_3
+  appInfo.apiVersion = makeVersion(1, 3, 0);
 
   VkInstanceCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -130,26 +130,24 @@ static VkInstance createInstance() {
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
     populateDebugMessengerCreateInfo(debugCreateInfo);
     createInfo.pNext = &debugCreateInfo;
-
-    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create instance!");
-    }
   } else {
     createInfo.enabledLayerCount = 0;
     createInfo.pNext = nullptr;
+  }
 
-    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create instance!");
-    }
+  if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create instance!");
   }
 
   return instance;
 }
 
 static VkDebugUtilsMessengerEXT setupDebugMessenger(VkInstance instance) {
-  if (!enableValidationLayers) return VK_NULL_HANDLE;
+  if (!enableValidationLayers) {
+    return VK_NULL_HANDLE;
+  }
 
-  VkDebugUtilsMessengerCreateInfoEXT createInfo;
+  VkDebugUtilsMessengerCreateInfoEXT createInfo{};
   populateDebugMessengerCreateInfo(createInfo);
 
   VkDebugUtilsMessengerEXT debugMessenger;

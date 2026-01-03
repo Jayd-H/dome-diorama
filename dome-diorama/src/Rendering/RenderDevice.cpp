@@ -2,12 +2,12 @@
 
 #include <stdexcept>
 
-RenderDevice::RenderDevice(VkDevice device, VkPhysicalDevice physicalDevice,
-                           VkCommandPool commandPool, VkQueue graphicsQueue)
-    : device(device),
-      physicalDevice(physicalDevice),
-      commandPool(commandPool),
-      graphicsQueue(graphicsQueue) {}
+RenderDevice::RenderDevice(VkDevice inDevice, VkPhysicalDevice inPhysicalDevice,
+                           VkCommandPool inCommandPool, VkQueue inGraphicsQueue)
+    : device(inDevice),
+      physicalDevice(inPhysicalDevice),
+      commandPool(inCommandPool),
+      graphicsQueue(inGraphicsQueue) {}
 
 void RenderDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                                 VkMemoryPropertyFlags properties,
@@ -42,7 +42,7 @@ void RenderDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 
 void RenderDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,
                               VkDeviceSize size) {
-  VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+  VkCommandBuffer const commandBuffer = beginSingleTimeCommands();
 
   VkBufferCopy copyRegion{};
   copyRegion.size = size;
@@ -52,13 +52,14 @@ void RenderDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,
 }
 
 uint32_t RenderDevice::findMemoryType(uint32_t typeFilter,
-                                      VkMemoryPropertyFlags properties) {
+                                      VkMemoryPropertyFlags properties) const {
   VkPhysicalDeviceMemoryProperties memProperties;
   vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
   for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-    if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags &
-                                    properties) == properties) {
+    if ((typeFilter & (1u << i)) &&
+        (memProperties.memoryTypes[i].propertyFlags & properties) ==
+            properties) {
       return i;
     }
   }
@@ -66,7 +67,7 @@ uint32_t RenderDevice::findMemoryType(uint32_t typeFilter,
   throw std::runtime_error("Failed to find suitable memory type!");
 }
 
-VkCommandBuffer RenderDevice::beginSingleTimeCommands() {
+VkCommandBuffer RenderDevice::beginSingleTimeCommands() const {
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -85,7 +86,7 @@ VkCommandBuffer RenderDevice::beginSingleTimeCommands() {
   return commandBuffer;
 }
 
-void RenderDevice::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
+void RenderDevice::endSingleTimeCommands(VkCommandBuffer commandBuffer) const {
   vkEndCommandBuffer(commandBuffer);
 
   VkSubmitInfo submitInfo{};

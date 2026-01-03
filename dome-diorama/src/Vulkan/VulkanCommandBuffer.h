@@ -28,9 +28,9 @@ inline VkCommandPool createCommandPool(VkDevice device,
   return commandPool;
 }
 
-inline std::vector<VkCommandBuffer> createCommandBuffers(
-    VkDevice device, VkCommandPool commandPool, int maxFramesInFlight) {
-  std::vector<VkCommandBuffer> commandBuffers;
+inline void createCommandBuffers(VkDevice device, VkCommandPool commandPool,
+                                 uint32_t maxFramesInFlight,
+                                 std::vector<VkCommandBuffer>& commandBuffers) {
   commandBuffers.resize(maxFramesInFlight);
 
   VkCommandBufferAllocateInfo allocInfo{};
@@ -43,8 +43,6 @@ inline std::vector<VkCommandBuffer> createCommandBuffers(
       VK_SUCCESS) {
     throw std::runtime_error("Failed to allocate command buffers!");
   }
-
-  return commandBuffers;
 }
 
 }  // namespace Vulkan

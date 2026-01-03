@@ -166,8 +166,8 @@ void Application::initVulkan() {
                                MAX_FRAMES_IN_FLIGHT, descriptorSets);
 
   Debug::log(Debug::Category::VULKAN, "Creating command buffers...");
-  commandBuffers =
-      Vulkan::createCommandBuffers(device, commandPool, MAX_FRAMES_IN_FLIGHT);
+  Vulkan::createCommandBuffers(device, commandPool, MAX_FRAMES_IN_FLIGHT,
+                               commandBuffers);
 
   Debug::log(Debug::Category::VULKAN, "Creating sync objects...");
   Vulkan::createSyncObjects(device, MAX_FRAMES_IN_FLIGHT,
@@ -599,14 +599,16 @@ void Application::createDepthResources() {
 
 void Application::framebufferResizeCallback(GLFWwindow* win, int width,
                                             int height) {
-  auto* app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
+  auto* const app =
+      reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
   app->framebufferResized = true;
 }
 
 void Application::keyCallback(GLFWwindow* win, int key, int scancode,
                               int action, int mods) {
   if (win == nullptr) return;
-  auto* app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
+  auto* const app =
+      reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
   app->input.onKey(key, scancode, action, mods);
 
   if (action == GLFW_PRESS) {
@@ -640,13 +642,15 @@ void Application::keyCallback(GLFWwindow* win, int key, int scancode,
 }
 
 void Application::cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
-  auto* app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
+  auto* const app =
+      reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
   app->input.onMouseMove(xpos, ypos);
 }
 
 void Application::mouseButtonCallback(GLFWwindow* win, int button, int action,
                                       int mods) {
-  auto* app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
+  auto* const const app =
+      reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
   app->input.onMouseButton(button, action, mods);
 }
 
@@ -1047,7 +1051,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
       if (!object.visible) continue;
       if (object.meshID == INVALID_MESH_ID) continue;
 
-      const Mesh* mesh = meshManager->getMesh(object.meshID);
+      const Mesh* const mesh = meshManager->getMesh(object.meshID);
       if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
 
       shadowPush.model = object.getModelMatrix();
@@ -1123,8 +1127,9 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     if (object.meshID == INVALID_MESH_ID) continue;
     if (object.materialID == INVALID_MATERIAL_ID) continue;
 
-    const Mesh* mesh = meshManager->getMesh(object.meshID);
-    const Material* material = materialManager->getMaterial(object.materialID);
+    const Mesh* const mesh = meshManager->getMesh(object.meshID);
+    const Material* const material =
+        materialManager->getMaterial(object.materialID);
 
     if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
@@ -1242,7 +1247,7 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
                " SwaySpeed: ", windData.swaySpeed);
   }
 
-  for (size_t idx : plantObjectIndicesSet) {
+  for (size_t const idx : plantObjectIndicesSet) {
     if (idx >= sceneObjects.size()) continue;
 
     const Object& object = sceneObjects[idx];
@@ -1250,8 +1255,9 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
     if (object.meshID == INVALID_MESH_ID) continue;
     if (object.materialID == INVALID_MATERIAL_ID) continue;
 
-    const Mesh* mesh = meshManager->getMesh(object.meshID);
-    const Material* material = materialManager->getMaterial(object.materialID);
+    const Mesh* const mesh = meshManager->getMesh(object.meshID);
+    const Material* const material =
+        materialManager->getMaterial(object.materialID);
 
     if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
