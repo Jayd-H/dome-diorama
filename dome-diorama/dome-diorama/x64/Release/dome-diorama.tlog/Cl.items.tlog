@@ -1,4 +1,4 @@
-D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Scene\LightManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\LightManager.obj
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Application.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\Application.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\main.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\main.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Resources\MaterialManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\MaterialManager.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Resources\MeshManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\MeshManager.obj
@@ -7,4 +7,4 @@ D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Scene\PlantManage
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Rendering\PostProcessing.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\PostProcessing.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Rendering\RenderDevice.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\RenderDevice.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Resources\TextureManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\TextureManager.obj
-D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Scene\WorldState.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\WorldState.obj
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Util\ConfigParser.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\ConfigParser.obj

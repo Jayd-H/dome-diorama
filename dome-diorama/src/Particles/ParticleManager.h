@@ -44,9 +44,9 @@ class ParticleManager {
   void* instanceBufferMapped;
   VkDeviceSize instanceBufferSize;
 
-  std::vector<VkBuffer> shaderParamsBuffers;
-  std::vector<VkDeviceMemory> shaderParamsMemory;
-  std::vector<void*> shaderParamsMapped;
+  std::vector<std::vector<VkBuffer>> shaderParamsBuffers;
+  std::vector<std::vector<VkDeviceMemory>> shaderParamsMemory;
+  std::vector<std::vector<void*>> shaderParamsMapped;
 
   VkDescriptorSetLayout materialDescriptorSetLayout;
   VkDescriptorSetLayout particleParamsLayout;

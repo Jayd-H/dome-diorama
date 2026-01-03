@@ -31,7 +31,11 @@ void main() {
     vec2 coord = fragTexCoord * 2.0 - 1.0;
     float dist = length(coord);
     
-    float alpha = 1.0 - smoothstep(0.0, 1.0, dist);
+    if (dist > 1.0) {
+        discard;
+    }
+    
+    float alpha = 1.0 - smoothstep(0.8, 1.0, dist);
     
     float fadeIn = min(1.0, fragLifeRatio / params.fadeInDuration);
     float fadeOut = min(1.0, (1.0 - fragLifeRatio) / params.fadeOutDuration);

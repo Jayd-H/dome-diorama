@@ -68,6 +68,13 @@ class Camera final {
     }
   }
 
+  inline glm::vec3 getPosition() const {
+    if (mode == CameraMode::ORBIT) {
+      return lastOrbitPosition;
+    }
+    return fpsPosition;
+  }
+
  private:
   inline void updateOrbitMode(const Input& input, float deltaTime) {
     static_cast<void>(deltaTime);

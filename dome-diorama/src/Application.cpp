@@ -455,14 +455,7 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
       50000.0f);
   ubo.proj[1][1] *= -1;
 
-  glm::vec3 camPos = glm::vec3(0.0f);
-  if (camera.getMode() == CameraMode::ORBIT) {
-    const float camX = 35.0f * sin(0.5f) * cos(0.0f);
-    const float camY = 35.0f * cos(0.5f);
-    const float camZ = 35.0f * sin(0.5f) * sin(0.0f);
-    camPos = glm::vec3(camX, camY, camZ);
-  }
-  ubo.eyePos = camPos;
+  ubo.eyePos = camera.getPosition();
   ubo.time = time;
 
   const auto& shadowMaps = lightManager->getShadowSystem()->getShadowMaps();

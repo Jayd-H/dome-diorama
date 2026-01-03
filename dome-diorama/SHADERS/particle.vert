@@ -107,9 +107,10 @@ void main() {
     float cosRot = cos(rotation);
     float sinRot = sin(rotation);
     
+    vec2 quadPos = vec2(inPosition.x, inPosition.y);
     vec2 rotatedPos = vec2(
-        inPosition.x * cosRot - inPosition.y * sinRot,
-        inPosition.x * sinRot + inPosition.y * cosRot
+        quadPos.x * cosRot - quadPos.y * sinRot,
+        quadPos.x * sinRot + quadPos.y * cosRot
     );
     
     vec3 billboardPos = particlePos + (right * rotatedPos.x + up * rotatedPos.y) * scale;
