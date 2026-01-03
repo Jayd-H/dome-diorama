@@ -306,7 +306,7 @@ void ParticleManager::createParticleDescriptorPool(size_t frameCount) {
   Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Creating particle descriptor pool");
 
-  const uint32_t maxEmitters = 500;
+  const uint32_t maxEmitters = 2000;
 
   VkDescriptorPoolSize poolSize{};
   poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

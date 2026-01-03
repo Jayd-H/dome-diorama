@@ -22,7 +22,12 @@ class PlantManager;
 class Plant final {
  public:
   Plant(size_t objIndex, PlantType t, int s, int v)
-      : state_(), objectIndex_(objIndex), type_(t), stage_(s), variant_(v) {}
+      : state_(),
+        objectIndex_(objIndex),
+        type_(t),
+        stage_(s),
+        variant_(v),
+        burnRevertTime_(0.0f) {}
 
   size_t getObjectIndex() const { return objectIndex_; }
   PlantType getType() const { return type_; }
@@ -44,6 +49,7 @@ class Plant final {
   PlantType type_;
   int stage_;
   int variant_;
+  float burnRevertTime_;
 };
 
 struct PlantSpawnConfig {
@@ -102,6 +108,8 @@ class PlantManager final {
     return plantObjectIndices;
   }
 
+  void setTerrainMesh(const Mesh* mesh) { terrainMesh = mesh; }
+
  private:
   std::mt19937 rng;
   std::vector<std::vector<MeshID>> cactusMeshes;
@@ -115,6 +123,7 @@ class PlantManager final {
   MeshManager* meshManager;
   MaterialManager* materialManager;
   ParticleManager* particleManager = nullptr;
+  const Mesh* terrainMesh = nullptr;
 
   float totalTime = 0.0f;
   MaterialID fireMaterialID = INVALID_MATERIAL_ID;
@@ -138,8 +147,13 @@ class PlantManager final {
   void updatePlantFire(Plant& plant, std::vector<Object>& sceneObjects,
                        size_t plantIndex,
                        const EnvironmentConditions& conditions);
+  void updatePlantSpreading(Plant& plant, std::vector<Object>& sceneObjects,
+                            size_t plantIndex,
+                            const EnvironmentConditions& conditions);
   void checkFireSpread(std::vector<Object>& sceneObjects);
   void startFire(Plant& plant, const glm::vec3& position);
   void extinguishFire(Plant& plant);
   void killPlant(Plant& plant, std::vector<Object>& sceneObjects);
+  void spawnOffspring(std::vector<Object>& sceneObjects, const Plant& parent,
+                      const glm::vec3& parentPos);
 };

@@ -150,6 +150,7 @@ std::vector<Object> createScene(const ConfigParser& config,
 
   plantManager->setParticleManager(particleManager);
   plantManager->setFireMaterialID(particleMaterialID);
+  plantManager->setTerrainMesh(terrainMesh);
 
   plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
 
