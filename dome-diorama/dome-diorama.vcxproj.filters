@@ -80,6 +80,9 @@
     <CustomBuild Include="SHADERS\skybox.vert">
       <Filter>Shaders</Filter>
     </CustomBuild>
+    <CustomBuild Include="SHADERS\plant.vert">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Util\Input.h">
@@ -188,6 +191,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Util\ConfigParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Scene\PlantState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\PushConstants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

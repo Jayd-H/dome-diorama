@@ -2,6 +2,7 @@
 #include <vulkan/vulkan.h>
 
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 #include "Particles/ParticleManager.h"
@@ -19,6 +20,8 @@
 #include "Scene/WorldState.h"
 #include "Util/Camera.h"
 #include "Util/Input.h"
+#include "Rendering/PushConstants.h"
+#include "Scene/PlantState.h"
 
 constexpr uint32_t WIDTH = 800;
 constexpr uint32_t HEIGHT = 600;
@@ -144,6 +147,13 @@ class Application final {
   void createDepthResources();
   void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
   void updateUniformBuffer(uint32_t currentImage);
+
+  void renderPlants(VkCommandBuffer commandBuffer, uint32_t currentFrame);
+  std::unordered_set<size_t> plantObjectIndicesSet;
+  VkPipeline plantPipeline = VK_NULL_HANDLE;
+  VkPipelineLayout plantPipelineLayout = VK_NULL_HANDLE;
+  void createPlantPipeline();
+
 
   void recreateTextureSamplers(VkFilter magFilter, VkFilter minFilter);
   void toggleShadingMode();

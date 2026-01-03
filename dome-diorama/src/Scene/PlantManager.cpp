@@ -5,19 +5,31 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 
+#include "Particles/FireEmitter.h"
+#include "Particles/ParticleManager.h"
 #include "Util/Debug.h"
 
 PlantManager::PlantManager(MeshManager* meshMgr, MaterialManager* materialMgr)
     : meshManager(meshMgr),
       materialManager(materialMgr),
+      particleManager(nullptr),
+      fireMaterialID(INVALID_MATERIAL_ID),
       cactusMeshes(3),
-      cactusMaterials(3) {
+      cactusMaterials(3),
+      windData{} {
   Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Constructor called");
+
+  windData.windDirection = glm::vec3(1.0f, 0.0f, 0.0f);
+  windData.windStrength = 1.0f;
+  windData.time = 0.0f;
+  windData.swayAmount = 0.15f;
+  windData.swaySpeed = 2.0f;
 }
 
 PlantManager::~PlantManager() noexcept {
   try {
-    Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Destructor called");
+    Debug::log(Debug::Category::PLANTMANAGER,
+               "PlantManager: Destructor called");
   } catch (...) {
   }
 }
@@ -33,7 +45,8 @@ void PlantManager::init() {
 }
 
 void PlantManager::loadCactiModels() {
-  Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Loading cactus models");
+  Debug::log(Debug::Category::PLANTMANAGER,
+             "PlantManager: Loading cactus models");
 
   struct CactusModelPair {
     std::string objPath;
@@ -74,7 +87,8 @@ void PlantManager::loadCactiModels() {
 }
 
 void PlantManager::loadTreeModels() {
-  Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Loading tree models");
+  Debug::log(Debug::Category::PLANTMANAGER,
+             "PlantManager: Loading tree models");
 
   for (int i = 1; i <= 8; i++) {
     const std::string objPath =
@@ -202,6 +216,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
                                  .build();
 
     sceneObjects.push_back(cactusObj);
+    plantObjectIndices.push_back(sceneObjects.size() - 1);
     plants.emplace_back(sceneObjects.size() - 1, PlantType::Cactus, stage,
                         variant);
   }
@@ -257,11 +272,12 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
                                .build();
 
     sceneObjects.push_back(treeObj);
+    plantObjectIndices.push_back(sceneObjects.size() - 1);
     plants.emplace_back(sceneObjects.size() - 1, PlantType::Tree, stage, 0);
   }
 
-  Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Successfully spawned ",
-             plants.size(), " plants");
+  Debug::log(Debug::Category::PLANTMANAGER,
+             "PlantManager: Successfully spawned ", plants.size(), " plants");
 }
 
 float PlantManager::calculateMeshBottomOffset(const Mesh* mesh) const {
@@ -287,6 +303,9 @@ void PlantManager::growPlant(std::vector<Object>& sceneObjects,
   }
 
   Plant& plant = plants[plantIndex];
+
+  if (plant.getState().isDead) return;
+
   Object& obj = sceneObjects[plant.getObjectIndex()];
 
   if (plant.getType() == PlantType::Cactus) {
@@ -310,4 +329,319 @@ void PlantManager::growPlant(std::vector<Object>& sceneObjects,
                  "PlantManager: Tree grew to stage ", plant.getStage());
     }
   }
+}
+
+void PlantManager::shrinkPlant(std::vector<Object>& sceneObjects,
+                               size_t plantIndex) {
+  if (plantIndex >= plants.size()) {
+    return;
+  }
+
+  Plant& plant = plants[plantIndex];
+
+  if (plant.getState().isDead) return;
+
+  Object& obj = sceneObjects[plant.getObjectIndex()];
+
+  if (plant.getStage() > 0) {
+    plant.setStage(plant.getStage() - 1);
+
+    if (plant.getType() == PlantType::Cactus) {
+      int variant = plant.getVariant();
+      if (variant >= static_cast<int>(cactusMeshes[plant.getStage()].size())) {
+        variant = 0;
+        plant.setVariant(variant);
+      }
+      obj.setMesh(cactusMeshes[plant.getStage()][variant]);
+      obj.setMaterial(cactusMaterials[plant.getStage()][variant]);
+    } else {
+      obj.setMesh(treeMeshes[plant.getStage()]);
+      obj.setMaterial(treeMaterials[plant.getStage()]);
+    }
+
+    Debug::log(Debug::Category::PLANTMANAGER,
+               "PlantManager: Plant shrunk to stage ", plant.getStage());
+  } else {
+    killPlant(plant, sceneObjects);
+  }
+}
+
+void PlantManager::updateEnvironment(std::vector<Object>& sceneObjects,
+                                     const EnvironmentConditions& conditions) {
+  totalTime += conditions.deltaTime;
+
+  windData.windDirection = glm::normalize(conditions.windDirection);
+  windData.windStrength = conditions.windStrength;
+  windData.time = totalTime;
+  windData.swayAmount = 0.15f;
+  windData.swaySpeed = 2.0f + conditions.windStrength * 0.5f;
+
+  for (size_t i = 0; i < plants.size(); ++i) {
+    Plant& plant = plants[i];
+
+    if (plant.getState().isDead) continue;
+
+    updatePlantHealth(plant, conditions);
+    updatePlantFire(plant, sceneObjects, conditions);
+    updatePlantGrowth(plant, sceneObjects, conditions);
+  }
+
+  checkFireSpread(sceneObjects);
+}
+
+void PlantManager::updatePlantHealth(Plant& plant,
+                                     const EnvironmentConditions& conditions) {
+  PlantState& state = plant.getState();
+
+  if (conditions.precipitationIntensity > 0.1f) {
+    state.waterLevel += PlantState::RAIN_WATER_RATE *
+                        conditions.precipitationIntensity *
+                        conditions.deltaTime;
+    state.waterLevel = std::min(state.waterLevel, 100.0f);
+  }
+
+  float drainMultiplier = 1.0f;
+  if (conditions.temperature > 30.0f) {
+    drainMultiplier = 1.0f + (conditions.temperature - 30.0f) * 0.1f;
+  }
+  state.waterLevel -=
+      PlantState::WATER_DRAIN_RATE * drainMultiplier * conditions.deltaTime;
+  state.waterLevel = std::max(state.waterLevel, 0.0f);
+
+  if (state.waterLevel < 10.0f) {
+    state.health -= 5.0f * conditions.deltaTime;
+  }
+
+  if (conditions.temperature > PlantState::HEAT_DAMAGE_THRESHOLD &&
+      !state.isOnFire) {
+    float heatDamageChance =
+        (conditions.temperature - PlantState::HEAT_DAMAGE_THRESHOLD) * 0.01f;
+
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    if (dist(rng) < heatDamageChance * conditions.deltaTime) {
+      state.health -= 2.0f;
+
+      if (conditions.temperature > 40.0f && state.waterLevel < 30.0f) {
+        float fireChance = (conditions.temperature - 40.0f) * 0.005f;
+        if (dist(rng) < fireChance * conditions.deltaTime) {
+          Object& obj = const_cast<std::vector<Object>&>(
+              std::vector<Object>{})[plant.getObjectIndex()];
+        }
+      }
+    }
+  }
+
+  state.health = std::max(0.0f, std::min(PlantState::MAX_HEALTH, state.health));
+}
+
+void PlantManager::updatePlantGrowth(Plant& plant,
+                                     std::vector<Object>& sceneObjects,
+                                     const EnvironmentConditions& conditions) {
+  PlantState& state = plant.getState();
+
+  if (state.isOnFire || state.isDead) return;
+
+  float growthRate = 0.0f;
+
+  if (conditions.temperature >= PlantState::OPTIMAL_TEMP_MIN &&
+      conditions.temperature <= PlantState::OPTIMAL_TEMP_MAX) {
+    growthRate = 1.0f;
+  } else if (conditions.temperature < PlantState::OPTIMAL_TEMP_MIN) {
+    float coldFactor = (conditions.temperature - PlantState::OPTIMAL_TEMP_MIN) /
+                       PlantState::OPTIMAL_TEMP_MIN;
+    growthRate = std::max(0.0f, 1.0f + coldFactor);
+  } else {
+    float heatFactor =
+        (conditions.temperature - PlantState::OPTIMAL_TEMP_MAX) / 20.0f;
+    growthRate = std::max(0.0f, 1.0f - heatFactor);
+  }
+
+  if (state.waterLevel > 30.0f) {
+    growthRate *= 1.0f + (state.waterLevel - 30.0f) * 0.01f;
+  } else {
+    growthRate *= state.waterLevel / 30.0f;
+  }
+
+  if (conditions.precipitationIntensity > 0.3f) {
+    growthRate *= 1.5f;
+  }
+
+  state.growthProgress += growthRate * conditions.deltaTime;
+
+  if (state.growthProgress >= PlantState::GROWTH_THRESHOLD) {
+    state.growthProgress = 0.0f;
+
+    size_t plantIndex = 0;
+    for (size_t i = 0; i < plants.size(); ++i) {
+      if (&plants[i] == &plant) {
+        plantIndex = i;
+        break;
+      }
+    }
+
+    if (plant.getStage() < plant.getMaxStage()) {
+      growPlant(sceneObjects, plantIndex);
+    }
+  }
+}
+
+void PlantManager::updatePlantFire(Plant& plant,
+                                   std::vector<Object>& sceneObjects,
+                                   const EnvironmentConditions& conditions) {
+  PlantState& state = plant.getState();
+
+  if (!state.isOnFire) {
+    if (conditions.temperature > 40.0f && state.waterLevel < 20.0f) {
+      float fireChance = (conditions.temperature - 40.0f) * 0.001f *
+                         (1.0f - state.waterLevel / 20.0f);
+
+      std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+      if (dist(rng) < fireChance * conditions.deltaTime) {
+        const Object& obj = sceneObjects[plant.getObjectIndex()];
+        startFire(plant, obj.position);
+      }
+    }
+    return;
+  }
+
+  if (conditions.precipitationIntensity > 0.5f) {
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    if (dist(rng) < conditions.precipitationIntensity * conditions.deltaTime) {
+      extinguishFire(plant);
+      return;
+    }
+  }
+
+  state.burnTimer += conditions.deltaTime;
+  state.health -= PlantState::BURN_DAMAGE_PER_SECOND * conditions.deltaTime;
+
+  if (state.burnTimer >= 5.0f) {
+    state.burnTimer = 0.0f;
+
+    size_t plantIndex = 0;
+    for (size_t i = 0; i < plants.size(); ++i) {
+      if (&plants[i] == &plant) {
+        plantIndex = i;
+        break;
+      }
+    }
+
+    shrinkPlant(sceneObjects, plantIndex);
+  }
+
+  if (state.health <= 0.0f || plant.getStage() < 0) {
+    extinguishFire(plant);
+    killPlant(plant, sceneObjects);
+  }
+}
+
+void PlantManager::checkFireSpread(std::vector<Object>& sceneObjects) {
+  std::vector<size_t> plantsToIgnite;
+
+  for (size_t i = 0; i < plants.size(); ++i) {
+    const Plant& plant = plants[i];
+    const PlantState& state = plant.getState();
+
+    if (!state.isOnFire || state.isDead) continue;
+
+    const Object& burningObj = sceneObjects[plant.getObjectIndex()];
+
+    for (size_t j = 0; j < plants.size(); ++j) {
+      if (i == j) continue;
+
+      Plant& otherPlant = plants[j];
+      PlantState& otherState = otherPlant.getState();
+
+      if (otherState.isOnFire || otherState.isDead) continue;
+
+      const Object& otherObj = sceneObjects[otherPlant.getObjectIndex()];
+
+      float distance = glm::length(burningObj.position - otherObj.position);
+
+      if (distance < PlantState::FIRE_SPREAD_RADIUS) {
+        float spreadChance =
+            (1.0f - distance / PlantState::FIRE_SPREAD_RADIUS) * 0.1f *
+            (1.0f - otherState.waterLevel / 100.0f);
+
+        std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+        if (dist(rng) < spreadChance) {
+          plantsToIgnite.push_back(j);
+        }
+      }
+    }
+  }
+
+  for (size_t idx : plantsToIgnite) {
+    Plant& plant = plants[idx];
+    if (!plant.getState().isOnFire) {
+      const Object& obj = sceneObjects[plant.getObjectIndex()];
+      startFire(plant, obj.position);
+    }
+  }
+}
+
+void PlantManager::startFire(Plant& plant, const glm::vec3& position) {
+  PlantState& state = plant.getState();
+
+  if (state.isOnFire || state.isDead) return;
+
+  state.isOnFire = true;
+  state.burnTimer = 0.0f;
+
+  if (particleManager && fireMaterialID != INVALID_MATERIAL_ID) {
+    FireEmitter* fireEmitter =
+        FireEmitterBuilder()
+            .name("PlantFire_" + std::to_string(plant.getObjectIndex()))
+            .position(position + glm::vec3(0.0f, 1.0f, 0.0f))
+            .maxParticles(200)
+            .particleLifetime(1.5f)
+            .material(fireMaterialID)
+            .baseColor(1.0f, 0.8f, 0.2f)
+            .tipColor(1.0f, 0.2f, 0.0f)
+            .upwardSpeed(3.0f)
+            .spawnRadius(0.5f)
+            .particleScale(0.8f)
+            .build();
+
+    state.fireEmitterID = particleManager->registerEmitter(fireEmitter);
+
+    Debug::log(Debug::Category::PLANTMANAGER,
+               "PlantManager: Plant caught fire at position (", position.x,
+               ", ", position.y, ", ", position.z, ")");
+  }
+}
+
+void PlantManager::extinguishFire(Plant& plant) {
+  PlantState& state = plant.getState();
+
+  if (!state.isOnFire) return;
+
+  state.isOnFire = false;
+  state.burnTimer = 0.0f;
+
+  if (particleManager && state.fireEmitterID != INVALID_EMITTER_ID) {
+    ParticleEmitter* emitter = particleManager->getEmitter(state.fireEmitterID);
+    if (emitter) {
+      emitter->setActive(false);
+    }
+    state.fireEmitterID = INVALID_EMITTER_ID;
+
+    Debug::log(Debug::Category::PLANTMANAGER,
+               "PlantManager: Fire extinguished on plant");
+  }
+}
+
+void PlantManager::killPlant(Plant& plant, std::vector<Object>& sceneObjects) {
+  PlantState& state = plant.getState();
+
+  if (state.isDead) return;
+
+  state.isDead = true;
+  extinguishFire(plant);
+
+  Object& obj = sceneObjects[plant.getObjectIndex()];
+  obj.visible = false;
+
+  Debug::log(Debug::Category::PLANTMANAGER,
+             "PlantManager: Plant died and was removed");
 }
