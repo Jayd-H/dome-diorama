@@ -11,19 +11,15 @@ constexpr MaterialID INVALID_MATERIAL_ID = 0;
 
 struct MaterialProperties {
   glm::vec4 albedoColor = glm::vec4(1.0f);
-
   float roughness = 0.5f;
   float metallic = 0.0f;
   float emissiveIntensity = 0.0f;
   float opacity = 1.0f;
-
   float indexOfRefraction = 1.5f;
   float heightScale = 0.05f;
   float textureScale = 1.0f;
   float padding2 = 0.0f;
 };
-
-class MaterialBuilder;
 
 class Material final {
  public:
@@ -32,7 +28,22 @@ class Material final {
   Material& operator=(const Material&) = default;
   ~Material() = default;
 
-  friend class MaterialBuilder;
+  void reset() {
+    properties = MaterialProperties{};
+    albedoMap = INVALID_TEXTURE_ID;
+    normalMap = INVALID_TEXTURE_ID;
+    roughnessMap = INVALID_TEXTURE_ID;
+    metallicMap = INVALID_TEXTURE_ID;
+    emissiveMap = INVALID_TEXTURE_ID;
+    heightMap = INVALID_TEXTURE_ID;
+    aoMap = INVALID_TEXTURE_ID;
+    isTransparent = false;
+    doubleSided = false;
+  }
+
+  bool isValid() const {
+    return properties.opacity >= 0.0f && properties.opacity <= 1.0f;
+  }
 
   inline TextureID getAlbedoMap() const { return albedoMap; }
   inline void setAlbedoMap(TextureID id) { albedoMap = id; }
@@ -55,8 +66,9 @@ class Material final {
   inline TextureID getAoMap() const { return aoMap; }
   inline void setAoMap(TextureID id) { aoMap = id; }
 
-  inline const MaterialProperties& getProperties() const { return properties; }
-  inline MaterialProperties& getPropertiesMutable() { return properties; }
+  inline void getProperties(MaterialProperties& outProps) const {
+    outProps = properties;
+  }
   inline void setProperties(const MaterialProperties& props) {
     properties = props;
   }
@@ -79,7 +91,7 @@ class Material final {
   inline bool getDoubleSided() const { return doubleSided; }
   inline void setDoubleSided(bool value) { doubleSided = value; }
 
-  inline const std::string& getName() const { return name; }
+  inline void getName(std::string& outName) const { outName = name; }
   inline void setName(const std::string& newName) { name = newName; }
 
   inline VkDescriptorSet getDescriptorSet() const { return descriptorSet; }
@@ -107,15 +119,15 @@ class Material final {
 
 class MaterialBuilder final {
  public:
-  MaterialBuilder() { material.properties = MaterialProperties{}; }
+  MaterialBuilder() { material.setProperties(MaterialProperties{}); }
 
   MaterialBuilder& name(const std::string& n) {
-    material.name = n;
+    material.setName(n);
     return *this;
   }
 
   MaterialBuilder& albedoMap(TextureID id) {
-    material.albedoMap = id;
+    material.setAlbedoMap(id);
     return *this;
   }
 
@@ -126,17 +138,23 @@ class MaterialBuilder final {
   }
 
   MaterialBuilder& albedoColor(const glm::vec3& color) {
-    material.properties.albedoColor = glm::vec4(color, 1.0f);
+    MaterialProperties props;
+    material.getProperties(props);
+    props.albedoColor = glm::vec4(color, 1.0f);
+    material.setProperties(props);
     return *this;
   }
 
   MaterialBuilder& albedoColor(float r, float g, float b) {
-    material.properties.albedoColor = glm::vec4(r, g, b, 1.0f);
+    MaterialProperties props;
+    material.getProperties(props);
+    props.albedoColor = glm::vec4(r, g, b, 1.0f);
+    material.setProperties(props);
     return *this;
   }
 
   MaterialBuilder& normalMap(TextureID id) {
-    material.normalMap = id;
+    material.setNormalMap(id);
     return *this;
   }
 
@@ -147,7 +165,7 @@ class MaterialBuilder final {
   }
 
   MaterialBuilder& roughnessMap(TextureID id) {
-    material.roughnessMap = id;
+    material.setRoughnessMap(id);
     return *this;
   }
 
@@ -158,12 +176,15 @@ class MaterialBuilder final {
   }
 
   MaterialBuilder& roughness(float value) {
-    material.properties.roughness = value;
+    MaterialProperties props;
+    material.getProperties(props);
+    props.roughness = value;
+    material.setProperties(props);
     return *this;
   }
 
   MaterialBuilder& metallicMap(TextureID id) {
-    material.metallicMap = id;
+    material.setMetallicMap(id);
     return *this;
   }
 
@@ -174,12 +195,15 @@ class MaterialBuilder final {
   }
 
   MaterialBuilder& metallic(float value) {
-    material.properties.metallic = value;
+    MaterialProperties props;
+    material.getProperties(props);
+    props.metallic = value;
+    material.setProperties(props);
     return *this;
   }
 
   MaterialBuilder& emissiveMap(TextureID id) {
-    material.emissiveMap = id;
+    material.setEmissiveMap(id);
     return *this;
   }
 
@@ -190,12 +214,15 @@ class MaterialBuilder final {
   }
 
   MaterialBuilder& emissiveIntensity(float value) {
-    material.properties.emissiveIntensity = value;
+    MaterialProperties props;
+    material.getProperties(props);
+    props.emissiveIntensity = value;
+    material.setProperties(props);
     return *this;
   }
 
   MaterialBuilder& heightMap(TextureID id) {
-    material.heightMap = id;
+    material.setHeightMap(id);
     return *this;
   }
 
@@ -206,12 +233,15 @@ class MaterialBuilder final {
   }
 
   MaterialBuilder& heightScale(float value) {
-    material.properties.heightScale = value;
+    MaterialProperties props;
+    material.getProperties(props);
+    props.heightScale = value;
+    material.setProperties(props);
     return *this;
   }
 
   MaterialBuilder& aoMap(TextureID id) {
-    material.aoMap = id;
+    material.setAoMap(id);
     return *this;
   }
 
@@ -222,58 +252,73 @@ class MaterialBuilder final {
   }
 
   MaterialBuilder& transparent(bool enabled = true) {
-    material.isTransparent = enabled;
+    material.setIsTransparent(enabled);
     return *this;
   }
 
   MaterialBuilder& opacity(float value) {
-    material.properties.opacity = value;
+    MaterialProperties props;
+    material.getProperties(props);
+    props.opacity = value;
+    material.setProperties(props);
     return *this;
   }
 
   MaterialBuilder& indexOfRefraction(float ior) {
-    material.properties.indexOfRefraction = ior;
+    MaterialProperties props;
+    material.getProperties(props);
+    props.indexOfRefraction = ior;
+    material.setProperties(props);
     return *this;
   }
 
   MaterialBuilder& doubleSided(bool enabled = true) {
-    material.doubleSided = enabled;
+    material.setDoubleSided(enabled);
     return *this;
   }
 
   MaterialBuilder& textureScale(float value) {
-    material.properties.textureScale = value;
+    MaterialProperties props;
+    material.getProperties(props);
+    props.textureScale = value;
+    material.setProperties(props);
     return *this;
   }
 
   Material* build() const { return new Material(material); }
 
   inline bool getHasAlbedoTexture() const { return hasAlbedoTexture; }
-  inline const std::string& getAlbedoFilepath() const { return albedoFilepath; }
+  inline void getAlbedoFilepath(std::string& out) const {
+    out = albedoFilepath;
+  }
 
   inline bool getHasNormalTexture() const { return hasNormalTexture; }
-  inline const std::string& getNormalFilepath() const { return normalFilepath; }
+  inline void getNormalFilepath(std::string& out) const {
+    out = normalFilepath;
+  }
 
   inline bool getHasRoughnessTexture() const { return hasRoughnessTexture; }
-  inline const std::string& getRoughnessFilepath() const {
-    return roughnessFilepath;
+  inline void getRoughnessFilepath(std::string& out) const {
+    out = roughnessFilepath;
   }
 
   inline bool getHasMetallicTexture() const { return hasMetallicTexture; }
-  inline const std::string& getMetallicFilepath() const {
-    return metallicFilepath;
+  inline void getMetallicFilepath(std::string& out) const {
+    out = metallicFilepath;
   }
 
   inline bool getHasEmissiveTexture() const { return hasEmissiveTexture; }
-  inline const std::string& getEmissiveFilepath() const {
-    return emissiveFilepath;
+  inline void getEmissiveFilepath(std::string& out) const {
+    out = emissiveFilepath;
   }
 
   inline bool getHasHeightTexture() const { return hasHeightTexture; }
-  inline const std::string& getHeightFilepath() const { return heightFilepath; }
+  inline void getHeightFilepath(std::string& out) const {
+    out = heightFilepath;
+  }
 
   inline bool getHasAOTexture() const { return hasAOTexture; }
-  inline const std::string& getAoFilepath() const { return aoFilepath; }
+  inline void getAoFilepath(std::string& out) const { out = aoFilepath; }
 
  private:
   std::string albedoFilepath;

@@ -2,14 +2,17 @@
 
 #include <array>
 #include <fstream>
+#include <functional>
 #include <sstream>
 
 #include "Util/Debug.h"
 
-MaterialManager::MaterialManager(RenderDevice* renderDevice,
-                                 TextureManager* textureManager)
-    : renderDevice(renderDevice),
-      textureManager(textureManager),
+MaterialManager::MaterialManager(RenderDevice* rd, TextureManager* tm)
+    : mtlFilepathToID(),
+      materialNameToID(),
+      materials(),
+      renderDevice(rd),
+      textureManager(tm),
       descriptorSetLayout(VK_NULL_HANDLE),
       descriptorPool(VK_NULL_HANDLE),
       defaultMaterialID(0) {
@@ -17,18 +20,22 @@ MaterialManager::MaterialManager(RenderDevice* renderDevice,
 }
 
 MaterialManager::~MaterialManager() {
-  Debug::log(Debug::Category::MATERIALS, "MaterialManager: Destructor called");
-  cleanup();
+  try {
+    Debug::log(Debug::Category::MATERIALS,
+               "MaterialManager: Destructor called");
+    cleanup();
+  } catch (...) {
+  }
 }
 
-void MaterialManager::init(VkDescriptorSetLayout descriptorSetLayout,
-                           VkDescriptorPool descriptorPool) {
+void MaterialManager::init(VkDescriptorSetLayout descSetLayout,
+                           VkDescriptorPool descPool) {
   Debug::log(
       Debug::Category::MATERIALS,
       "MaterialManager: Initializing with descriptor set layout and pool");
 
-  this->descriptorSetLayout = descriptorSetLayout;
-  this->descriptorPool = descriptorPool;
+  descriptorSetLayout = descSetLayout;
+  descriptorPool = descPool;
 
   createDefaultMaterial();
 
@@ -44,9 +51,10 @@ MaterialID MaterialManager::registerMaterial(Material* material) {
     return defaultMaterialID;
   }
 
+  std::string matName;
+  material->getName(matName);
   Debug::log(Debug::Category::MATERIALS,
-             "MaterialManager: Registering material '", material->getName(),
-             "'");
+             "MaterialManager: Registering material '", matName, "'");
 
   if (material->getAlbedoMap() == INVALID_TEXTURE_ID) {
     material->setAlbedoMap(textureManager->getDefaultWhite());
@@ -86,46 +94,48 @@ MaterialID MaterialManager::registerMaterial(Material* material) {
 
   createDescriptorSet(material);
 
-  MaterialID id = static_cast<MaterialID>(materials.size());
+  const MaterialID id = static_cast<MaterialID>(materials.size());
   materials.push_back(std::unique_ptr<Material>(material));
 
   Debug::log(Debug::Category::MATERIALS,
-             "MaterialManager: Successfully registered material '",
-             material->getName(), "' with ID: ", id);
+             "MaterialManager: Successfully registered material '", matName,
+             "' with ID: ", id);
 
   return id;
 }
 
-MaterialID MaterialManager::registerMaterial(MaterialBuilder& builder) {
-  Material* material = builder.build();
+MaterialID MaterialManager::registerMaterial(const MaterialBuilder& builder) {
+  Material* const material = builder.build();
+
+  std::string path;
 
   if (builder.getHasAlbedoTexture()) {
-    material->setAlbedoMap(
-        textureManager->load(builder.getAlbedoFilepath(), TextureType::sRGB));
+    builder.getAlbedoFilepath(path);
+    material->setAlbedoMap(textureManager->load(path, TextureType::sRGB));
   }
   if (builder.getHasNormalTexture()) {
-    material->setNormalMap(
-        textureManager->load(builder.getNormalFilepath(), TextureType::Linear));
+    builder.getNormalFilepath(path);
+    material->setNormalMap(textureManager->load(path, TextureType::Linear));
   }
   if (builder.getHasRoughnessTexture()) {
-    material->setRoughnessMap(textureManager->load(
-        builder.getRoughnessFilepath(), TextureType::Linear));
+    builder.getRoughnessFilepath(path);
+    material->setRoughnessMap(textureManager->load(path, TextureType::Linear));
   }
   if (builder.getHasMetallicTexture()) {
-    material->setMetallicMap(textureManager->load(builder.getMetallicFilepath(),
-                                                  TextureType::Linear));
+    builder.getMetallicFilepath(path);
+    material->setMetallicMap(textureManager->load(path, TextureType::Linear));
   }
   if (builder.getHasEmissiveTexture()) {
-    material->setEmissiveMap(
-        textureManager->load(builder.getEmissiveFilepath(), TextureType::sRGB));
+    builder.getEmissiveFilepath(path);
+    material->setEmissiveMap(textureManager->load(path, TextureType::sRGB));
   }
   if (builder.getHasHeightTexture()) {
-    material->setHeightMap(
-        textureManager->load(builder.getHeightFilepath(), TextureType::Linear));
+    builder.getHeightFilepath(path);
+    material->setHeightMap(textureManager->load(path, TextureType::Linear));
   }
   if (builder.getHasAOTexture()) {
-    material->setAoMap(
-        textureManager->load(builder.getAoFilepath(), TextureType::Linear));
+    builder.getAoFilepath(path);
+    material->setAoMap(textureManager->load(path, TextureType::Linear));
   }
 
   return registerMaterial(material);
@@ -177,12 +187,14 @@ void MaterialManager::cleanup() {
 }
 
 void MaterialManager::createDescriptorSet(Material* material) {
+  std::string matName;
+  material->getName(matName);
   Debug::log(Debug::Category::MATERIALS,
-             "MaterialManager: Creating descriptor set for material '",
-             material->getName(), "'");
+             "MaterialManager: Creating descriptor set for material '", matName,
+             "'");
 
-  VkDevice device = renderDevice->getDevice();
-  VkDeviceSize bufferSize = sizeof(MaterialProperties);
+  const VkDevice device = renderDevice->getDevice();
+  const VkDeviceSize bufferSize = sizeof(MaterialProperties);
 
   VkBuffer buffer;
   VkDeviceMemory memory;
@@ -197,7 +209,9 @@ void MaterialManager::createDescriptorSet(Material* material) {
 
   void* data;
   vkMapMemory(device, memory, 0, bufferSize, 0, &data);
-  memcpy(data, &material->getProperties(), bufferSize);
+  MaterialProperties props;
+  material->getProperties(props);
+  memcpy(data, &props, bufferSize);
   vkUnmapMemory(device, memory);
 
   Debug::log(Debug::Category::MATERIALS, "  - Created properties buffer");
@@ -222,8 +236,8 @@ void MaterialManager::createDescriptorSet(Material* material) {
   Debug::log(Debug::Category::MATERIALS, "  - Updated descriptor set bindings");
 }
 
-void MaterialManager::updateDescriptorSet(Material* material) {
-  VkDevice device = renderDevice->getDevice();
+void MaterialManager::updateDescriptorSet(const Material* material) const {
+  const VkDevice device = renderDevice->getDevice();
 
   VkDescriptorBufferInfo bufferInfo{};
   bufferInfo.buffer = material->getPropertiesBuffer();
@@ -319,8 +333,24 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
   std::string currentMaterialName;
 
   auto extractFilename = [](const std::string& path) {
-    size_t lastSlash = path.find_last_of("/\\");
+    const size_t lastSlash = path.find_last_of("/\\");
     return (lastSlash != std::string::npos) ? path.substr(lastSlash + 1) : path;
+  };
+
+  auto finalizeMaterial = [&](Material* mat, const std::string& name) {
+    if (!mat) return;
+    auto nameIt = materialNameToID.find(name);
+    if (nameIt != materialNameToID.end()) {
+      Debug::log(Debug::Category::MATERIALS, "  - Material '", name,
+                 "' already exists with ID: ", nameIt->second, ", reusing");
+      loadedMaterials.push_back(nameIt->second);
+      delete mat;
+    } else {
+      const MaterialID id = registerMaterial(mat);
+      loadedMaterials.push_back(id);
+      materialNameToID[name] = id;
+      mtlFilepathToID[mtlFilepath + "::" + name] = id;
+    }
   };
 
   std::string line;
@@ -330,22 +360,7 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
     iss >> prefix;
 
     if (prefix == "newmtl") {
-      if (currentMaterial) {
-        auto nameIt = materialNameToID.find(currentMaterialName);
-        if (nameIt != materialNameToID.end()) {
-          Debug::log(Debug::Category::MATERIALS, "  - Material '",
-                     currentMaterialName,
-                     "' already exists with ID: ", nameIt->second, ", reusing");
-          loadedMaterials.push_back(nameIt->second);
-          delete currentMaterial;
-        } else {
-          MaterialID id = registerMaterial(currentMaterial);
-          loadedMaterials.push_back(id);
-          materialNameToID[currentMaterialName] = id;
-          mtlFilepathToID[mtlFilepath + "::" + currentMaterialName] = id;
-        }
-      }
-
+      finalizeMaterial(currentMaterial, currentMaterialName);
       iss >> currentMaterialName;
 
       auto nameIt = materialNameToID.find(currentMaterialName);
@@ -360,40 +375,46 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
 
       currentMaterial = new Material();
       currentMaterial->setName(currentMaterialName);
-
       Debug::log(Debug::Category::MATERIALS,
                  "  - Found material: ", currentMaterialName);
 
     } else if (currentMaterial) {
+      MaterialProperties props;
+      currentMaterial->getProperties(props);
+
       if (prefix == "Ns") {
         float ns;
         iss >> ns;
-        currentMaterial->getPropertiesMutable().roughness =
-            1.0f - (ns / 1000.0f);
+        props.roughness = 1.0f - (ns / 1000.0f);
+        currentMaterial->setProperties(props);
       } else if (prefix == "Ka") {
       } else if (prefix == "Kd") {
         float r, g, b;
         iss >> r >> g >> b;
-        currentMaterial->getPropertiesMutable().albedoColor =
-            glm::vec4(r, g, b, 1.0f);
+        props.albedoColor = glm::vec4(r, g, b, 1.0f);
+        currentMaterial->setProperties(props);
       } else if (prefix == "Ks") {
         float r, g, b;
         iss >> r >> g >> b;
-        float specular = (r + g + b) / 3.0f;
-        currentMaterial->getPropertiesMutable().metallic = specular;
+        const float specular = (r + g + b) / 3.0f;
+        props.metallic = specular;
+        currentMaterial->setProperties(props);
       } else if (prefix == "Ke") {
         float r, g, b;
         iss >> r >> g >> b;
-        float emission = (r + g + b) / 3.0f;
-        currentMaterial->getPropertiesMutable().emissiveIntensity = emission;
+        const float emission = (r + g + b) / 3.0f;
+        props.emissiveIntensity = emission;
+        currentMaterial->setProperties(props);
       } else if (prefix == "Ni") {
         float ior;
         iss >> ior;
-        currentMaterial->getPropertiesMutable().indexOfRefraction = ior;
+        props.indexOfRefraction = ior;
+        currentMaterial->setProperties(props);
       } else if (prefix == "d") {
         float opacity;
         iss >> opacity;
-        currentMaterial->getPropertiesMutable().opacity = opacity;
+        props.opacity = opacity;
+        currentMaterial->setProperties(props);
         if (opacity < 1.0f) {
           currentMaterial->setIsTransparent(true);
         }
@@ -402,70 +423,50 @@ MaterialID MaterialManager::loadFromMTL(const std::string& mtlFilepath) {
         std::string texPath;
         std::getline(iss, texPath);
         texPath = texPath.substr(texPath.find_first_not_of(" \t"));
-
         std::string filename = extractFilename(texPath);
         std::string fullPath = baseDir + "textures/" + filename;
-        TextureID texID = textureManager->load(fullPath, TextureType::sRGB);
+        const TextureID texID =
+            textureManager->load(fullPath, TextureType::sRGB);
         currentMaterial->setAlbedoMap(texID);
-
         Debug::log(Debug::Category::MATERIALS,
                    "    - Loaded albedo texture: ", fullPath);
       } else if (prefix == "map_Ks") {
         std::string texPath;
         std::getline(iss, texPath);
         texPath = texPath.substr(texPath.find_first_not_of(" \t"));
-
         std::string filename = extractFilename(texPath);
         std::string fullPath = baseDir + "textures/" + filename;
-        TextureID texID = textureManager->load(fullPath, TextureType::Linear);
+        const TextureID texID =
+            textureManager->load(fullPath, TextureType::Linear);
         currentMaterial->setMetallicMap(texID);
-
         Debug::log(Debug::Category::MATERIALS,
                    "    - Loaded specular texture: ", fullPath);
       } else if (prefix == "map_Bump" || prefix == "bump") {
         std::string texPath;
         std::getline(iss, texPath);
         texPath = texPath.substr(texPath.find_first_not_of(" \t"));
-
         std::string filename = extractFilename(texPath);
         std::string fullPath = baseDir + "textures/" + filename;
-        TextureID texID = textureManager->load(fullPath, TextureType::Linear);
+        const TextureID texID =
+            textureManager->load(fullPath, TextureType::Linear);
         currentMaterial->setNormalMap(texID);
-
         Debug::log(Debug::Category::MATERIALS,
                    "    - Loaded normal texture: ", fullPath);
       } else if (prefix == "map_d") {
         std::string texPath;
         std::getline(iss, texPath);
         texPath = texPath.substr(texPath.find_first_not_of(" \t"));
-
         std::string filename = extractFilename(texPath);
         std::string fullPath = baseDir + "textures/" + filename;
-        TextureID texID = textureManager->load(fullPath, TextureType::Linear);
-
+        textureManager->load(fullPath, TextureType::Linear);
         Debug::log(Debug::Category::MATERIALS,
                    "    - Found opacity texture: ", fullPath);
-
         currentMaterial->setIsTransparent(true);
       }
     }
   }
 
-  if (currentMaterial) {
-    auto nameIt = materialNameToID.find(currentMaterialName);
-    if (nameIt != materialNameToID.end()) {
-      Debug::log(Debug::Category::MATERIALS, "  - Material '",
-                 currentMaterialName,
-                 "' already exists with ID: ", nameIt->second, ", reusing");
-      loadedMaterials.push_back(nameIt->second);
-      delete currentMaterial;
-    } else {
-      MaterialID id = registerMaterial(currentMaterial);
-      loadedMaterials.push_back(id);
-      materialNameToID[currentMaterialName] = id;
-      mtlFilepathToID[mtlFilepath + "::" + currentMaterialName] = id;
-    }
-  }
+  finalizeMaterial(currentMaterial, currentMaterialName);
 
   file.close();
 
@@ -487,12 +488,15 @@ void MaterialManager::createDefaultMaterial() {
   Debug::log(Debug::Category::MATERIALS,
              "MaterialManager: Creating default material");
 
-  Material* defaultMat = new Material();
+  Material* const defaultMat = new Material();
   defaultMat->setName("Default Material");
-  defaultMat->getPropertiesMutable().albedoColor =
-      glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
-  defaultMat->getPropertiesMutable().roughness = 0.5f;
-  defaultMat->getPropertiesMutable().metallic = 0.0f;
+
+  MaterialProperties props;
+  defaultMat->getProperties(props);
+  props.albedoColor = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
+  props.roughness = 0.5f;
+  props.metallic = 0.0f;
+  defaultMat->setProperties(props);
 
   defaultMaterialID = registerMaterial(defaultMat);
 

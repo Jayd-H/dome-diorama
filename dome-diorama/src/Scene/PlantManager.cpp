@@ -187,7 +187,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
     const float scaleY = baseScale + scaleVarianceY;
     const float scaleZ = baseScale + scaleVarianceZ;
 
-    const Mesh* mesh = meshManager->getMesh(cactusMeshes[stage][variant]);
+    const Mesh* const mesh = meshManager->getMesh(cactusMeshes[stage][variant]);
     const float yOffset = calculateMeshBottomOffset(mesh);
     const float scaledYOffset = yOffset * scaleY;
     const float sinkAmount = sinkDist(rng);
@@ -242,7 +242,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
     const float scaleY = baseScale + scaleVarianceY;
     const float scaleZ = baseScale + scaleVarianceZ;
 
-    const Mesh* mesh = meshManager->getMesh(treeMeshes[stage]);
+    const Mesh* const mesh = meshManager->getMesh(treeMeshes[stage]);
     const float yOffset = calculateMeshBottomOffset(mesh);
     const float scaledYOffset = yOffset * scaleY;
     const float sinkAmount = sinkDist(rng);
