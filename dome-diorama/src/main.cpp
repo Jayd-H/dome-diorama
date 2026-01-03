@@ -148,6 +148,7 @@ std::vector<Object> createScene(const ConfigParser& config,
                              .direction(0.0f, -1.0f, 0.0f)
                              .color(1.0f, 0.95f, 0.8f)
                              .intensity(5.0f)
+                             .castsShadows(true)
                              .build();
 
   sunLightID = lightManager->addLight(sunLight);

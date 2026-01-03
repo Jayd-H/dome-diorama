@@ -19,7 +19,7 @@ class Light final {
         linear(0.09f),
         quadratic(0.032f),
         name("Unnamed Light"),
-        castsShadows(false),
+        castsShadows(true),
         shadowMapIndex(UINT32_MAX) {}
 
   Light(const Light&) = default;

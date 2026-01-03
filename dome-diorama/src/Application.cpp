@@ -422,7 +422,7 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   worldState.update(deltaTime);
   particleManager->update(deltaTime);
 
-  const glm::vec3 sunDirection = glm::normalize(glm::vec3(0.5f, -1.0f, 0.3f));
+ const glm::vec3 sunDirection = glm::normalize(glm::vec3(0.5f, -1.0f, 0.3f));
   const float sunOrbitRadius = 150.0f;
   const glm::vec3 sunPosition = -sunDirection * sunOrbitRadius;
   sceneObjects[0].setPosition(sunPosition);
@@ -433,14 +433,38 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     sunLight->intensity = 5.0f;
     sunLight->color = glm::vec3(1.0f, 0.95f, 0.85f);
 
-    const glm::vec3 sceneCenter = glm::vec3(0.0f, 5.0f, 0.0f);
-    const glm::vec3 lightEye = sceneCenter - sunDirection * 300.0f;
-    const glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
+    const float shadowDistance = 500.0f;
+    const glm::vec3 lightEye = sceneCenter - sunDirection * shadowDistance;
+
+    // Calculate a proper up vector that's perpendicular to the light direction
+    glm::vec3 lightUp;
+    if (abs(sunDirection.y) > 0.999f) {
+      // Near vertical, use X axis as up
+      lightUp = glm::vec3(1.0f, 0.0f, 0.0f);
+    } else {
+      // Use cross product to get perpendicular up vector
+      glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+      glm::vec3 right = glm::normalize(glm::cross(worldUp, sunDirection));
+      lightUp = glm::cross(sunDirection, right);
+    }
 
     const glm::mat4 lightView = glm::lookAt(lightEye, sceneCenter, lightUp);
     const glm::mat4 lightProjection =
-        glm::ortho(-200.0f, 200.0f, -200.0f, 200.0f, 0.1f, 600.0f);
+        glm::ortho(-350.0f, 350.0f, -350.0f, 350.0f, 1.0f, 1000.0f);
+
     const glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+
+    static bool logged = false;
+    if (!logged) {
+      Debug::log(Debug::Category::SHADOWS, "Light eye position: ", lightEye.x,
+                 ", ", lightEye.y, ", ", lightEye.z);
+      Debug::log(Debug::Category::SHADOWS, "Scene center: ", sceneCenter.x,
+                 ", ", sceneCenter.y, ", ", sceneCenter.z);
+      Debug::log(Debug::Category::SHADOWS, "Sun direction: ", sunDirection.x,
+                 ", ", sunDirection.y, ", ", sunDirection.z);
+      logged = true;
+    }
 
     lightManager->updateLightSpaceMatrix(sunLightID, lightSpaceMatrix);
   }
@@ -917,6 +941,7 @@ void Application::createShadowPipeline() {
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
 
   Debug::log(Debug::Category::VULKAN, "Shadow pipeline created successfully");
+
 }
 
 void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
@@ -1003,6 +1028,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
     shadowPush.lightSpaceMatrix = shadowMap.lightSpaceMatrix;
 
+    int objectsRendered = 0;
     for (const auto& object : sceneObjects) {
       if (!object.visible) continue;
       if (object.meshID == INVALID_MESH_ID) continue;
@@ -1024,6 +1050,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
       vkCmdDrawIndexed(commandBuffer,
                        static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
+      objectsRendered++;
     }
 
     vkCmdEndRendering(commandBuffer);

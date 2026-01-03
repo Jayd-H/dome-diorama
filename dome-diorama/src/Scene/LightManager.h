@@ -21,9 +21,11 @@ struct LightData {
   alignas(4) float constant;
   alignas(4) float linear;
   alignas(4) float quadratic;
+  alignas(4) float cutOff;
+  alignas(4) float outerCutOff;
   alignas(4) int castsShadows;
   alignas(4) int shadowMapIndex;
-  alignas(8) float padding[2];
+  alignas(4) float padding;
 };
 
 struct LightBufferObject {

@@ -53,7 +53,7 @@ layout(binding = 5, set = 1) uniform sampler2D emissiveMap;
 layout(binding = 6, set = 1) uniform sampler2D heightMap;
 layout(binding = 7, set = 1) uniform sampler2D aoMap;
 
-layout(binding = 0, set = 2) uniform sampler2DShadow shadowMaps[4];
+layout(binding = 0, set = 2) uniform sampler2D shadowMaps[4];
 
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
@@ -66,13 +66,15 @@ layout(location = 0) out vec4 outColor;
 const float PI = 3.14159265359;
 
 float sampleShadowMap(int index, vec3 shadowCoord) {
+    float closestDepth;
     switch (index) {
-        case 0: return texture(shadowMaps[0], shadowCoord);
-        case 1: return texture(shadowMaps[1], shadowCoord);
-        case 2: return texture(shadowMaps[2], shadowCoord);
-        case 3: return texture(shadowMaps[3], shadowCoord);
+        case 0: closestDepth = texture(shadowMaps[0], shadowCoord.xy).r; break;
+        case 1: closestDepth = texture(shadowMaps[1], shadowCoord.xy).r; break;
+        case 2: closestDepth = texture(shadowMaps[2], shadowCoord.xy).r; break;
+        case 3: closestDepth = texture(shadowMaps[3], shadowCoord.xy).r; break;
         default: return 1.0;
     }
+    return shadowCoord.z > closestDepth + 0.0005 ? 0.0 : 1.0;
 }
 
 vec2 getShadowMapTexelSize(int index) {
@@ -87,11 +89,13 @@ vec2 getShadowMapTexelSize(int index) {
 
 float calculateShadow(int lightIndex, vec3 fragPos, vec3 normal, vec3 lightDir) {
     if (lightBuffer.lights[lightIndex].castsShadows == 0) {
+        outColor = vec4(1.0, 0.0, 0.0, 1.0); // RED: castsShadows is 0
         return 1.0;
     }
     
     int shadowMapIndex = lightBuffer.lights[lightIndex].shadowMapIndex;
     if (shadowMapIndex < 0 || shadowMapIndex >= 4) {
+        outColor = vec4(0.0, 1.0, 0.0, 1.0); // GREEN: invalid shadow map index
         return 1.0;
     }
     
@@ -100,28 +104,35 @@ float calculateShadow(int lightIndex, vec3 fragPos, vec3 normal, vec3 lightDir) 
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
     
-    if (projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || 
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 || 
         projCoords.y < 0.0 || projCoords.y > 1.0) {
+        outColor = vec4(0.0, 0.0, 1.0, 1.0); // BLUE: outside XY bounds
         return 1.0;
     }
     
+    if (projCoords.z > 1.0) {
+        outColor = vec4(1.0, 1.0, 0.0, 1.0); // YELLOW: beyond far plane
+        return 1.0;
+    }
+    
+    // DEBUG: Visualize the shadow map depth value
+    float shadowMapDepth = texture(shadowMaps[shadowMapIndex], projCoords.xy).r;
+    outColor = vec4(shadowMapDepth, shadowMapDepth, shadowMapDepth, 1.0); // Grayscale depth visualization
+    
     float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
-    float bias = mix(0.005, 0.0005, cosTheta);
+    float bias = max(0.005 * (1.0 - cosTheta), 0.0005);
     float currentDepth = projCoords.z - bias;
     
     float shadow = 0.0;
     vec2 texelSize = getShadowMapTexelSize(shadowMapIndex);
     
-    int kernelSize = 2;
-    float kernelTotal = float((kernelSize * 2 + 1) * (kernelSize * 2 + 1));
-    
-    for (int x = -kernelSize; x <= kernelSize; ++x) {
-        for (int y = -kernelSize; y <= kernelSize; ++y) {
+    for (int x = -1; x <= 1; ++x) {
+        for (int y = -1; y <= 1; ++y) {
             vec2 offset = vec2(x, y) * texelSize;
             shadow += sampleShadowMap(shadowMapIndex, vec3(projCoords.xy + offset, currentDepth));
         }
     }
-    shadow /= kernelTotal;
+    shadow /= 9.0;
     
     return shadow;
 }
@@ -179,28 +190,29 @@ void main() {
     vec3 albedo = albedoSample.rgb;
     float alpha = albedoSample.a * material.opacity;
     
+    // Normal rendering (won't reach here with debug active)
     if (SHADING_MODE == 0) {
-    vec3 normal = normalize(fragNormal);
-    vec3 viewDir = normalize(ubo.eyePos - fragWorldPos);
-    
-    float roughness = material.roughness;
-    float metallic = material.metallic;
-    
-    vec3 ambient = vec3(0.03) * albedo;
-    vec3 lighting = ambient;
-    
-    for (int i = 0; i < lightBuffer.numLights && i < 8; i++) {
-        LightData light = lightBuffer.lights[i];
+        vec3 normal = normalize(fragNormal);
+        vec3 viewDir = normalize(ubo.eyePos - fragWorldPos);
         
-        if (light.type == 0) {
-            lighting += calculatePointLight(light, i, normal, fragWorldPos, viewDir, albedo, roughness, metallic);
-        } else if (light.type == 1) {
-            lighting += calculateSunLight(light, i, normal, viewDir, albedo, roughness, metallic);
+        float roughness = material.roughness;
+        float metallic = material.metallic;
+        
+        vec3 ambient = vec3(0.03) * albedo;
+        vec3 lighting = ambient;
+        
+        for (int i = 0; i < lightBuffer.numLights && i < 8; i++) {
+            LightData light = lightBuffer.lights[i];
+            
+            if (light.type == 0) {
+                lighting += calculatePointLight(light, i, normal, fragWorldPos, viewDir, albedo, roughness, metallic);
+            } else if (light.type == 1) {
+                lighting += calculateSunLight(light, i, normal, viewDir, albedo, roughness, metallic);
+            }
         }
+        
+        outColor = vec4(lighting, alpha);
+    } else {
+        outColor = vec4(fragLighting * albedo, alpha);
     }
-    
-    outColor = vec4(lighting, alpha);
-} else {
-    outColor = vec4(fragLighting * albedo, alpha);
-}
 }

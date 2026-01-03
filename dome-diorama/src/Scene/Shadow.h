@@ -128,7 +128,7 @@ class ShadowSystem {
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    samplerInfo.compareEnable = VK_TRUE;
+    samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
@@ -152,9 +152,6 @@ class ShadowSystem {
                               const glm::mat4& matrix) {
     if (shadowMapIndex < shadowMaps.size()) {
       shadowMaps[shadowMapIndex].lightSpaceMatrix = matrix;
-      Debug::log(Debug::Category::SHADOWS,
-                 "ShadowSystem: Updated light space matrix for shadow map ",
-                 shadowMapIndex);
     } else {
       Debug::log(Debug::Category::SHADOWS,
                  "ShadowSystem: WARNING - Invalid shadow map index ",
@@ -379,7 +376,7 @@ inline void ShadowSystem::createDummyShadowMap() {
   samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
   samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
   samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-  samplerInfo.compareEnable = VK_TRUE;
+  samplerInfo.compareEnable = VK_FALSE;
   samplerInfo.compareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 
   if (vkCreateSampler(renderDevice->getDevice(), &samplerInfo, nullptr,
