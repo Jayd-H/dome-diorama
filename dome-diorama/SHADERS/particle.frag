@@ -3,6 +3,7 @@
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in float fragLifeRatio;
+layout(location = 3) in float fragHeightAboveEmitter;
 
 layout(set = 2, binding = 0) uniform ParticleParams {
     vec3 emitterPosition;
@@ -41,5 +42,24 @@ void main() {
     float fadeOut = min(1.0, (1.0 - fragLifeRatio) / params.fadeOutDuration);
     alpha *= fadeIn * fadeOut;
     
-    outColor = vec4(fragColor, alpha);
+    vec3 finalColor = fragColor;
+    
+    if (params.colorMode == 0) {
+        float heightFactor = clamp(fragHeightAboveEmitter / 5.0, 0.0, 1.0);
+        
+        vec3 fireColor = mix(params.baseColor, vec3(1.0, 0.4, 0.0), fragLifeRatio * 0.5);
+        
+        vec3 smokeColor = mix(vec3(0.3, 0.3, 0.3), params.tipColor, heightFactor);
+        
+        float fireToSmokeTransition = smoothstep(0.3, 0.7, heightFactor);
+        finalColor = mix(fireColor, smokeColor, fireToSmokeTransition);
+        
+        finalColor = mix(finalColor, params.tipColor, fragLifeRatio * 0.3);
+        
+        if (heightFactor > 0.5) {
+            alpha *= (1.0 - (heightFactor - 0.5) * 0.3);
+        }
+    }
+    
+    outColor = vec4(finalColor, alpha);
 }

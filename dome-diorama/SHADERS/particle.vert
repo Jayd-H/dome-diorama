@@ -36,6 +36,7 @@ layout(set = 2, binding = 0) uniform ParticleParams {
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out float fragLifeRatio;
+layout(location = 3) out float fragHeightAboveEmitter;
 
 const float PI = 3.14159265359;
 
@@ -127,4 +128,5 @@ void main() {
     
     fragTexCoord = inTexCoord;
     fragLifeRatio = lifeRatio;
+    fragHeightAboveEmitter = particlePos.y - params.emitterPosition.y;
 }
