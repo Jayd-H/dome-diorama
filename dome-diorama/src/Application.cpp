@@ -69,7 +69,7 @@ void Application::initVulkan() {
                                       window->getHandle(), swapChainImageFormat,
                                       swapChainExtent, swapChainImages);
 
- Debug::log(Debug::Category::VULKAN, "Creating image views...");
+  Debug::log(Debug::Category::VULKAN, "Creating image views...");
   Vulkan::createImageViews(device, swapChainImages, swapChainImageFormat,
                            swapChainImageViews);
 
@@ -159,8 +159,8 @@ void Application::initVulkan() {
 
   Debug::log(Debug::Category::VULKAN, "Creating descriptor sets...");
   Vulkan::createDescriptorSets(device, descriptorPool, descriptorSetLayout,
-                              uniformBuffers, lightManager->getLightBuffer(),
-                              MAX_FRAMES_IN_FLIGHT, descriptorSets);
+                               uniformBuffers, lightManager->getLightBuffer(),
+                               MAX_FRAMES_IN_FLIGHT, descriptorSets);
 
   Debug::log(Debug::Category::VULKAN, "Creating command buffers...");
   commandBuffers =
@@ -422,7 +422,7 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   worldState.update(deltaTime);
   particleManager->update(deltaTime);
 
- const glm::vec3 sunDirection = glm::normalize(glm::vec3(0.5f, -1.0f, 0.3f));
+  const glm::vec3 sunDirection = glm::normalize(glm::vec3(0.5f, -1.0f, 0.3f));
   const float sunOrbitRadius = 150.0f;
   const glm::vec3 sunPosition = -sunDirection * sunOrbitRadius;
   sceneObjects[0].setPosition(sunPosition);
@@ -434,26 +434,47 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     sunLight->color = glm::vec3(1.0f, 0.95f, 0.85f);
 
     const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
-    const float shadowDistance = 500.0f;
-    const glm::vec3 lightEye = sceneCenter - sunDirection * shadowDistance;
+    const glm::vec3 lightEye = sceneCenter - sunDirection * 500.0f;
 
-    // Calculate a proper up vector that's perpendicular to the light direction
-    glm::vec3 lightUp;
-    if (abs(sunDirection.y) > 0.999f) {
-      // Near vertical, use X axis as up
-      lightUp = glm::vec3(1.0f, 0.0f, 0.0f);
-    } else {
-      // Use cross product to get perpendicular up vector
-      glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
-      glm::vec3 right = glm::normalize(glm::cross(worldUp, sunDirection));
-      lightUp = glm::cross(sunDirection, right);
-    }
+    const glm::mat4 lightView =
+        glm::lookAt(lightEye, sceneCenter, glm::vec3(0.0f, 1.0f, 0.0f));
 
-    const glm::mat4 lightView = glm::lookAt(lightEye, sceneCenter, lightUp);
-    const glm::mat4 lightProjection =
-        glm::ortho(-350.0f, 350.0f, -350.0f, 350.0f, 1.0f, 1000.0f);
+    const float orthoSize = 800.0f;
+    glm::mat4 lightProjection =
+        glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, 0.1f, 1000.0f);
+
+    lightProjection[1][1] *= -1;
 
     const glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+
+    static bool matrixLogged = false;
+    if (!matrixLogged) {
+      Debug::log(Debug::Category::SHADOWS,
+                 "Light space matrix column 0: ", lightSpaceMatrix[0][0], ", ",
+                 lightSpaceMatrix[0][1], ", ", lightSpaceMatrix[0][2], ", ",
+                 lightSpaceMatrix[0][3]);
+      Debug::log(Debug::Category::SHADOWS,
+                 "Light space matrix column 1: ", lightSpaceMatrix[1][0], ", ",
+                 lightSpaceMatrix[1][1], ", ", lightSpaceMatrix[1][2], ", ",
+                 lightSpaceMatrix[1][3]);
+      matrixLogged = true;
+    }
+
+    if (sunLight->shadowMapIndex != UINT32_MAX) {
+      lightManager->getShadowSystem()->updateLightSpaceMatrix(
+          sunLight->shadowMapIndex, lightSpaceMatrix);
+    }
+
+    static bool shadowMapLogged = false;
+    if (!shadowMapLogged) {
+      const auto& shadowMaps = lightManager->getShadowSystem()->getShadowMaps();
+      Debug::log(Debug::Category::SHADOWS, "Shadow map 0 matrix column 0: ",
+                 shadowMaps[0].lightSpaceMatrix[0][0], ", ",
+                 shadowMaps[0].lightSpaceMatrix[0][1], ", ",
+                 shadowMaps[0].lightSpaceMatrix[0][2], ", ",
+                 shadowMaps[0].lightSpaceMatrix[0][3]);
+      shadowMapLogged = true;
+    }
 
     static bool logged = false;
     if (!logged) {
@@ -465,8 +486,6 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
                  ", ", sunDirection.y, ", ", sunDirection.z);
       logged = true;
     }
-
-    lightManager->updateLightSpaceMatrix(sunLightID, lightSpaceMatrix);
   }
 
   lightManager->updateLightBuffer();
@@ -672,8 +691,7 @@ void Application::createParticlePipeline() {
   attributes[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)};
   attributes[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)};
   attributes[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)};
-  attributes[3] = {3, 0, VK_FORMAT_R32G32B32_SFLOAT,
-                   offsetof(Vertex, normal)};
+  attributes[3] = {3, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)};
   attributes[4] = {4, 1, VK_FORMAT_R32_SFLOAT,
                    offsetof(ParticleInstanceData, particleIndex)};
 
@@ -699,8 +717,7 @@ void Application::createParticlePipeline() {
   viewportState.scissorCount = 1;
 
   VkPipelineRasterizationStateCreateInfo rasterizer{};
-  rasterizer.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   rasterizer.depthClampEnable = VK_FALSE;
   rasterizer.rasterizerDiscardEnable = VK_FALSE;
   rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
@@ -748,8 +765,7 @@ void Application::createParticlePipeline() {
                                                VK_DYNAMIC_STATE_SCISSOR};
   VkPipelineDynamicStateCreateInfo dynamicState{};
   dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-  dynamicState.dynamicStateCount =
-      static_cast<uint32_t>(dynamicStates.size());
+  dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
   dynamicState.pDynamicStates = dynamicStates.data();
 
   std::array<VkDescriptorSetLayout, 3> layouts = {
@@ -767,8 +783,7 @@ void Application::createParticlePipeline() {
   }
 
   VkPipelineRenderingCreateInfo renderingCreateInfo{};
-  renderingCreateInfo.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+  renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
   renderingCreateInfo.colorAttachmentCount = 1;
   renderingCreateInfo.pColorAttachmentFormats = &swapChainImageFormat;
   renderingCreateInfo.depthAttachmentFormat = depthFormat;
@@ -797,8 +812,7 @@ void Application::createParticlePipeline() {
   vkDestroyShaderModule(device, fragShaderModule, nullptr);
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
 
-  Debug::log(Debug::Category::VULKAN,
-             "Particle pipeline created successfully");
+  Debug::log(Debug::Category::VULKAN, "Particle pipeline created successfully");
 }
 
 void Application::createShadowPipeline() {
@@ -850,8 +864,7 @@ void Application::createShadowPipeline() {
   viewportState.scissorCount = 1;
 
   VkPipelineRasterizationStateCreateInfo rasterizer{};
-  rasterizer.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   rasterizer.depthClampEnable = VK_FALSE;
   rasterizer.rasterizerDiscardEnable = VK_FALSE;
   rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
@@ -885,8 +898,7 @@ void Application::createShadowPipeline() {
                                                VK_DYNAMIC_STATE_DEPTH_BIAS};
   VkPipelineDynamicStateCreateInfo dynamicState{};
   dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-  dynamicState.dynamicStateCount =
-      static_cast<uint32_t>(dynamicStates.size());
+  dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
   dynamicState.pDynamicStates = dynamicStates.data();
 
   struct ShadowPushConstants {
@@ -912,8 +924,7 @@ void Application::createShadowPipeline() {
   const VkFormat shadowDepthFormat = VK_FORMAT_D32_SFLOAT;
 
   VkPipelineRenderingCreateInfo renderingCreateInfo{};
-  renderingCreateInfo.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+  renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
   renderingCreateInfo.depthAttachmentFormat = shadowDepthFormat;
 
   VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -941,7 +952,6 @@ void Application::createShadowPipeline() {
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
 
   Debug::log(Debug::Category::VULKAN, "Shadow pipeline created successfully");
-
 }
 
 void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
@@ -1019,7 +1029,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     scissor.extent = {SHADOW_MAP_SIZE, SHADOW_MAP_SIZE};
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    vkCmdSetDepthBias(commandBuffer, 1.25f, 0.0f, 1.75f);
+    vkCmdSetDepthBias(commandBuffer, 0.0f, 0.0f, 0.0f);
 
     struct ShadowPushConstants {
       glm::mat4 lightSpaceMatrix;
@@ -1185,7 +1195,8 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
   }
 }
 
-VkShaderModule Application::createShaderModule(const std::vector<char>& code) const {
+VkShaderModule Application::createShaderModule(
+    const std::vector<char>& code) const {
   VkShaderModuleCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   createInfo.codeSize = code.size();
