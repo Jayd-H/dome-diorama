@@ -85,7 +85,7 @@ static bool checkValidationLayerSupport() {
 
 static void getRequiredExtensions(std::vector<const char*>& extensions) {
   uint32_t glfwExtensionCount = 0;
-  const char** glfwExtensions =
+  const char** const glfwExtensions =
       glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
   extensions.assign(glfwExtensions, glfwExtensions + glfwExtensionCount);
   if (enableValidationLayers) {
