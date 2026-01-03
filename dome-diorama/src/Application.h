@@ -44,7 +44,19 @@ class Application final {
   Application& operator=(const Application&) = delete;
 
   void init();
-  void setScene(const std::vector<Object>& objects) { sceneObjects = objects; }
+  void setScene(const std::vector<Object>& objects) {
+    sceneObjects = objects;
+
+    plantObjectIndicesSet.clear();
+    const auto& plantIndices = plantManager->getPlantObjectIndices();
+    for (size_t idx : plantIndices) {
+      plantObjectIndicesSet.insert(idx);
+    }
+
+    Debug::log(Debug::Category::PLANTMANAGER, "Application: Registered ",
+               plantObjectIndicesSet.size(),
+               " plant objects for wind rendering");
+  }
   void run();
 
   MeshManager* getMeshManager() const { return meshManager; }

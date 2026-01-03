@@ -140,6 +140,9 @@ void Application::initVulkan() {
   Debug::log(Debug::Category::VULKAN, "Creating shadow pipeline...");
   createShadowPipeline();
 
+  Debug::log(Debug::Category::VULKAN, "Creating plant pipeline...");
+  createPlantPipeline();
+
   Debug::log(Debug::Category::VULKAN, "Creating post-processing...");
   postProcessing =
       new PostProcessing(renderDevice, device, swapChainImageFormat);
@@ -420,9 +423,39 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   const float time =
       std::chrono::duration<float>(currentTime - startTime).count();
 
-  const float deltaTime = time - (time - 0.016f);
+  static float lastTime = 0.0f;
+  const float deltaTime = time - lastTime;
+  lastTime = time;
 
   worldState.update(deltaTime);
+
+  EnvironmentConditions conditions;
+  conditions.temperature = worldState.getTemperature();
+  conditions.humidity = worldState.getHumidity();
+  conditions.precipitationIntensity = worldState.getPrecipitationIntensity();
+  conditions.windDirection = worldState.getWindDirection();
+  conditions.windStrength = worldState.getWindSpeed();
+  conditions.deltaTime = deltaTime;
+
+  plantManager->updateEnvironment(sceneObjects, conditions);
+
+  static float envDebugTimer = 0.0f;
+  envDebugTimer += deltaTime;
+  if (envDebugTimer >= 3.0f) {
+    envDebugTimer = 0.0f;
+    size_t alivePlants = 0;
+    size_t burningPlants = 0;
+    for (const auto& plant : plantManager->getPlants()) {
+      if (!plant.getState().isDead) alivePlants++;
+      if (plant.getState().isOnFire) burningPlants++;
+    }
+    Debug::log(Debug::Category::PLANTMANAGER,
+               "Environment - Temp: ", conditions.temperature,
+               "C, Wind: ", conditions.windStrength,
+               " m/s, Humidity: ", conditions.humidity * 100.0f,
+               "%, Plants alive: ", alivePlants, ", Burning: ", burningPlants);
+  }
+
   particleManager->update(deltaTime);
 
   const glm::vec3 sunDirection = glm::normalize(glm::vec3(0.5f, -1.0f, 0.3f));
@@ -454,80 +487,9 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
 
     const glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
-    static bool matrixLogged = false;
-    if (!matrixLogged) {
-      Debug::log(Debug::Category::SHADOWS, "Ortho size: ", orthoSize);
-      Debug::log(Debug::Category::SHADOWS, "Near plane: ", nearPlane);
-      Debug::log(Debug::Category::SHADOWS, "Far plane: ", farPlane);
-      Debug::log(Debug::Category::SHADOWS, "Shadow distance: ", shadowDistance);
-      Debug::log(Debug::Category::SHADOWS, "Light eye: ", lightEye.x, ", ",
-                 lightEye.y, ", ", lightEye.z);
-
-      glm::vec4 testPoint =
-          lightSpaceMatrix * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-      testPoint /= testPoint.w;
-      Debug::log(Debug::Category::SHADOWS,
-                 "Scene center in light space: ", testPoint.x, ", ",
-                 testPoint.y, ", ", testPoint.z);
-
-      glm::vec4 cornerPoint =
-          lightSpaceMatrix * glm::vec4(300.0f, 0.0f, 300.0f, 1.0f);
-      cornerPoint /= cornerPoint.w;
-      Debug::log(Debug::Category::SHADOWS,
-                 "Corner (300,0,300) in light space: ", cornerPoint.x, ", ",
-                 cornerPoint.y, ", ", cornerPoint.z);
-
-      glm::vec4 negCornerPoint =
-          lightSpaceMatrix * glm::vec4(-300.0f, 0.0f, -300.0f, 1.0f);
-      negCornerPoint /= negCornerPoint.w;
-      Debug::log(Debug::Category::SHADOWS,
-                 "Corner (-300,0,-300) in light space: ", negCornerPoint.x,
-                 ", ", negCornerPoint.y, ", ", negCornerPoint.z);
-
-      Debug::log(Debug::Category::SHADOWS,
-                 "Light space matrix column 0: ", lightSpaceMatrix[0][0], ", ",
-                 lightSpaceMatrix[0][1], ", ", lightSpaceMatrix[0][2], ", ",
-                 lightSpaceMatrix[0][3]);
-      Debug::log(Debug::Category::SHADOWS,
-                 "Light space matrix column 1: ", lightSpaceMatrix[1][0], ", ",
-                 lightSpaceMatrix[1][1], ", ", lightSpaceMatrix[1][2], ", ",
-                 lightSpaceMatrix[1][3]);
-      Debug::log(Debug::Category::SHADOWS,
-                 "Light space matrix column 2: ", lightSpaceMatrix[2][0], ", ",
-                 lightSpaceMatrix[2][1], ", ", lightSpaceMatrix[2][2], ", ",
-                 lightSpaceMatrix[2][3]);
-      Debug::log(Debug::Category::SHADOWS,
-                 "Light space matrix column 3: ", lightSpaceMatrix[3][0], ", ",
-                 lightSpaceMatrix[3][1], ", ", lightSpaceMatrix[3][2], ", ",
-                 lightSpaceMatrix[3][3]);
-      matrixLogged = true;
-    }
-
     if (sunLight->shadowMapIndex != UINT32_MAX) {
       lightManager->getShadowSystem()->updateLightSpaceMatrix(
           sunLight->shadowMapIndex, lightSpaceMatrix);
-    }
-
-    static bool shadowMapLogged = false;
-    if (!shadowMapLogged) {
-      const auto& shadowMaps = lightManager->getShadowSystem()->getShadowMaps();
-      Debug::log(Debug::Category::SHADOWS, "Shadow map 0 matrix column 0: ",
-                 shadowMaps[0].lightSpaceMatrix[0][0], ", ",
-                 shadowMaps[0].lightSpaceMatrix[0][1], ", ",
-                 shadowMaps[0].lightSpaceMatrix[0][2], ", ",
-                 shadowMaps[0].lightSpaceMatrix[0][3]);
-      shadowMapLogged = true;
-    }
-
-    static bool logged = false;
-    if (!logged) {
-      Debug::log(Debug::Category::SHADOWS, "Light eye position: ", lightEye.x,
-                 ", ", lightEye.y, ", ", lightEye.z);
-      Debug::log(Debug::Category::SHADOWS, "Scene center: ", sceneCenter.x,
-                 ", ", sceneCenter.y, ", ", sceneCenter.z);
-      Debug::log(Debug::Category::SHADOWS, "Sun direction: ", sunDirection.x,
-                 ", ", sunDirection.y, ", ", sunDirection.z);
-      logged = true;
     }
   }
 
@@ -1081,7 +1043,6 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
     shadowPush.lightSpaceMatrix = shadowMap.lightSpaceMatrix;
 
-    int objectsRendered = 0;
     for (const auto& object : sceneObjects) {
       if (!object.visible) continue;
       if (object.meshID == INVALID_MESH_ID) continue;
@@ -1103,7 +1064,6 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
       vkCmdDrawIndexed(commandBuffer,
                        static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
-      objectsRendered++;
     }
 
     vkCmdEndRendering(commandBuffer);
@@ -1153,7 +1113,12 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
   scissor.extent = swapChainExtent;
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-  for (const auto& object : sceneObjects) {
+  for (size_t i = 0; i < sceneObjects.size(); ++i) {
+    if (plantObjectIndicesSet.count(i) > 0) {
+      continue;
+    }
+
+    const auto& object = sceneObjects[i];
     if (!object.visible) continue;
     if (object.meshID == INVALID_MESH_ID) continue;
     if (object.materialID == INVALID_MATERIAL_ID) continue;
@@ -1189,7 +1154,9 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
                      1, 0, 0, 0);
   }
 
-  const Object* domeGlassObject = &sceneObjects[3];
+  renderPlants(commandBuffer, currentFrame);
+
+  const Object* domeGlassObject = &sceneObjects[2];
   skybox->render(commandBuffer, descriptorSets[currentFrame], swapChainExtent,
                  domeGlassObject);
 
@@ -1238,13 +1205,96 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
   }
 }
 
-// Add this function to Application.cpp
+void Application::renderPlants(VkCommandBuffer commandBuffer,
+                               uint32_t currentFrame) {
+  if (plantObjectIndicesSet.empty()) {
+    return;
+  }
+
+  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    plantPipeline);
+
+  VkViewport viewport{};
+  viewport.x = 0.0f;
+  viewport.y = 0.0f;
+  viewport.width = static_cast<float>(swapChainExtent.width);
+  viewport.height = static_cast<float>(swapChainExtent.height);
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+  vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+  VkRect2D scissor{};
+  scissor.offset = {0, 0};
+  scissor.extent = swapChainExtent;
+  vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+  const PlantWindData& windData = plantManager->getWindData();
+
+  static float windDebugTimer = 0.0f;
+  windDebugTimer += 0.016f;
+  if (windDebugTimer >= 5.0f) {
+    windDebugTimer = 0.0f;
+    Debug::log(Debug::Category::PLANTMANAGER,
+               "Rendering plants with wind - Dir: (", windData.windDirection.x,
+               ", ", windData.windDirection.y, ", ", windData.windDirection.z,
+               ") Strength: ", windData.windStrength, " Time: ", windData.time,
+               " SwayAmount: ", windData.swayAmount,
+               " SwaySpeed: ", windData.swaySpeed);
+  }
+
+  for (size_t idx : plantObjectIndicesSet) {
+    if (idx >= sceneObjects.size()) continue;
+
+    const Object& object = sceneObjects[idx];
+    if (!object.visible) continue;
+    if (object.meshID == INVALID_MESH_ID) continue;
+    if (object.materialID == INVALID_MATERIAL_ID) continue;
+
+    const Mesh* mesh = meshManager->getMesh(object.meshID);
+    const Material* material = materialManager->getMaterial(object.materialID);
+
+    if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
+    if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
+
+    PlantPushConstants pushConstants{};
+    pushConstants.model = object.getModelMatrix();
+    pushConstants.windDirection = windData.windDirection;
+    pushConstants.windStrength = windData.windStrength;
+    pushConstants.time = windData.time;
+    pushConstants.swayAmount = windData.swayAmount;
+    pushConstants.swaySpeed = windData.swaySpeed;
+    pushConstants.isPlant = 1.0f;
+
+    vkCmdPushConstants(
+        commandBuffer, plantPipelineLayout,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+        sizeof(PlantPushConstants), &pushConstants);
+
+    VkBuffer vertexBuffers[] = {mesh->vertexBuffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+    vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer, 0,
+                         VK_INDEX_TYPE_UINT16);
+
+    std::array<VkDescriptorSet, 3> descriptorSetsToBind = {
+        descriptorSets[currentFrame], material->getDescriptorSet(),
+        lightManager->getShadowDescriptorSet()};
+
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            plantPipelineLayout, 0,
+                            static_cast<uint32_t>(descriptorSetsToBind.size()),
+                            descriptorSetsToBind.data(), 0, nullptr);
+
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh->indices.size()),
+                     1, 0, 0, 0);
+  }
+}
 
 void Application::createPlantPipeline() {
   Debug::log(Debug::Category::VULKAN, "Creating plant pipeline...");
 
-  const auto vertShaderCode = readFile("shaders/plant_vert.spv");
-  const auto fragShaderCode = readFile("shaders/shader_frag.spv");
+  const auto vertShaderCode = readFile("SHADERS/plant_vert.spv");
+  const auto fragShaderCode = readFile("SHADERS/frag.spv");
 
   const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
   const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);

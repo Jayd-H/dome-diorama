@@ -117,8 +117,10 @@ class PlantManager final {
 
   void updatePlantHealth(Plant& plant, const EnvironmentConditions& conditions);
   void updatePlantGrowth(Plant& plant, std::vector<Object>& sceneObjects,
+                         size_t plantIndex,
                          const EnvironmentConditions& conditions);
   void updatePlantFire(Plant& plant, std::vector<Object>& sceneObjects,
+                       size_t plantIndex,
                        const EnvironmentConditions& conditions);
   void checkFireSpread(std::vector<Object>& sceneObjects);
   void startFire(Plant& plant, const glm::vec3& position);

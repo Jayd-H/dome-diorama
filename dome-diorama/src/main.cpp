@@ -28,6 +28,14 @@ std::vector<Object> createScene(const ConfigParser& config,
 
   std::vector<Object> sceneObjects;
 
+  const MaterialID particleMaterialID =
+      materialManager->registerMaterial(MaterialBuilder()
+                                            .name("Particle Material")
+                                            .albedoColor(1.0f, 1.0f, 1.0f)
+                                            .roughness(0.0f)
+                                            .metallic(0.0f)
+                                            .transparent(true));
+
   const MaterialID sunMaterialID =
       materialManager->registerMaterial(MaterialBuilder()
                                             .name("Sun Material")
@@ -140,6 +148,9 @@ std::vector<Object> createScene(const ConfigParser& config,
   plantConfig.rotationVariance =
       config.getFloat("Plants.rotation_variance", 0.8f);
 
+  plantManager->setParticleManager(particleManager);
+  plantManager->setFireMaterialID(particleMaterialID);
+
   plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
 
   const Light sunLight = LightBuilder()
@@ -152,14 +163,6 @@ std::vector<Object> createScene(const ConfigParser& config,
                              .build();
 
   sunLightID = lightManager->addLight(sunLight);
-
-  const MaterialID particleMaterialID =
-      materialManager->registerMaterial(MaterialBuilder()
-                                            .name("Particle Material")
-                                            .albedoColor(1.0f, 1.0f, 1.0f)
-                                            .roughness(0.0f)
-                                            .metallic(0.0f)
-                                            .transparent(true));
 
   FireEmitter* const fireEmitter = FireEmitterBuilder()
                                        .name("Fire Emitter")

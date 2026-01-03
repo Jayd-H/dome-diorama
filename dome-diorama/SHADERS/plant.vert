@@ -35,21 +35,24 @@ vec3 applyWindSway(vec3 position, vec3 worldPos) {
     }
     
     float height = max(0.0, position.y);
-    float heightFactor = pow(height, 1.5);
+    float normalizedHeight = clamp(height / 5.0, 0.0, 1.0);
+    float heightFactor = normalizedHeight * normalizedHeight;
     
     float uniquePhase = fract(sin(dot(worldPos.xz, vec2(12.9898, 78.233))) * 43758.5453) * 6.28318;
     float phase = push.time * push.swaySpeed + uniquePhase;
     
-    float primaryWave = sin(phase) * 0.6;
-    float secondaryWave = sin(phase * 2.3 + 1.7) * 0.3;
+    float primaryWave = sin(phase) * 0.7;
+    float secondaryWave = sin(phase * 2.3 + 1.7) * 0.2;
     float tertiaryWave = sin(phase * 4.1 + 3.2) * 0.1;
     float combinedWave = primaryWave + secondaryWave + tertiaryWave;
     
-    vec3 swayOffset = push.windDirection * combinedWave * heightFactor * push.swayAmount * push.windStrength;
+    float windFactor = clamp(push.windStrength / 10.0, 0.0, 1.0);
+    
+    vec3 swayOffset = push.windDirection * combinedWave * heightFactor * push.swayAmount * windFactor;
     
     vec3 crossWind = normalize(cross(push.windDirection, vec3(0.0, 1.0, 0.0)));
-    float crossWave = sin(phase * 1.7 + 2.1) * 0.3;
-    swayOffset += crossWind * crossWave * heightFactor * push.swayAmount * push.windStrength;
+    float crossWave = sin(phase * 1.7 + 2.1) * 0.15;
+    swayOffset += crossWind * crossWave * heightFactor * push.swayAmount * windFactor * 0.3;
     
     return position + swayOffset;
 }
