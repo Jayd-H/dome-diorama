@@ -31,9 +31,22 @@ constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 struct UniformBufferObject {
   alignas(16) glm::mat4 view;
   alignas(16) glm::mat4 proj;
+  alignas(16) glm::mat4 lightSpaceMatrices[MAX_SHADOW_CASTERS];
   alignas(16) glm::vec3 eyePos;
   alignas(4) float time;
-  alignas(16) glm::mat4 lightSpaceMatrices[MAX_SHADOW_CASTERS];
+};
+
+struct PipelineConfigInfo {
+  VkPipelineVertexInputStateCreateInfo vertexInputInfo;
+  VkPipelineInputAssemblyStateCreateInfo inputAssembly;
+  VkPipelineViewportStateCreateInfo viewportState;
+  VkPipelineRasterizationStateCreateInfo rasterizer;
+  VkPipelineMultisampleStateCreateInfo multisampling;
+  VkPipelineDepthStencilStateCreateInfo depthStencil;
+  VkPipelineColorBlendStateCreateInfo colorBlending;
+  VkPipelineDynamicStateCreateInfo dynamicState;
+  std::vector<VkDynamicState> dynamicStates;
+  VkPipelineColorBlendAttachmentState colorBlendAttachment;
 };
 
 class Application final {
@@ -45,26 +58,14 @@ class Application final {
   Application& operator=(const Application&) = delete;
 
   void init();
-  void setScene(const std::vector<Object>& objects) {
-    sceneObjects = objects;
-
-    plantObjectIndicesSet.clear();
-    const size_t count = plantManager->getPlantCount();
-    for (size_t i = 0; i < count; ++i) {
-      plantObjectIndicesSet.insert(plantManager->getPlantObjectIndex(i));
-    }
-
-    Debug::log(Debug::Category::PLANTMANAGER, "Application: Registered ",
-               plantObjectIndicesSet.size(),
-               " plant objects for wind rendering");
-  }
+  void setScene(const std::vector<Object>& objects);
   void run();
 
-  MeshManager* getMeshManager() const { return meshManager; }
-  MaterialManager* getMaterialManager() const { return materialManager; }
-  PlantManager* getPlantManager() const { return plantManager; }
-  ParticleManager* getParticleManager() const { return particleManager; }
-  LightManager* getLightManager() const { return lightManager; }
+  MeshManager* getMeshManager() const { return meshManager.get(); }
+  MaterialManager* getMaterialManager() const { return materialManager.get(); }
+  PlantManager* getPlantManager() const { return plantManager.get(); }
+  ParticleManager* getParticleManager() const { return particleManager.get(); }
+  LightManager* getLightManager() const { return lightManager.get(); }
 
   void setSunLightID(LightID id) { sunLightID = id; }
 
@@ -72,12 +73,40 @@ class Application final {
     worldState = WorldState(config);
   }
 
-  WeatherSystem* getWeatherSystem() const { return weatherSystem; }
+  WeatherSystem* getWeatherSystem() const { return weatherSystem.get(); }
 
  private:
+  std::vector<Object> sceneObjects;
+
   std::unique_ptr<Window> window;
-  bool framebufferResized = false;
-  uint32_t currentFrame = 0;
+  Input input;
+  Camera camera;
+  WorldState worldState;
+
+  std::vector<VkImage> swapChainImages;
+  std::vector<VkImageView> swapChainImageViews;
+  std::vector<VkBuffer> uniformBuffers;
+  std::vector<VkDeviceMemory> uniformBuffersMemory;
+  std::vector<void*> uniformBuffersMapped;
+  std::vector<VkDescriptorSet> descriptorSets;
+  std::vector<VkCommandBuffer> commandBuffers;
+  std::vector<VkSemaphore> imageAvailableSemaphores;
+  std::vector<VkSemaphore> renderFinishedSemaphores;
+  std::vector<VkFence> inFlightFences;
+
+  std::unique_ptr<RenderDevice> renderDevice;
+  std::unique_ptr<TextureManager> textureManager;
+  std::unique_ptr<MaterialManager> materialManager;
+  std::unique_ptr<MeshManager> meshManager;
+  std::unique_ptr<LightManager> lightManager;
+  std::unique_ptr<PlantManager> plantManager;
+  std::unique_ptr<ParticleManager> particleManager;
+  std::unique_ptr<WeatherSystem> weatherSystem;
+  std::unique_ptr<Skybox> skybox;
+  std::unique_ptr<PostProcessing> postProcessing;
+  std::unique_ptr<MainPipeline> mainPipeline;
+
+  std::unordered_set<size_t> plantObjectIndicesSet;
 
   VkInstance instance = VK_NULL_HANDLE;
   VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
@@ -87,12 +116,8 @@ class Application final {
   VkQueue graphicsQueue = VK_NULL_HANDLE;
   VkQueue presentQueue = VK_NULL_HANDLE;
   VkCommandPool commandPool = VK_NULL_HANDLE;
-
   VkSwapchainKHR swapChain = VK_NULL_HANDLE;
-  std::vector<VkImage> swapChainImages;
-  VkFormat swapChainImageFormat = VK_FORMAT_UNDEFINED;
-  VkExtent2D swapChainExtent{0, 0};
-  std::vector<VkImageView> swapChainImageViews;
+  VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 
   VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
   VkDescriptorSetLayout materialDescriptorSetLayout = VK_NULL_HANDLE;
@@ -101,51 +126,31 @@ class Application final {
   VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
   VkBuffer indexBuffer = VK_NULL_HANDLE;
   VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
-  std::vector<VkBuffer> uniformBuffers;
-  std::vector<VkDeviceMemory> uniformBuffersMemory;
-  std::vector<void*> uniformBuffersMapped;
-
-  VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-  std::vector<VkDescriptorSet> descriptorSets;
-
-  std::vector<VkCommandBuffer> commandBuffers;
-  std::vector<VkSemaphore> imageAvailableSemaphores;
-  std::vector<VkSemaphore> renderFinishedSemaphores;
-  std::vector<VkFence> inFlightFences;
-
-  Input input;
-  Camera camera;
-  float lastFrameTime = 0.0f;
-
-  TextureManager* textureManager = nullptr;
-  MaterialManager* materialManager = nullptr;
-  RenderDevice* renderDevice = nullptr;
-  MeshManager* meshManager = nullptr;
-  LightManager* lightManager = nullptr;
-  PlantManager* plantManager = nullptr;
-  PostProcessing* postProcessing = nullptr;
-  ParticleManager* particleManager = nullptr;
-  Skybox* skybox = nullptr;
-
-  std::vector<Object> sceneObjects;
 
   VkImage depthImage = VK_NULL_HANDLE;
   VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
   VkImageView depthImageView = VK_NULL_HANDLE;
-  VkFormat depthFormat = VK_FORMAT_UNDEFINED;
 
   VkPipeline particlePipeline = VK_NULL_HANDLE;
-  MeshID particleQuadMesh = 0;
   VkPipelineLayout particlePipelineLayout = VK_NULL_HANDLE;
-
-  WorldState worldState;
-  LightID sunLightID = INVALID_LIGHT_ID;
-  LightID moonLightID = INVALID_LIGHT_ID;
 
   VkPipeline shadowPipeline = VK_NULL_HANDLE;
   VkPipelineLayout shadowPipelineLayout = VK_NULL_HANDLE;
 
-  std::unique_ptr<MainPipeline> mainPipeline;
+  VkPipeline plantPipeline = VK_NULL_HANDLE;
+  VkPipelineLayout plantPipelineLayout = VK_NULL_HANDLE;
+
+  VkFormat swapChainImageFormat = VK_FORMAT_UNDEFINED;
+  VkExtent2D swapChainExtent{0, 0};
+  VkFormat depthFormat = VK_FORMAT_UNDEFINED;
+
+  float lastFrameTime = 0.0f;
+  uint32_t currentFrame = 0;
+  bool framebufferResized = false;
+
+  MeshID particleQuadMesh = 0;
+  LightID sunLightID = INVALID_LIGHT_ID;
+  LightID moonLightID = INVALID_LIGHT_ID;
 
   void initWindow();
   void initVulkan();
@@ -155,6 +160,7 @@ class Application final {
   void recreateGraphicsPipeline();
   void createParticlePipeline();
   void createShadowPipeline();
+  void createPlantPipeline();
   void createUniformBuffers();
   void drawFrame();
   void recreateSwapChain();
@@ -163,13 +169,7 @@ class Application final {
   void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
   void updateUniformBuffer(uint32_t currentImage);
 
-  void renderPlants(VkCommandBuffer commandBuffer, uint32_t currentFrame);
-  std::unordered_set<size_t> plantObjectIndicesSet;
-  VkPipeline plantPipeline = VK_NULL_HANDLE;
-  VkPipelineLayout plantPipelineLayout = VK_NULL_HANDLE;
-  void createPlantPipeline();
-
-  WeatherSystem* weatherSystem = nullptr;
+  void renderPlants(VkCommandBuffer commandBuffer, uint32_t frameIndex);
 
   void recreateTextureSamplers(VkFilter magFilter, VkFilter minFilter);
   void toggleShadingMode();
@@ -185,5 +185,7 @@ class Application final {
                              double yoffset);
 
   VkShaderModule createShaderModule(const std::vector<char>& code) const;
-  static std::vector<char> readFile(const std::string& filename);
+
+  // Helper to reduce duplicated code in pipeline creation
+  void createDefaultPipelineConfig(PipelineConfigInfo& configInfo);
 };
