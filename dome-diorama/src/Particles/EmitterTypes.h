@@ -1,54 +1,16 @@
 #pragma once
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "ParticleEmitter.h"
 
-class ParticleEmitterBuilder final {
- public:
-  ParticleEmitterBuilder();
-  ~ParticleEmitterBuilder();
-
-  ParticleEmitterBuilder(ParticleEmitterBuilder&& other) noexcept;
-  ParticleEmitterBuilder& operator=(ParticleEmitterBuilder&& other) noexcept;
-
-  ParticleEmitterBuilder(const ParticleEmitterBuilder&) = delete;
-  ParticleEmitterBuilder& operator=(const ParticleEmitterBuilder&) = delete;
-
-  ParticleEmitterBuilder& name(const std::string& n);
-  ParticleEmitterBuilder& position(const glm::vec3& pos);
-  ParticleEmitterBuilder& position(float x, float y, float z);
-  ParticleEmitterBuilder& maxParticles(size_t count);
-  ParticleEmitterBuilder& particleLifetime(float lifetime);
-  ParticleEmitterBuilder& material(MaterialID id);
-  ParticleEmitterBuilder& active(bool isActive);
-
-  ParticleEmitterBuilder& baseColor(const glm::vec3& color);
-  ParticleEmitterBuilder& tipColor(const glm::vec3& color);
-  ParticleEmitterBuilder& gravity(const glm::vec3& g);
-  ParticleEmitterBuilder& initialVelocity(const glm::vec3& v);
-  ParticleEmitterBuilder& velocityRandomness(float r);
-  ParticleEmitterBuilder& spawnRadius(float radius);
-  ParticleEmitterBuilder& particleScale(float scale);
-  ParticleEmitterBuilder& scaleOverLifetime(float scale);
-  ParticleEmitterBuilder& rotationSpeed(float speed);
-  ParticleEmitterBuilder& fadeTimings(float in, float out);
-  ParticleEmitterBuilder& billboardMode(ParticleEmitter::BillboardMode mode);
-  ParticleEmitterBuilder& colorMode(ParticleEmitter::ColorMode mode);
-  ParticleEmitterBuilder& windInfluence(float influence);
-
-  ParticleEmitter* build();
-
- private:
-  std::unique_ptr<ParticleEmitter> emitter;
-};
-
 struct ParticleEmitterConfig {
-  const char* name;
   glm::vec3 baseColor;
   glm::vec3 tipColor;
   glm::vec3 gravity;
   glm::vec3 initialVelocity;
+  const char* name;
   float spawnRadius;
   float particleScale;
   float fadeIn;
@@ -58,6 +20,134 @@ struct ParticleEmitterConfig {
   float rotationSpeed;
   ParticleEmitter::BillboardMode billboardMode;
   ParticleEmitter::ColorMode colorMode;
+
+  ParticleEmitterConfig() = default;
+  ParticleEmitterConfig(const ParticleEmitterConfig&) = default;
+  ParticleEmitterConfig& operator=(const ParticleEmitterConfig&) = default;
+  ParticleEmitterConfig(ParticleEmitterConfig&&) = default;
+  ParticleEmitterConfig& operator=(ParticleEmitterConfig&&) = default;
+  ~ParticleEmitterConfig() = default;
+};
+
+class ParticleEmitterBuilder final {
+ public:
+  ParticleEmitterBuilder() : emitter(std::make_unique<ParticleEmitter>()) {}
+  ~ParticleEmitterBuilder() = default;
+
+  ParticleEmitterBuilder(ParticleEmitterBuilder&& other) noexcept = default;
+  ParticleEmitterBuilder& operator=(ParticleEmitterBuilder&& other) noexcept =
+      default;
+
+  ParticleEmitterBuilder(const ParticleEmitterBuilder&) = delete;
+  ParticleEmitterBuilder& operator=(const ParticleEmitterBuilder&) = delete;
+
+  ParticleEmitterBuilder& name(const std::string& n) {
+    if (emitter) emitter->setName(n);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& position(const glm::vec3& pos) {
+    if (emitter) emitter->setPosition(pos);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& position(float x, float y, float z) {
+    if (emitter) emitter->setPosition(glm::vec3(x, y, z));
+    return *this;
+  }
+
+  ParticleEmitterBuilder& maxParticles(size_t count) {
+    if (emitter) emitter->setMaxParticles(count);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& particleLifetime(float lifetime) {
+    if (emitter) emitter->setParticleLifetime(lifetime);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& material(MaterialID id) {
+    if (emitter) emitter->setMaterialID(id);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& active(bool isActive) {
+    if (emitter) emitter->setActive(isActive);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& baseColor(const glm::vec3& color) {
+    if (emitter) emitter->setBaseColor(color);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& tipColor(const glm::vec3& color) {
+    if (emitter) emitter->setTipColor(color);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& gravity(const glm::vec3& g) {
+    if (emitter) emitter->setGravity(g);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& initialVelocity(const glm::vec3& v) {
+    if (emitter) emitter->setInitialVelocity(v);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& velocityRandomness(float r) {
+    if (emitter) emitter->setVelocityRandomness(r);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& spawnRadius(float radius) {
+    if (emitter) emitter->setSpawnRadius(radius);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& particleScale(float scale) {
+    if (emitter) emitter->setParticleScale(scale);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& scaleOverLifetime(float scale) {
+    if (emitter) emitter->setScaleOverLifetime(scale);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& rotationSpeed(float speed) {
+    if (emitter) emitter->setRotationSpeed(speed);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& fadeTimings(float in, float out) {
+    if (emitter) {
+      emitter->setFadeInDuration(in);
+      emitter->setFadeOutDuration(out);
+    }
+    return *this;
+  }
+
+  ParticleEmitterBuilder& billboardMode(ParticleEmitter::BillboardMode mode) {
+    if (emitter) emitter->setBillboardMode(mode);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& colorMode(ParticleEmitter::ColorMode mode) {
+    if (emitter) emitter->setColorMode(mode);
+    return *this;
+  }
+
+  ParticleEmitterBuilder& windInfluence(float influence) {
+    if (emitter) emitter->setWindInfluence(influence);
+    return *this;
+  }
+
+  ParticleEmitter* build() { return emitter.release(); }
+
+ private:
+  std::unique_ptr<ParticleEmitter> emitter;
 };
 
 class EmitterPresets final {
@@ -72,149 +162,6 @@ class EmitterPresets final {
   static ParticleEmitterBuilder createFromConfig(
       const ParticleEmitterConfig& config);
 };
-
-inline ParticleEmitterBuilder::ParticleEmitterBuilder()
-    : emitter(std::make_unique<ParticleEmitter>()) {}
-
-inline ParticleEmitterBuilder::~ParticleEmitterBuilder() = default;
-
-inline ParticleEmitterBuilder::ParticleEmitterBuilder(
-    ParticleEmitterBuilder&& other) noexcept
-    : emitter(std::move(other.emitter)) {}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::operator=(
-    ParticleEmitterBuilder&& other) noexcept {
-  if (this != &other) {
-    emitter = std::move(other.emitter);
-  }
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::name(
-    const std::string& n) {
-  if (emitter) emitter->setName(n);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::position(
-    const glm::vec3& pos) {
-  if (emitter) emitter->setPosition(pos);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::position(float x,
-                                                                float y,
-                                                                float z) {
-  if (emitter) emitter->setPosition(glm::vec3(x, y, z));
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::maxParticles(
-    size_t count) {
-  if (emitter) emitter->setMaxParticles(count);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::particleLifetime(
-    float lifetime) {
-  if (emitter) emitter->setParticleLifetime(lifetime);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::material(MaterialID id) {
-  if (emitter) emitter->setMaterialID(id);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::active(bool isActive) {
-  if (emitter) emitter->setActive(isActive);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::baseColor(
-    const glm::vec3& color) {
-  if (emitter) emitter->setBaseColor(color);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::tipColor(
-    const glm::vec3& color) {
-  if (emitter) emitter->setTipColor(color);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::gravity(
-    const glm::vec3& g) {
-  if (emitter) emitter->setGravity(g);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::initialVelocity(
-    const glm::vec3& v) {
-  if (emitter) emitter->setInitialVelocity(v);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::velocityRandomness(
-    float r) {
-  if (emitter) emitter->setVelocityRandomness(r);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::spawnRadius(
-    float radius) {
-  if (emitter) emitter->setSpawnRadius(radius);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::particleScale(
-    float scale) {
-  if (emitter) emitter->setParticleScale(scale);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::scaleOverLifetime(
-    float scale) {
-  if (emitter) emitter->setScaleOverLifetime(scale);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::rotationSpeed(
-    float speed) {
-  if (emitter) emitter->setRotationSpeed(speed);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::fadeTimings(float in,
-                                                                   float out) {
-  if (emitter) {
-    emitter->setFadeInDuration(in);
-    emitter->setFadeOutDuration(out);
-  }
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::billboardMode(
-    ParticleEmitter::BillboardMode mode) {
-  if (emitter) emitter->setBillboardMode(mode);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::colorMode(
-    ParticleEmitter::ColorMode mode) {
-  if (emitter) emitter->setColorMode(mode);
-  return *this;
-}
-
-inline ParticleEmitterBuilder& ParticleEmitterBuilder::windInfluence(
-    float influence) {
-  if (emitter) emitter->setWindInfluence(influence);
-  return *this;
-}
-
-inline ParticleEmitter* ParticleEmitterBuilder::build() {
-  return emitter.release();
-}
 
 inline ParticleEmitterBuilder EmitterPresets::createFromConfig(
     const ParticleEmitterConfig& config) {
@@ -236,44 +183,96 @@ inline ParticleEmitterBuilder EmitterPresets::createFromConfig(
 }
 
 inline ParticleEmitterBuilder EmitterPresets::createFire() {
-  return createFromConfig(
-      {"Fire Emitter", glm::vec3(1.0f, 0.9f, 0.1f), glm::vec3(1.0f, 0.3f, 0.0f),
-       glm::vec3(0.0f), glm::vec3(0.0f, 2.0f, 0.0f), 0.2f, 0.5f, 0.1f, 0.5f,
-       0.5f, 0.3f, 1.0f, ParticleEmitter::BillboardMode::Spherical,
-       ParticleEmitter::ColorMode::Gradient});
+  ParticleEmitterConfig config;
+  config.name = "Fire Emitter";
+  config.baseColor = glm::vec3(1.0f, 0.9f, 0.1f);
+  config.tipColor = glm::vec3(1.0f, 0.3f, 0.0f);
+  config.gravity = glm::vec3(0.0f);
+  config.initialVelocity = glm::vec3(0.0f, 2.0f, 0.0f);
+  config.spawnRadius = 0.2f;
+  config.particleScale = 0.5f;
+  config.fadeIn = 0.1f;
+  config.fadeOut = 0.5f;
+  config.velocityRandomness = 0.5f;
+  config.scaleOverLifetime = 0.3f;
+  config.rotationSpeed = 1.0f;
+  config.billboardMode = ParticleEmitter::BillboardMode::Spherical;
+  config.colorMode = ParticleEmitter::ColorMode::Gradient;
+  return createFromConfig(config);
 }
 
 inline ParticleEmitterBuilder EmitterPresets::createSmoke() {
-  return createFromConfig({"Smoke Emitter", glm::vec3(0.3f, 0.3f, 0.3f),
-                           glm::vec3(0.6f, 0.6f, 0.6f), glm::vec3(0.0f),
-                           glm::vec3(0.0f, 1.5f, 0.0f), 0.3f, 1.5f, 0.2f, 0.8f,
-                           0.8f, 2.5f, 0.5f,
-                           ParticleEmitter::BillboardMode::Spherical,
-                           ParticleEmitter::ColorMode::Gradient});
+  ParticleEmitterConfig config;
+  config.name = "Smoke Emitter";
+  config.baseColor = glm::vec3(0.3f, 0.3f, 0.3f);
+  config.tipColor = glm::vec3(0.6f, 0.6f, 0.6f);
+  config.gravity = glm::vec3(0.0f);
+  config.initialVelocity = glm::vec3(0.0f, 1.5f, 0.0f);
+  config.spawnRadius = 0.3f;
+  config.particleScale = 1.5f;
+  config.fadeIn = 0.2f;
+  config.fadeOut = 0.8f;
+  config.velocityRandomness = 0.8f;
+  config.scaleOverLifetime = 2.5f;
+  config.rotationSpeed = 0.5f;
+  config.billboardMode = ParticleEmitter::BillboardMode::Spherical;
+  config.colorMode = ParticleEmitter::ColorMode::Gradient;
+  return createFromConfig(config);
 }
 
 inline ParticleEmitterBuilder EmitterPresets::createDust() {
-  return createFromConfig(
-      {"Dust Emitter", glm::vec3(0.7f, 0.6f, 0.5f), glm::vec3(0.5f, 0.4f, 0.3f),
-       glm::vec3(0.0f), glm::vec3(1.0f, 0.5f, 0.0f), 5.0f, 0.3f, 0.3f, 0.5f,
-       1.0f, 1.2f, 0.3f, ParticleEmitter::BillboardMode::Spherical,
-       ParticleEmitter::ColorMode::Gradient});
+  ParticleEmitterConfig config;
+  config.name = "Dust Emitter";
+  config.baseColor = glm::vec3(0.7f, 0.6f, 0.5f);
+  config.tipColor = glm::vec3(0.5f, 0.4f, 0.3f);
+  config.gravity = glm::vec3(0.0f);
+  config.initialVelocity = glm::vec3(1.0f, 0.5f, 0.0f);
+  config.spawnRadius = 5.0f;
+  config.particleScale = 0.3f;
+  config.fadeIn = 0.3f;
+  config.fadeOut = 0.5f;
+  config.velocityRandomness = 1.0f;
+  config.scaleOverLifetime = 1.2f;
+  config.rotationSpeed = 0.3f;
+  config.billboardMode = ParticleEmitter::BillboardMode::Spherical;
+  config.colorMode = ParticleEmitter::ColorMode::Gradient;
+  return createFromConfig(config);
 }
 
 inline ParticleEmitterBuilder EmitterPresets::createRain() {
-  return createFromConfig(
-      {"Rain Emitter", glm::vec3(0.5f, 0.6f, 0.9f), glm::vec3(0.7f, 0.8f, 1.0f),
-       glm::vec3(0.0f, -25.0f, 0.0f), glm::vec3(2.0f, 0.0f, 0.0f), 20.0f, 0.1f,
-       0.0f, 0.1f, 0.2f, 1.0f, 0.0f,
-       ParticleEmitter::BillboardMode::Cylindrical,
-       ParticleEmitter::ColorMode::BaseOnly});
+  ParticleEmitterConfig config;
+  config.name = "Rain Emitter";
+  config.baseColor = glm::vec3(0.5f, 0.6f, 0.9f);
+  config.tipColor = glm::vec3(0.7f, 0.8f, 1.0f);
+  config.gravity = glm::vec3(0.0f, -25.0f, 0.0f);
+  config.initialVelocity = glm::vec3(2.0f, 0.0f, 0.0f);
+  config.spawnRadius = 20.0f;
+  config.particleScale = 0.1f;
+  config.fadeIn = 0.0f;
+  config.fadeOut = 0.1f;
+  config.velocityRandomness = 0.2f;
+  config.scaleOverLifetime = 1.0f;
+  config.rotationSpeed = 0.0f;
+  config.billboardMode = ParticleEmitter::BillboardMode::Cylindrical;
+  config.colorMode = ParticleEmitter::ColorMode::BaseOnly;
+  return createFromConfig(config);
 }
 
 inline ParticleEmitterBuilder EmitterPresets::createSnow() {
-  return createFromConfig(
-      {"Snow Emitter", glm::vec3(0.95f, 0.95f, 1.0f),
-       glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, -5.0f, 0.0f),
-       glm::vec3(0.5f, 0.0f, 0.0f), 20.0f, 0.2f, 0.0f, 0.1f, 0.3f, 1.0f, 0.2f,
-       ParticleEmitter::BillboardMode::Spherical,
-       ParticleEmitter::ColorMode::BaseOnly});
+  ParticleEmitterConfig config;
+  config.name = "Snow Emitter";
+  config.baseColor = glm::vec3(0.95f, 0.95f, 1.0f);
+  config.tipColor = glm::vec3(1.0f, 1.0f, 1.0f);
+  config.gravity = glm::vec3(0.0f, -5.0f, 0.0f);
+  config.initialVelocity = glm::vec3(0.5f, 0.0f, 0.0f);
+  config.spawnRadius = 20.0f;
+  config.particleScale = 0.2f;
+  config.fadeIn = 0.0f;
+  config.fadeOut = 0.1f;
+  config.velocityRandomness = 0.3f;
+  config.scaleOverLifetime = 1.0f;
+  config.rotationSpeed = 0.2f;
+  config.billboardMode = ParticleEmitter::BillboardMode::Spherical;
+  config.colorMode = ParticleEmitter::ColorMode::BaseOnly;
+  return createFromConfig(config);
 }
