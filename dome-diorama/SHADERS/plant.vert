@@ -9,7 +9,7 @@ layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragNormal;
 layout(location = 3) out vec3 fragPos;
-layout(location = 4) out vec4 fragPosLightSpace[4];
+layout(location = 4) out vec3 fragLighting;
 
 layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 view;
@@ -71,7 +71,5 @@ void main() {
     fragNormal = mat3(transpose(inverse(push.model))) * inNormal;
     fragPos = worldPos.xyz;
     
-    for (int i = 0; i < 4; i++) {
-        fragPosLightSpace[i] = ubo.lightSpaceMatrices[i] * worldPos;
-    }
+    fragLighting = vec3(1.0);
 }
