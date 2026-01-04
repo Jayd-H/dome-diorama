@@ -68,7 +68,7 @@ class Camera final {
     }
   }
 
-  inline const glm::vec3& getPosition() const {
+  inline glm::vec3 getPosition() const {
     if (mode == CameraMode::ORBIT) {
       return lastOrbitPosition;
     }
