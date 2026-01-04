@@ -33,6 +33,9 @@ class PostProcessing final {
   VkImageView getOffscreenImageView() const { return offscreenImageView; }
   void updateEnvironmentalParams(float temperature, float humidity);
 
+  void toggleToonMode() { useToonShader = !useToonShader; }
+  bool isToonModeEnabled() const { return useToonShader; }
+
  private:
   RenderDevice* renderDevice;
   VkDevice device;
@@ -53,13 +56,17 @@ class PostProcessing final {
 
   VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
   VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+
   VkPipeline pipeline = VK_NULL_HANDLE;
+  VkPipeline toonPipeline = VK_NULL_HANDLE;
+  bool useToonShader = false;
+
   std::vector<VkDescriptorSet> descriptorSets;
 
   void createOffscreenResources();
   void createDepthResources();
   void createDescriptorSetLayout();
-  void createPipeline();
+  void createPipelines();
   void createDescriptorSets(VkDescriptorPool descriptorPool);
   void updateDescriptorSets();
   void cleanupOffscreenResources();

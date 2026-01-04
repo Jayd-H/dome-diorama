@@ -101,6 +101,12 @@
     <CustomBuild Include="SHADERS\plant.vert">
       <Filter>Shaders</Filter>
     </CustomBuild>
+    <CustomBuild Include="toon.vert">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="toon.frag">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Util\Input.h">

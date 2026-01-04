@@ -14,3 +14,7 @@ glslc.exe "D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\SHADERS\pa
 glslc "D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\SHADERS\shadow.frag" -o "D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\shaders\shadow_frag.spv"
 ^D:\FILES\DOCUMENTS\APROJECTS\CPP\DOME-DIORAMA\DOME-DIORAMA\SHADERS\SHADOW.VERT
 glslc "D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\SHADERS\shadow.vert" -o "D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\shaders\shadow_vert.spv"
+^D:\FILES\DOCUMENTS\APROJECTS\CPP\DOME-DIORAMA\DOME-DIORAMA\TOON.FRAG
+glslc.exe shaders/toon.frag -o shaders/toon_frag.spv
+^D:\FILES\DOCUMENTS\APROJECTS\CPP\DOME-DIORAMA\DOME-DIORAMA\TOON.VERT
+glslc.exe shaders/toon.vert -o shaders/toon_vert.spv

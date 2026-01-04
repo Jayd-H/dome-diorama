@@ -725,11 +725,11 @@ void Application::keyCallback(GLFWwindow* win, int key, int scancode,
       app->setCameraPreset(3);
     } else if (key == GLFW_KEY_F4) {
       app->triggerFireEffect();
-    } else if (key == GLFW_KEY_RIGHT_BRACKET) {  // Increase Time Scale
+    } else if (key == GLFW_KEY_RIGHT_BRACKET) {
       app->timeScale += 0.5f;
       Debug::log(Debug::Category::MAIN,
                  "Time Scale Increased: ", app->timeScale);
-    } else if (key == GLFW_KEY_LEFT_BRACKET) {  // Decrease Time Scale
+    } else if (key == GLFW_KEY_LEFT_BRACKET) {
       app->timeScale = std::max(0.0f, app->timeScale - 0.5f);
       Debug::log(Debug::Category::MAIN,
                  "Time Scale Decreased: ", app->timeScale);
@@ -769,6 +769,10 @@ void Application::keyCallback(GLFWwindow* win, int key, int scancode,
       app->cycleWeather();
     } else if (key == GLFW_KEY_P) {
       app->toggleTimePause();
+    } else if (key == GLFW_KEY_K) {
+      app->postProcessing->toggleToonMode();
+      Debug::log(Debug::Category::MAIN, "Toggled Toon Shader: ",
+                 app->postProcessing->isToonModeEnabled() ? "ON" : "OFF");
     }
   }
 }
