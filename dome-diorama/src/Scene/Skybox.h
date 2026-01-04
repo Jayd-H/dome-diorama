@@ -123,14 +123,11 @@ class Skybox final {
  private:
   static constexpr float SKYBOX_RADIUS = 300.0f;
 
-  // OPT-13 Fix: Reordered variables from largest alignment (pointers) to
-  // smallest
   RenderDevice* renderDevice;
   VkDevice device;
   VkCommandPool commandPool;
   VkQueue graphicsQueue;
 
-  // Handles (pointers on 64-bit systems)
   VkImage cubemapImage;
   VkDeviceMemory cubemapImageMemory;
   VkImageView cubemapImageView;
@@ -148,21 +145,17 @@ class Skybox final {
   VkPipeline pipeline;
   VkPipelineLayout pipelineLayout;
 
-  // Complex objects (Vectors contain pointers internally)
   std::vector<glm::vec3> vertices;
   std::vector<uint16_t> indices;
 
-  // Enums (usually integers, smaller alignment)
   VkFormat swapchainFormat;
   VkFormat depthFormat;
 
-  // Functions with loops moved to CPP (OPT.18)
   void loadCubemap(const std::string& folderPath);
   void createSkyboxGeometry();
   uint32_t findMemoryType(uint32_t typeFilter,
                           VkMemoryPropertyFlags properties) const;
 
-  // Inline helper functions (No loops, kept here)
   void createCubemapImageView() {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
