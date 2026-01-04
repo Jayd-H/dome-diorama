@@ -117,7 +117,7 @@ float PlantManager::getTerrainHeightAt(const Mesh* terrainData, float x,
   float closestDistSq = std::numeric_limits<float>::max();
   float height = 0.0f;
 
-  for (const auto& vertex : terrainData->vertices) {
+  for (const auto& vertex : terrainData->getVertices()) {
     const float dx = vertex.pos.x - x;
     const float dz = vertex.pos.z - z;
     const float distSq = dx * dx + dz * dz;
@@ -136,7 +136,7 @@ glm::vec3 PlantManager::getTerrainNormalAt(const Mesh* terrainData, float x,
   float closestDistSq = std::numeric_limits<float>::max();
   glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
 
-  for (const auto& vertex : terrainData->vertices) {
+  for (const auto& vertex : terrainData->getVertices()) {
     const float dx = vertex.pos.x - x;
     const float dz = vertex.pos.z - z;
     const float distSq = dx * dx + dz * dz;
@@ -151,13 +151,13 @@ glm::vec3 PlantManager::getTerrainNormalAt(const Mesh* terrainData, float x,
 }
 
 float PlantManager::calculateMeshBottomOffset(const Mesh* mesh) const {
-  if (!mesh || mesh->vertices.empty()) {
+  if (!mesh || mesh->getVertices().empty()) {
     return 0.0f;
   }
 
   float minY = std::numeric_limits<float>::max();
 
-  for (const auto& vertex : mesh->vertices) {
+  for (const auto& vertex : mesh->getVertices()) {
     minY = std::min(minY, vertex.pos.y);
   }
 

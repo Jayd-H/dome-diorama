@@ -12,7 +12,7 @@ RenderDevice::RenderDevice(VkDevice inDevice, VkPhysicalDevice inPhysicalDevice,
 void RenderDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                                 VkMemoryPropertyFlags properties,
                                 VkBuffer& buffer,
-                                VkDeviceMemory& bufferMemory) {
+                                VkDeviceMemory& bufferMemory) const {
   VkBufferCreateInfo bufferInfo{};
   bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   bufferInfo.size = size;
@@ -41,7 +41,7 @@ void RenderDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 }
 
 void RenderDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,
-                              VkDeviceSize size) {
+                              VkDeviceSize size) const {
   VkCommandBuffer const commandBuffer = beginSingleTimeCommands();
 
   VkBufferCopy copyRegion{};

@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "../Util/RenderUtils.h"
 #include "../stb_image.h"
 #include "Rendering/RenderDevice.h"
 #include "Resources/Object.h"
@@ -262,12 +263,14 @@ class Skybox final {
 
   void createPipeline(VkDescriptorSetLayout cameraLayout) {
     std::vector<char> vertShaderCode;
-    readFile("shaders/skybox_vert.spv", vertShaderCode);
+    RenderUtils::readFile("shaders/skybox_vert.spv", vertShaderCode);
     std::vector<char> fragShaderCode;
-    readFile("shaders/skybox_frag.spv", fragShaderCode);
+    RenderUtils::readFile("shaders/skybox_frag.spv", fragShaderCode);
 
-    const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-    const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+    const VkShaderModule vertShaderModule =
+        RenderUtils::createShaderModule(device, vertShaderCode);
+    const VkShaderModule fragShaderModule =
+        RenderUtils::createShaderModule(device, fragShaderCode);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType =
@@ -393,21 +396,12 @@ class Skybox final {
     std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
         vertShaderStageInfo, fragShaderStageInfo};
 
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.pNext = &renderingCreateInfo;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages.data();
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = VK_NULL_HANDLE;
+    VkGraphicsPipelineCreateInfo pipelineInfo =
+        RenderUtils::createGraphicsPipelineCreateInfo(
+            pipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
+            &vertexInputInfo, &inputAssembly, &viewportState, &rasterizer,
+            &multisampling, &depthStencil, &colorBlending, &dynamicState,
+            &renderingCreateInfo);
 
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
                                   nullptr, &pipeline) != VK_SUCCESS) {
@@ -449,31 +443,5 @@ class Skybox final {
     vkQueueWaitIdle(graphicsQueue);
 
     vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
-  }
-
-  VkShaderModule createShaderModule(const std::vector<char>& code) const {
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-    VkShaderModule shaderModule;
-    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) !=
-        VK_SUCCESS) {
-      throw std::runtime_error("Failed to create shader module!");
-    }
-    return shaderModule;
-  }
-
-  static void readFile(const std::string& filename, std::vector<char>& buffer) {
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-    if (!file.is_open()) {
-      throw std::runtime_error("Failed to open file: " + filename);
-    }
-    const size_t fileSize = static_cast<size_t>(file.tellg());
-    buffer.resize(fileSize);
-    file.seekg(0);
-    file.read(buffer.data(), static_cast<std::streamsize>(fileSize));
-    file.close();
   }
 };

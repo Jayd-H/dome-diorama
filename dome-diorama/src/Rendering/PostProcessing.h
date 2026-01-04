@@ -10,7 +10,7 @@ class PostProcessing final {
  public:
   PostProcessing(RenderDevice* renderDevice, VkDevice device,
                  VkFormat swapchainFormat);
-  ~PostProcessing();
+  ~PostProcessing() noexcept;
 
   PostProcessing(const PostProcessing&) = delete;
   PostProcessing& operator=(const PostProcessing&) = delete;
@@ -39,11 +39,6 @@ class PostProcessing final {
  private:
   RenderDevice* renderDevice;
   VkDevice device;
-  VkFormat swapchainFormat;
-  VkFormat depthFormat;
-
-  uint32_t width = 0;
-  uint32_t height = 0;
 
   VkImage offscreenImage = VK_NULL_HANDLE;
   VkDeviceMemory offscreenImageMemory = VK_NULL_HANDLE;
@@ -59,9 +54,21 @@ class PostProcessing final {
 
   VkPipeline pipeline = VK_NULL_HANDLE;
   VkPipeline toonPipeline = VK_NULL_HANDLE;
-  bool useToonShader = false;
 
+  // Containers (24 bytes)
   std::vector<VkDescriptorSet> descriptorSets;
+
+  // Enums/Ints/Floats (4 bytes)
+  VkFormat swapchainFormat;
+  VkFormat depthFormat;
+
+  uint32_t width = 0;
+  uint32_t height = 0;
+  float currentTemperature = 20.0f;
+  float currentHumidity = 0.5f;
+
+  // Bools (1 byte)
+  bool useToonShader = false;
 
   void createOffscreenResources();
   void createDepthResources();
@@ -72,9 +79,5 @@ class PostProcessing final {
   void cleanupOffscreenResources();
   void cleanupDepthResources();
 
-  float currentTemperature = 20.0f;
-  float currentHumidity = 0.5f;
-
   VkShaderModule createShaderModule(const std::vector<char>& code) const;
-  static std::vector<char> readFile(const std::string& filename);
 };

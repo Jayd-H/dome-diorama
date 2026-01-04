@@ -1,9 +1,9 @@
 #include "PostProcessing.h"
 
 #include <array>
-#include <fstream>
 #include <stdexcept>
 
+#include "Util/RenderUtils.h"
 #include "Rendering/RenderDevice.h"
 #include "Util/Debug.h"
 
@@ -209,7 +209,7 @@ void PostProcessing::render(VkCommandBuffer commandBuffer,
 
   vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
-  VkPipeline pipelineToBind = useToonShader ? toonPipeline : pipeline;
+  const VkPipeline pipelineToBind = useToonShader ? toonPipeline : pipeline;
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipelineToBind);
 
@@ -392,12 +392,8 @@ void PostProcessing::createDescriptorSetLayout() {
   Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Creating descriptor set layout");
 
-  VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-  samplerLayoutBinding.binding = 0;
-  samplerLayoutBinding.descriptorCount = 1;
-  samplerLayoutBinding.descriptorType =
-      VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  VkDescriptorSetLayoutBinding samplerLayoutBinding =
+      RenderUtils::createSamplerLayoutBinding(0, VK_SHADER_STAGE_FRAGMENT_BIT);
 
   VkDescriptorSetLayoutCreateInfo layoutInfo{};
   layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -424,11 +420,9 @@ void PostProcessing::createPipelines() {
   vertexInputInfo.vertexBindingDescriptionCount = 0;
   vertexInputInfo.vertexAttributeDescriptionCount = 0;
 
-  VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-  inputAssembly.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-  inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-  inputAssembly.primitiveRestartEnable = VK_FALSE;
+  VkPipelineInputAssemblyStateCreateInfo inputAssembly =
+      RenderUtils::createInputAssemblyState(
+          VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
   VkPipelineViewportStateCreateInfo viewportState{};
   viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -457,11 +451,8 @@ void PostProcessing::createPipelines() {
   depthStencil.depthTestEnable = VK_FALSE;
   depthStencil.depthWriteEnable = VK_FALSE;
 
-  VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-  colorBlendAttachment.colorWriteMask =
-      VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-  colorBlendAttachment.blendEnable = VK_FALSE;
+  VkPipelineColorBlendAttachmentState colorBlendAttachment =
+      RenderUtils::createColorBlendAttachment();
 
   VkPipelineColorBlendStateCreateInfo colorBlending{};
   colorBlending.sType =
@@ -513,46 +504,16 @@ void PostProcessing::createPipelines() {
   pipelineInfo.layout = pipelineLayout;
   pipelineInfo.renderPass = VK_NULL_HANDLE;
 
-  {
-    auto vertCode = readFile("shaders/postprocess_vert.spv");
-    auto fragCode = readFile("shaders/postprocess_frag.spv");
+  auto createPipelineInstance = [&](const std::string& vertPath,
+                                    const std::string& fragPath,
+                                    VkPipeline& outPipeline) {
+    std::vector<char> vertCode;
+    RenderUtils::readFile(vertPath, vertCode);
+    std::vector<char> fragCode;
+    RenderUtils::readFile(fragPath, fragCode);
 
-    VkShaderModule vertModule = createShaderModule(vertCode);
-    VkShaderModule fragModule = createShaderModule(fragCode);
-
-    VkPipelineShaderStageCreateInfo vertStage{};
-    vertStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vertStage.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertStage.module = vertModule;
-    vertStage.pName = "main";
-
-    VkPipelineShaderStageCreateInfo fragStage{};
-    fragStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fragStage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragStage.module = fragModule;
-    fragStage.pName = "main";
-
-    std::array<VkPipelineShaderStageCreateInfo, 2> stages = {vertStage,
-                                                             fragStage};
-    pipelineInfo.stageCount = static_cast<uint32_t>(stages.size());
-    pipelineInfo.pStages = stages.data();
-
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-                                  nullptr, &pipeline) != VK_SUCCESS) {
-      throw std::runtime_error(
-          "failed to create post-process graphics pipeline!");
-    }
-
-    vkDestroyShaderModule(device, fragModule, nullptr);
-    vkDestroyShaderModule(device, vertModule, nullptr);
-  }
-
-  {
-    auto vertCode = readFile("shaders/toon_vert.spv");
-    auto fragCode = readFile("shaders/toon_frag.spv");
-
-    VkShaderModule vertModule = createShaderModule(vertCode);
-    VkShaderModule fragModule = createShaderModule(fragCode);
+    const VkShaderModule vertModule = createShaderModule(vertCode);
+    const VkShaderModule fragModule = createShaderModule(fragCode);
 
     VkPipelineShaderStageCreateInfo vertStage{};
     vertStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -566,19 +527,25 @@ void PostProcessing::createPipelines() {
     fragStage.module = fragModule;
     fragStage.pName = "main";
 
-    std::array<VkPipelineShaderStageCreateInfo, 2> stages = {vertStage,
-                                                             fragStage};
+    const std::array<VkPipelineShaderStageCreateInfo, 2> stages = {vertStage,
+                                                                   fragStage};
     pipelineInfo.stageCount = static_cast<uint32_t>(stages.size());
     pipelineInfo.pStages = stages.data();
 
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-                                  nullptr, &toonPipeline) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create toon graphics pipeline!");
+                                  nullptr, &outPipeline) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create graphics pipeline for " +
+                               vertPath);
     }
 
     vkDestroyShaderModule(device, fragModule, nullptr);
     vkDestroyShaderModule(device, vertModule, nullptr);
-  }
+  };
+
+  createPipelineInstance("shaders/postprocess_vert.spv",
+                         "shaders/postprocess_frag.spv", pipeline);
+  createPipelineInstance("shaders/toon_vert.spv", "shaders/toon_frag.spv",
+                         toonPipeline);
 
   Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Pipelines created");
@@ -677,20 +644,4 @@ VkShaderModule PostProcessing::createShaderModule(
   }
 
   return shaderModule;
-}
-
-std::vector<char> PostProcessing::readFile(const std::string& filename) {
-  std::ifstream file(filename, std::ios::ate | std::ios::binary);
-  if (!file.is_open()) {
-    throw std::runtime_error("failed to open file: " + filename);
-  }
-
-  const size_t fileSize = static_cast<size_t>(file.tellg());
-  std::vector<char> buffer(fileSize);
-
-  file.seekg(0);
-  file.read(buffer.data(), static_cast<std::streamsize>(fileSize));
-  file.close();
-
-  return buffer;
 }

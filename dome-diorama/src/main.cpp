@@ -267,17 +267,6 @@ std::vector<Object> createScene(const ConfigParser& config,
 
   // FIX: This line was missing, causing the fire effect to be invisible
   plantManager->setFireMaterialID(particleMaterialID);
-
-  ParticleEmitter* const fireEmitter = EmitterPresets::createFire()
-                                           .name("Test Fire Emitter")
-                                           .position(-5.0f, 0.5f, 0.0f)
-                                           .maxParticles(800)
-                                           .particleLifetime(2.0f)
-                                           .material(particleMaterialID)
-                                           .build();
-
-  particleManager->registerEmitter(fireEmitter);
-
   Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
              " scene objects and ", lightManager->getLightCount(), " lights");
   Debug::log(Debug::Category::MAIN, "Spawned ", plantManager->getPlantCount(),
@@ -292,7 +281,7 @@ int main() {
 #endif
 
   ConfigParser config;
-  bool configLoaded = config.load("config.ini");
+  const bool configLoaded = config.load("config.ini");
 
 #ifdef _DEBUG
   // In Debug mode, load settings from config

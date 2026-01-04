@@ -68,9 +68,11 @@ void WeatherSystem::updateWeatherEmitters(const WorldState& worldState) {
 
 void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
   if (rainEmitterID == INVALID_EMITTER_ID) {
+    ParticleEmitterBuilder builder;
+    EmitterPresets::createRain(builder);
+
     ParticleEmitter* const rainEmitter =
-        EmitterPresets::createRain()
-            .name("Weather Rain")
+        builder.name("Weather Rain")
             .position(0.0f, 150.0f, 0.0f)
             .maxParticles(particleCount)
             .particleLifetime(8.0f)
@@ -95,9 +97,11 @@ void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
 
 void WeatherSystem::activateSnowEmitter(float intensity, size_t particleCount) {
   if (snowEmitterID == INVALID_EMITTER_ID) {
+    ParticleEmitterBuilder builder;
+    EmitterPresets::createSnow(builder);
+
     ParticleEmitter* const snowEmitter =
-        EmitterPresets::createSnow()
-            .name("Weather Snow")
+        builder.name("Weather Snow")
             .position(0.0f, 150.0f, 0.0f)
             .maxParticles(particleCount)
             .particleLifetime(15.0f)
@@ -122,9 +126,11 @@ void WeatherSystem::activateSnowEmitter(float intensity, size_t particleCount) {
 
 void WeatherSystem::activateDustStormEmitter() {
   if (dustEmitterID == INVALID_EMITTER_ID) {
+    ParticleEmitterBuilder builder;
+    EmitterPresets::createDust(builder);
+
     ParticleEmitter* const dustEmitter =
-        EmitterPresets::createDust()
-            .name("Weather Dust Storm")
+        builder.name("Weather Dust Storm")
             .position(0.0f, 80.0f, 0.0f)
             .maxParticles(2500)
             .particleLifetime(10.0f)

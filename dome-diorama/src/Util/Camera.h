@@ -34,17 +34,17 @@ class Camera final {
       }
     }
 
-    float rotSpeed = 2.0f * deltaTime;
-    float panSpeed = fpsSpeed * deltaTime;
+    const float rotSpeed = 2.0f * deltaTime;
+    const float panSpeed = fpsSpeed * deltaTime;
 
-    bool ctrlPressed = input.isKeyPressed(GLFW_KEY_LEFT_CONTROL) ||
-                       input.isKeyPressed(GLFW_KEY_RIGHT_CONTROL);
+    const bool ctrlPressed = input.isKeyPressed(GLFW_KEY_LEFT_CONTROL) ||
+                             input.isKeyPressed(GLFW_KEY_RIGHT_CONTROL);
 
     if (ctrlPressed) {
-      glm::vec3 forward = getForwardVector();
-      glm::vec3 right =
+      const glm::vec3 forward = getForwardVector();
+      const glm::vec3 right =
           glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
-      glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+      const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
       glm::vec3 movement(0.0f);
 
@@ -92,14 +92,14 @@ class Camera final {
 
   inline void setPose(const glm::vec3& position, const glm::vec3& target) {
     fpsPosition = position;
-    glm::vec3 direction = glm::normalize(target - position);
+    const glm::vec3 direction = glm::normalize(target - position);
     fpsPitch = glm::degrees(asin(direction.y));
     fpsYaw = glm::degrees(atan2(direction.z, direction.x));
 
     orbitPivot = target;
     orbitRadius = glm::length(position - target);
 
-    glm::vec3 dirToPos = glm::normalize(position - target);
+    const glm::vec3 dirToPos = glm::normalize(position - target);
     orbitPhi = acos(std::clamp(dirToPos.y, -1.0f, 1.0f));
     orbitTheta = atan2(dirToPos.z, dirToPos.x);
 
@@ -179,7 +179,7 @@ class Camera final {
       fpsSpeed = std::max(1.0f, fpsSpeed);
     }
 
-    glm::vec3 forward = getForwardVector();
+    const glm::vec3 forward = getForwardVector();
     const glm::vec3 right =
         glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
     const float speed = fpsSpeed * deltaTime;

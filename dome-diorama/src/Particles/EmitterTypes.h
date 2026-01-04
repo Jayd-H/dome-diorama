@@ -22,6 +22,30 @@ struct ParticleEmitterConfig {
   ParticleEmitter::ColorMode colorMode;
 
   ParticleEmitterConfig() = default;
+
+  ParticleEmitterConfig(const char* inName, const glm::vec3& inBaseColor,
+                        const glm::vec3& inTipColor, const glm::vec3& inGravity,
+                        const glm::vec3& inInitialVelocity, float inSpawnRadius,
+                        float inParticleScale, float inFadeIn, float inFadeOut,
+                        float inVelocityRandomness, float inScaleOverLifetime,
+                        float inRotationSpeed,
+                        ParticleEmitter::BillboardMode inBillboardMode,
+                        ParticleEmitter::ColorMode inColorMode)
+      : baseColor(inBaseColor),
+        tipColor(inTipColor),
+        gravity(inGravity),
+        initialVelocity(inInitialVelocity),
+        name(inName),
+        spawnRadius(inSpawnRadius),
+        particleScale(inParticleScale),
+        fadeIn(inFadeIn),
+        fadeOut(inFadeOut),
+        velocityRandomness(inVelocityRandomness),
+        scaleOverLifetime(inScaleOverLifetime),
+        rotationSpeed(inRotationSpeed),
+        billboardMode(inBillboardMode),
+        colorMode(inColorMode) {}
+
   ParticleEmitterConfig(const ParticleEmitterConfig&) = default;
   ParticleEmitterConfig& operator=(const ParticleEmitterConfig&) = default;
   ParticleEmitterConfig(ParticleEmitterConfig&&) = default;
@@ -152,21 +176,20 @@ class ParticleEmitterBuilder final {
 
 class EmitterPresets final {
  public:
-  static ParticleEmitterBuilder createFire();
-  static ParticleEmitterBuilder createSmoke();
-  static ParticleEmitterBuilder createDust();
-  static ParticleEmitterBuilder createRain();
-  static ParticleEmitterBuilder createSnow();
+  static void createFire(ParticleEmitterBuilder& outBuilder);
+  static void createSmoke(ParticleEmitterBuilder& outBuilder);
+  static void createDust(ParticleEmitterBuilder& outBuilder);
+  static void createRain(ParticleEmitterBuilder& outBuilder);
+  static void createSnow(ParticleEmitterBuilder& outBuilder);
 
  private:
-  static ParticleEmitterBuilder createFromConfig(
-      const ParticleEmitterConfig& config);
+  static void createFromConfig(const ParticleEmitterConfig& config,
+                               ParticleEmitterBuilder& outBuilder);
 };
 
-inline ParticleEmitterBuilder EmitterPresets::createFromConfig(
-    const ParticleEmitterConfig& config) {
-  ParticleEmitterBuilder builder;
-  builder.name(config.name)
+inline void EmitterPresets::createFromConfig(
+    const ParticleEmitterConfig& config, ParticleEmitterBuilder& outBuilder) {
+  outBuilder.name(config.name)
       .baseColor(config.baseColor)
       .tipColor(config.tipColor)
       .gravity(config.gravity)
@@ -179,100 +202,49 @@ inline ParticleEmitterBuilder EmitterPresets::createFromConfig(
       .rotationSpeed(config.rotationSpeed)
       .billboardMode(config.billboardMode)
       .colorMode(config.colorMode);
-  return builder;
 }
 
-inline ParticleEmitterBuilder EmitterPresets::createFire() {
-  ParticleEmitterConfig config;
-  config.name = "Fire Emitter";
-  config.baseColor = glm::vec3(1.0f, 0.9f, 0.1f);
-  config.tipColor = glm::vec3(1.0f, 0.3f, 0.0f);
-  config.gravity = glm::vec3(0.0f);
-  config.initialVelocity = glm::vec3(0.0f, 2.0f, 0.0f);
-  config.spawnRadius = 0.2f;
-  config.particleScale = 0.5f;
-  config.fadeIn = 0.1f;
-  config.fadeOut = 0.5f;
-  config.velocityRandomness = 0.5f;
-  config.scaleOverLifetime = 0.3f;
-  config.rotationSpeed = 1.0f;
-  config.billboardMode = ParticleEmitter::BillboardMode::Spherical;
-  config.colorMode = ParticleEmitter::ColorMode::Gradient;
-  return createFromConfig(config);
+inline void EmitterPresets::createFire(ParticleEmitterBuilder& outBuilder) {
+  createFromConfig(
+      {"Fire Emitter", glm::vec3(1.0f, 0.9f, 0.1f), glm::vec3(1.0f, 0.3f, 0.0f),
+       glm::vec3(0.0f), glm::vec3(0.0f, 2.0f, 0.0f), 0.2f, 0.5f, 0.1f, 0.5f,
+       0.5f, 0.3f, 1.0f, ParticleEmitter::BillboardMode::Spherical,
+       ParticleEmitter::ColorMode::Gradient},
+      outBuilder);
 }
 
-inline ParticleEmitterBuilder EmitterPresets::createSmoke() {
-  ParticleEmitterConfig config;
-  config.name = "Smoke Emitter";
-  config.baseColor = glm::vec3(0.3f, 0.3f, 0.3f);
-  config.tipColor = glm::vec3(0.6f, 0.6f, 0.6f);
-  config.gravity = glm::vec3(0.0f);
-  config.initialVelocity = glm::vec3(0.0f, 1.5f, 0.0f);
-  config.spawnRadius = 0.3f;
-  config.particleScale = 1.5f;
-  config.fadeIn = 0.2f;
-  config.fadeOut = 0.8f;
-  config.velocityRandomness = 0.8f;
-  config.scaleOverLifetime = 2.5f;
-  config.rotationSpeed = 0.5f;
-  config.billboardMode = ParticleEmitter::BillboardMode::Spherical;
-  config.colorMode = ParticleEmitter::ColorMode::Gradient;
-  return createFromConfig(config);
+inline void EmitterPresets::createSmoke(ParticleEmitterBuilder& outBuilder) {
+  createFromConfig({"Smoke Emitter", glm::vec3(0.3f, 0.3f, 0.3f),
+                    glm::vec3(0.6f, 0.6f, 0.6f), glm::vec3(0.0f),
+                    glm::vec3(0.0f, 1.5f, 0.0f), 0.3f, 1.5f, 0.2f, 0.8f, 0.8f,
+                    2.5f, 0.5f, ParticleEmitter::BillboardMode::Spherical,
+                    ParticleEmitter::ColorMode::Gradient},
+                   outBuilder);
 }
 
-inline ParticleEmitterBuilder EmitterPresets::createDust() {
-  ParticleEmitterConfig config;
-  config.name = "Dust Emitter";
-  config.baseColor = glm::vec3(0.7f, 0.6f, 0.5f);
-  config.tipColor = glm::vec3(0.5f, 0.4f, 0.3f);
-  config.gravity = glm::vec3(0.0f);
-  config.initialVelocity = glm::vec3(1.0f, 0.5f, 0.0f);
-  config.spawnRadius = 5.0f;
-  config.particleScale = 0.3f;
-  config.fadeIn = 0.3f;
-  config.fadeOut = 0.5f;
-  config.velocityRandomness = 1.0f;
-  config.scaleOverLifetime = 1.2f;
-  config.rotationSpeed = 0.3f;
-  config.billboardMode = ParticleEmitter::BillboardMode::Spherical;
-  config.colorMode = ParticleEmitter::ColorMode::Gradient;
-  return createFromConfig(config);
+inline void EmitterPresets::createDust(ParticleEmitterBuilder& outBuilder) {
+  createFromConfig(
+      {"Dust Emitter", glm::vec3(0.7f, 0.6f, 0.5f), glm::vec3(0.5f, 0.4f, 0.3f),
+       glm::vec3(0.0f), glm::vec3(1.0f, 0.5f, 0.0f), 5.0f, 0.3f, 0.3f, 0.5f,
+       1.0f, 1.2f, 0.3f, ParticleEmitter::BillboardMode::Spherical,
+       ParticleEmitter::ColorMode::Gradient},
+      outBuilder);
 }
 
-inline ParticleEmitterBuilder EmitterPresets::createRain() {
-  ParticleEmitterConfig config;
-  config.name = "Rain Emitter";
-  config.baseColor = glm::vec3(0.5f, 0.6f, 0.9f);
-  config.tipColor = glm::vec3(0.7f, 0.8f, 1.0f);
-  config.gravity = glm::vec3(0.0f, -25.0f, 0.0f);
-  config.initialVelocity = glm::vec3(2.0f, 0.0f, 0.0f);
-  config.spawnRadius = 20.0f;
-  config.particleScale = 0.1f;
-  config.fadeIn = 0.0f;
-  config.fadeOut = 0.1f;
-  config.velocityRandomness = 0.2f;
-  config.scaleOverLifetime = 1.0f;
-  config.rotationSpeed = 0.0f;
-  config.billboardMode = ParticleEmitter::BillboardMode::Cylindrical;
-  config.colorMode = ParticleEmitter::ColorMode::BaseOnly;
-  return createFromConfig(config);
+inline void EmitterPresets::createRain(ParticleEmitterBuilder& outBuilder) {
+  createFromConfig({"Rain Emitter", glm::vec3(0.5f, 0.6f, 0.9f),
+                    glm::vec3(0.7f, 0.8f, 1.0f), glm::vec3(0.0f, -25.0f, 0.0f),
+                    glm::vec3(2.0f, 0.0f, 0.0f), 20.0f, 0.1f, 0.0f, 0.1f, 0.2f,
+                    1.0f, 0.0f, ParticleEmitter::BillboardMode::Cylindrical,
+                    ParticleEmitter::ColorMode::BaseOnly},
+                   outBuilder);
 }
 
-inline ParticleEmitterBuilder EmitterPresets::createSnow() {
-  ParticleEmitterConfig config;
-  config.name = "Snow Emitter";
-  config.baseColor = glm::vec3(0.95f, 0.95f, 1.0f);
-  config.tipColor = glm::vec3(1.0f, 1.0f, 1.0f);
-  config.gravity = glm::vec3(0.0f, -5.0f, 0.0f);
-  config.initialVelocity = glm::vec3(0.5f, 0.0f, 0.0f);
-  config.spawnRadius = 20.0f;
-  config.particleScale = 0.2f;
-  config.fadeIn = 0.0f;
-  config.fadeOut = 0.1f;
-  config.velocityRandomness = 0.3f;
-  config.scaleOverLifetime = 1.0f;
-  config.rotationSpeed = 0.2f;
-  config.billboardMode = ParticleEmitter::BillboardMode::Spherical;
-  config.colorMode = ParticleEmitter::ColorMode::BaseOnly;
-  return createFromConfig(config);
+inline void EmitterPresets::createSnow(ParticleEmitterBuilder& outBuilder) {
+  createFromConfig({"Snow Emitter", glm::vec3(0.95f, 0.95f, 1.0f),
+                    glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, -5.0f, 0.0f),
+                    glm::vec3(0.5f, 0.0f, 0.0f), 20.0f, 0.2f, 0.0f, 0.1f, 0.3f,
+                    1.0f, 0.2f, ParticleEmitter::BillboardMode::Spherical,
+                    ParticleEmitter::ColorMode::BaseOnly},
+                   outBuilder);
 }

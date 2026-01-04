@@ -2,20 +2,20 @@
 #include <vulkan/vulkan.h>
 
 #include <array>
-#include <fstream>
-#include <stdexcept>
 #include <vector>
 
+#include "Util/RenderUtils.h"
 #include "Resources/MeshManager.h"
 
 class MainPipeline final {
  public:
   enum class ShadingMode { Phong, Gouraud };
 
-  MainPipeline(VkDevice device, VkFormat swapChainFormat, VkFormat depthFormat)
-      : device(device),
-        swapChainFormat(swapChainFormat),
-        depthFormat(depthFormat),
+  MainPipeline(VkDevice inDevice, VkFormat inSwapChainFormat,
+               VkFormat inDepthFormat)
+      : device(inDevice),
+        swapChainFormat(inSwapChainFormat),
+        depthFormat(inDepthFormat),
         pipeline(VK_NULL_HANDLE),
         pipelineLayout(VK_NULL_HANDLE),
         descriptorSetLayout(VK_NULL_HANDLE),
@@ -24,17 +24,22 @@ class MainPipeline final {
         currentPolygonMode(VK_POLYGON_MODE_FILL),
         currentShadingMode(ShadingMode::Phong) {}
 
-  ~MainPipeline() { cleanup(); }
+  ~MainPipeline() {
+    try {
+      cleanup();
+    } catch (...) {
+    }
+  }
 
   MainPipeline(const MainPipeline&) = delete;
   MainPipeline& operator=(const MainPipeline&) = delete;
 
-  void create(VkDescriptorSetLayout descriptorSetLayout,
-              VkDescriptorSetLayout materialDescriptorSetLayout,
-              VkDescriptorSetLayout shadowDescriptorSetLayout) {
-    this->descriptorSetLayout = descriptorSetLayout;
-    this->materialDescriptorSetLayout = materialDescriptorSetLayout;
-    this->shadowDescriptorSetLayout = shadowDescriptorSetLayout;
+  void create(VkDescriptorSetLayout inDescriptorSetLayout,
+              VkDescriptorSetLayout inMaterialDescriptorSetLayout,
+              VkDescriptorSetLayout inShadowDescriptorSetLayout) {
+    descriptorSetLayout = inDescriptorSetLayout;
+    materialDescriptorSetLayout = inMaterialDescriptorSetLayout;
+    shadowDescriptorSetLayout = inShadowDescriptorSetLayout;
 
     createPipeline();
   }
@@ -80,11 +85,16 @@ class MainPipeline final {
   ShadingMode currentShadingMode;
 
   void createPipeline() {
-    const auto vertShaderCode = readFile("shaders/vert.spv");
-    const auto fragShaderCode = readFile("shaders/frag.spv");
+    std::vector<char> vertShaderCode;
+    RenderUtils::readFile("shaders/vert.spv", vertShaderCode);
 
-    const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-    const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+    std::vector<char> fragShaderCode;
+    RenderUtils::readFile("shaders/frag.spv", fragShaderCode);
+
+    const VkShaderModule vertShaderModule =
+        RenderUtils::createShaderModule(device, vertShaderCode);
+    const VkShaderModule fragShaderModule =
+        RenderUtils::createShaderModule(device, fragShaderCode);
 
     uint32_t shadingModeValue =
         (currentShadingMode == ShadingMode::Phong) ? 0 : 1;
@@ -116,9 +126,6 @@ class MainPipeline final {
     fragShaderStageInfo.pName = "main";
     fragShaderStageInfo.pSpecializationInfo = &specializationInfo;
 
-    const std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
-        vertShaderStageInfo, fragShaderStageInfo};
-
     const auto bindingDescription = Vertex::getBindingDescription();
     const auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
@@ -130,12 +137,6 @@ class MainPipeline final {
     vertexInputInfo.vertexAttributeDescriptionCount =
         static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-    inputAssembly.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -228,22 +229,19 @@ class MainPipeline final {
     renderingCreateInfo.pColorAttachmentFormats = &swapChainFormat;
     renderingCreateInfo.depthAttachmentFormat = depthFormat;
 
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.pNext = &renderingCreateInfo;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages.data();
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = VK_NULL_HANDLE;
-    pipelineInfo.subpass = 0;
+    const std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
+        vertShaderStageInfo, fragShaderStageInfo};
+
+    const VkPipelineInputAssemblyStateCreateInfo inputAssembly =
+        RenderUtils::createInputAssemblyState(
+            VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+    VkGraphicsPipelineCreateInfo pipelineInfo =
+        RenderUtils::createGraphicsPipelineCreateInfo(
+            pipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
+            &vertexInputInfo, &inputAssembly, &viewportState, &rasterizer,
+            &multisampling, &depthStencil, &colorBlending, &dynamicState,
+            &renderingCreateInfo);
 
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
                                   nullptr, &pipeline) != VK_SUCCESS) {
@@ -252,31 +250,5 @@ class MainPipeline final {
 
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
-  }
-
-  VkShaderModule createShaderModule(const std::vector<char>& code) const {
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-    VkShaderModule shaderModule;
-    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) !=
-        VK_SUCCESS) {
-      throw std::runtime_error("failed to create shader module!");
-    }
-    return shaderModule;
-  }
-
-  static std::vector<char> readFile(const std::string& filename) {
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-    if (!file.is_open()) {
-      throw std::runtime_error("failed to open file!");
-    }
-    const size_t fileSize = static_cast<size_t>(file.tellg());
-    std::vector<char> buffer(fileSize);
-    file.seekg(0);
-    file.read(buffer.data(), static_cast<std::streamsize>(fileSize));
-    file.close();
-    return buffer;
   }
 };

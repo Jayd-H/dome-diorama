@@ -188,6 +188,7 @@
     <ClInclude Include="src\Application.h" />
     <ClInclude Include="src\Particles\EmitterTypes.h" />
     <ClInclude Include="src\Rendering\MainPipeline.h" />
+    <ClInclude Include="src\Util\RenderUtils.h" />
     <ClInclude Include="src\Rendering\Window.h" />
     <ClInclude Include="src\Scene\PlantState.h" />
     <ClInclude Include="src\Rendering\PushConstants.h" />

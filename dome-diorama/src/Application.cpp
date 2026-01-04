@@ -1226,7 +1226,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
       if (object.getMeshID() == INVALID_MESH_ID) continue;
 
       const Mesh* const mesh = meshManager->getMesh(object.getMeshID());
-      if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
+      if (!mesh || mesh->getVertexBuffer() == VK_NULL_HANDLE) continue;
 
       shadowPush.model = object.getModelMatrix();
 
@@ -1234,15 +1234,16 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
                          VK_SHADER_STAGE_VERTEX_BIT, 0,
                          sizeof(ShadowPushConstants), &shadowPush);
 
-      std::array<VkBuffer, 1> vertexBuffers = {mesh->vertexBuffer};
+      std::array<VkBuffer, 1> vertexBuffers = {mesh->getVertexBuffer()};
       std::array<VkDeviceSize, 1> offsets = {0};
       vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers.data(),
                              offsets.data());
-      vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer, 0,
+      vkCmdBindIndexBuffer(commandBuffer, mesh->getIndexBuffer(), 0,
                            VK_INDEX_TYPE_UINT16);
 
       vkCmdDrawIndexed(commandBuffer,
-                       static_cast<uint32_t>(mesh->indices.size()), 1, 0, 0, 0);
+                       static_cast<uint32_t>(mesh->getIndices().size()), 1, 0,
+                       0, 0);
     }
 
     vkCmdEndRendering(commandBuffer);
@@ -1307,7 +1308,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     const Material* const material =
         materialManager->getMaterial(object.getMaterialID());
 
-    if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
+    if (!mesh || mesh->getVertexBuffer() == VK_NULL_HANDLE) continue;
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
 
     StandardPushConstants pushConstants;
@@ -1320,11 +1321,11 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
         sizeof(StandardPushConstants), &pushConstants);
 
-    std::array<VkBuffer, 1> vertexBuffers = {mesh->vertexBuffer};
+    std::array<VkBuffer, 1> vertexBuffers = {mesh->getVertexBuffer()};
     std::array<VkDeviceSize, 1> offsets = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers.data(),
                            offsets.data());
-    vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer, 0,
+    vkCmdBindIndexBuffer(commandBuffer, mesh->getIndexBuffer(), 0,
                          VK_INDEX_TYPE_UINT16);
 
     std::array<VkDescriptorSet, 3> descriptorSetsToBind = {
@@ -1336,7 +1337,8 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
                             static_cast<uint32_t>(descriptorSetsToBind.size()),
                             descriptorSetsToBind.data(), 0, nullptr);
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh->indices.size()),
+    vkCmdDrawIndexed(commandBuffer,
+                     static_cast<uint32_t>(mesh->getIndices().size()),
                      1, 0, 0, 0);
   }
 
@@ -1441,7 +1443,7 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
     const Material* const material =
         materialManager->getMaterial(object.getMaterialID());
 
-    if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
+    if (!mesh || mesh->getVertexBuffer() == VK_NULL_HANDLE) continue;
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
 
     PlantPushConstants pushConstants{};
@@ -1458,11 +1460,11 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
         sizeof(PlantPushConstants), &pushConstants);
 
-    std::array<VkBuffer, 1> vertexBuffers = {mesh->vertexBuffer};
+    std::array<VkBuffer, 1> vertexBuffers = {mesh->getVertexBuffer()};
     std::array<VkDeviceSize, 1> offsets = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers.data(),
                            offsets.data());
-    vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer, 0,
+    vkCmdBindIndexBuffer(commandBuffer, mesh->getIndexBuffer(), 0,
                          VK_INDEX_TYPE_UINT16);
 
     std::array<VkDescriptorSet, 3> descriptorSetsToBind = {
@@ -1474,7 +1476,8 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
                             static_cast<uint32_t>(descriptorSetsToBind.size()),
                             descriptorSetsToBind.data(), 0, nullptr);
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh->indices.size()),
+    vkCmdDrawIndexed(commandBuffer,
+                     static_cast<uint32_t>(mesh->getIndices().size()),
                      1, 0, 0, 0);
   }
 }

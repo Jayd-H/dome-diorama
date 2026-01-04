@@ -124,11 +124,11 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     particlePipeline);
 
-  const std::array<VkBuffer, 1> vertexBuffers = {quadMesh->vertexBuffer};
+  const std::array<VkBuffer, 1> vertexBuffers = {quadMesh->getVertexBuffer()};
   const std::array<VkDeviceSize, 1> offsets = {0};
   vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers.data(),
                          offsets.data());
-  vkCmdBindIndexBuffer(commandBuffer, quadMesh->indexBuffer, 0,
+  vkCmdBindIndexBuffer(commandBuffer, quadMesh->getIndexBuffer(), 0,
                        VK_INDEX_TYPE_UINT16);
 
   for (size_t i = 0; i < emitters.size(); ++i) {

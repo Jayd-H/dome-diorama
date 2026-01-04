@@ -16,9 +16,8 @@ struct Vertex {
   glm::vec3 color;
   glm::vec2 texCoord;
   glm::vec3 normal;
-
   static VkVertexInputBindingDescription getBindingDescription();
-  static std::array<VkVertexInputAttributeDescription, 4>
+  static const std::array<VkVertexInputAttributeDescription, 4>&
   getAttributeDescriptions();
 };
 
@@ -28,12 +27,22 @@ class Mesh final {
  public:
   Mesh() = default;
   ~Mesh() = default;
-
   Mesh(const Mesh&) = delete;
   Mesh& operator=(const Mesh&) = delete;
-
   Mesh(Mesh&&) = default;
   Mesh& operator=(Mesh&&) = default;
+
+  const std::vector<Vertex>& getVertices() const { return vertices; }
+  const std::vector<uint16_t>& getIndices() const { return indices; }
+  VkBuffer getVertexBuffer() const { return vertexBuffer; }
+  VkDeviceMemory getVertexBufferMemory() const { return vertexBufferMemory; }
+  VkBuffer getIndexBuffer() const { return indexBuffer; }
+  VkDeviceMemory getIndexBufferMemory() const { return indexBufferMemory; }
+  MeshType getType() const { return type; }
+  const std::string& getName() const { return name; }
+
+ private:
+  friend class MeshManager;
 
   std::vector<Vertex> vertices;
   std::vector<uint16_t> indices;
@@ -41,15 +50,14 @@ class Mesh final {
   VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
   VkBuffer indexBuffer = VK_NULL_HANDLE;
   VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
-  MeshType type = MeshType::Custom;
   std::string name;
+  MeshType type = MeshType::Custom;
 };
 
 class MeshManager final {
  public:
   explicit MeshManager(RenderDevice* renderDev);
   ~MeshManager();
-
   MeshManager(const MeshManager&) = delete;
   MeshManager& operator=(const MeshManager&) = delete;
 
@@ -60,14 +68,10 @@ class MeshManager final {
                         uint32_t segments = 32);
   MeshID createParticleQuad();
   MeshID loadFromOBJ(const std::string& filepath);
-
   Mesh* getMesh(MeshID id);
   const Mesh* getMesh(MeshID id) const;
-
   MeshID getDefaultCube() const { return defaultCubeID; }
-
   void cleanup();
-
   MeshID createProceduralTerrain(float radius, uint32_t segments,
                                  float heightScale = 1.0f,
                                  float noiseScale = 4.0f, int octaves = 4,
@@ -76,9 +80,9 @@ class MeshManager final {
 
  private:
   RenderDevice* renderDevice;
-  MeshID defaultCubeID;
   std::vector<std::unique_ptr<Mesh>> meshes;
   std::unordered_map<std::string, MeshID> filepathToID;
+  MeshID defaultCubeID;
 
   MeshID registerMesh(Mesh* mesh);
   void createBuffers(Mesh* mesh);
