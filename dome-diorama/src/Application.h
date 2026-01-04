@@ -1,6 +1,7 @@
 #pragma once
 #include <vulkan/vulkan.h>
 
+#include <array>
 #include <memory>
 #include <unordered_set>
 #include <vector>
@@ -31,7 +32,7 @@ constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 struct UniformBufferObject {
   alignas(16) glm::mat4 view;
   alignas(16) glm::mat4 proj;
-  alignas(16) glm::mat4 lightSpaceMatrices[MAX_SHADOW_CASTERS];
+  alignas(16) std::array<glm::mat4, MAX_SHADOW_CASTERS> lightSpaceMatrices;
   alignas(16) glm::vec3 eyePos;
   alignas(4) float time;
 };
@@ -66,14 +67,12 @@ class Application final {
   PlantManager* getPlantManager() const { return plantManager.get(); }
   ParticleManager* getParticleManager() const { return particleManager.get(); }
   LightManager* getLightManager() const { return lightManager.get(); }
+  WeatherSystem* getWeatherSystem() const { return weatherSystem.get(); }
 
   void setSunLightID(LightID id) { sunLightID = id; }
-
   void setWorldConfig(const WorldConfig& config) {
     worldState = WorldState(config);
   }
-
-  WeatherSystem* getWeatherSystem() const { return weatherSystem.get(); }
 
   void setCameraPreset(int presetIndex);
   void triggerFireEffect();
@@ -87,17 +86,6 @@ class Application final {
   Camera camera;
   WorldState worldState;
 
-  std::vector<VkImage> swapChainImages;
-  std::vector<VkImageView> swapChainImageViews;
-  std::vector<VkBuffer> uniformBuffers;
-  std::vector<VkDeviceMemory> uniformBuffersMemory;
-  std::vector<void*> uniformBuffersMapped;
-  std::vector<VkDescriptorSet> descriptorSets;
-  std::vector<VkCommandBuffer> commandBuffers;
-  std::vector<VkSemaphore> imageAvailableSemaphores;
-  std::vector<VkSemaphore> renderFinishedSemaphores;
-  std::vector<VkFence> inFlightFences;
-
   std::unique_ptr<RenderDevice> renderDevice;
   std::unique_ptr<TextureManager> textureManager;
   std::unique_ptr<MaterialManager> materialManager;
@@ -109,6 +97,17 @@ class Application final {
   std::unique_ptr<Skybox> skybox;
   std::unique_ptr<PostProcessing> postProcessing;
   std::unique_ptr<MainPipeline> mainPipeline;
+
+  std::vector<VkImage> swapChainImages;
+  std::vector<VkImageView> swapChainImageViews;
+  std::vector<VkBuffer> uniformBuffers;
+  std::vector<VkDeviceMemory> uniformBuffersMemory;
+  std::vector<void*> uniformBuffersMapped;
+  std::vector<VkDescriptorSet> descriptorSets;
+  std::vector<VkCommandBuffer> commandBuffers;
+  std::vector<VkSemaphore> imageAvailableSemaphores;
+  std::vector<VkSemaphore> renderFinishedSemaphores;
+  std::vector<VkFence> inFlightFences;
 
   std::unordered_set<size_t> plantObjectIndicesSet;
 
@@ -144,22 +143,23 @@ class Application final {
   VkPipeline plantPipeline = VK_NULL_HANDLE;
   VkPipelineLayout plantPipelineLayout = VK_NULL_HANDLE;
 
-  VkFormat swapChainImageFormat = VK_FORMAT_UNDEFINED;
-  VkExtent2D swapChainExtent{0, 0};
-  VkFormat depthFormat = VK_FORMAT_UNDEFINED;
-
   float lastFrameTime = 0.0f;
   float simulationTime = 0.0f;
   float timeScale = 1.0f;
   float scaledDeltaTime = 0.0f;
 
+  VkFormat swapChainImageFormat = VK_FORMAT_UNDEFINED;
+  VkFormat depthFormat = VK_FORMAT_UNDEFINED;
+  VkExtent2D swapChainExtent{0, 0};
+
   uint32_t currentFrame = 0;
-  bool framebufferResized = false;
 
   MeshID particleQuadMesh = 0;
   LightID sunLightID = INVALID_LIGHT_ID;
   LightID moonLightID = INVALID_LIGHT_ID;
   uint32_t currentCameraLayer = 0xFFFFFFFF;
+
+  bool framebufferResized = false;
 
   void initWindow();
   void initVulkan();
@@ -203,7 +203,13 @@ class Application final {
   void cycleWeather();
   void toggleTimePause();
 
-  VkShaderModule createShaderModule(const std::vector<char>& code) const;
-
-  void createDefaultPipelineConfig(PipelineConfigInfo& configInfo);
+  void createDefaultPipelineConfig(PipelineConfigInfo& configInfo) const;
+  void setupRenderingCreateInfo(
+      VkPipelineRenderingCreateInfo& createInfo) const;
+  void setupViewportScissor(VkCommandBuffer commandBuffer, float width,
+                            float height) const;
+  void getShaderStages(
+      const std::string& vertPath, const std::string& fragPath,
+      VkShaderModule& vertModule, VkShaderModule& fragModule,
+      std::array<VkPipelineShaderStageCreateInfo, 2>& stages) const;
 };

@@ -149,6 +149,7 @@
     <ClCompile Include="src\Resources\MaterialManager.cpp" />
     <ClCompile Include="src\Resources\MeshManager.cpp" />
     <ClCompile Include="src\Particles\ParticleManager.cpp" />
+    <ClCompile Include="src\Scene\LightManager.cpp" />
     <ClCompile Include="src\Scene\PlantManager.cpp" />
     <ClCompile Include="src\Rendering\PostProcessing.cpp" />
     <ClCompile Include="src\Rendering\RenderDevice.cpp" />

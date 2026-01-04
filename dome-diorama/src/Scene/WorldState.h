@@ -242,7 +242,6 @@ inline float getSunIntensity() const {
     }
 
     const float progress = parameterUpdateTimer / parameterUpdateInterval;
-    const float smoothProgress = easeInOutCubic(progress);
 
     const float baseTransitionSpeed = transitionSmoothness;
     currentTemperature += (targetTemperature - currentTemperature) * deltaTime *

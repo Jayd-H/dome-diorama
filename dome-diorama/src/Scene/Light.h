@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <string>
+#include <utility>
 
 using LightID = uint32_t;
 constexpr LightID INVALID_LIGHT_ID = 0;
@@ -10,7 +11,7 @@ enum class LightType { Point, Sun };
 class Light final {
  public:
   Light()
-      : type(LightType::Point),
+      : name("Unnamed Light"),
         position(0.0f),
         direction(0.0f, -1.0f, 0.0f),
         color(1.0f),
@@ -18,24 +19,51 @@ class Light final {
         constant(1.0f),
         linear(0.09f),
         quadratic(0.032f),
-        name("Unnamed Light"),
-        castsShadows(true),
-        shadowMapIndex(UINT32_MAX) {}
+        type(LightType::Point),
+        shadowMapIndex(UINT32_MAX),
+        castsShadows(true) {}
 
   Light(const Light&) = default;
   Light& operator=(const Light&) = default;
 
-  LightType type;
-  glm::vec3 position;
-  glm::vec3 direction;
-  glm::vec3 color;
-  float intensity;
-  float constant;
-  float linear;
-  float quadratic;
-  std::string name;
-  bool castsShadows;
-  uint32_t shadowMapIndex;
+  void setType(LightType t) { type = t; }
+  LightType getType() const { return type; }
+
+  void setPosition(const glm::vec3& p) { position = p; }
+  const glm::vec3& getPosition() const { return position; }
+
+  void setDirection(const glm::vec3& d) { direction = d; }
+  const glm::vec3& getDirection() const { return direction; }
+
+  void setColor(const glm::vec3& c) { color = c; }
+  const glm::vec3& getColor() const { return color; }
+
+  void setIntensity(float i) { intensity = i; }
+  float getIntensity() const { return intensity; }
+
+  void setConstant(float c) { constant = c; }
+  float getConstant() const { return constant; }
+
+  void setLinear(float l) { linear = l; }
+  float getLinear() const { return linear; }
+
+  void setQuadratic(float q) { quadratic = q; }
+  float getQuadratic() const { return quadratic; }
+
+  void setName(const std::string& n) { name = n; }
+  const std::string& getName() const { return name; }
+
+  void setCastsShadows(bool cast) { castsShadows = cast; }
+  bool getCastsShadows() const { return castsShadows; }
+
+  void setShadowMapIndex(uint32_t idx) { shadowMapIndex = idx; }
+  uint32_t getShadowMapIndex() const { return shadowMapIndex; }
+
+  void setCutOff(float c) { cutOff = c; }
+  float getCutOff() const { return cutOff; }
+
+  void setOuterCutOff(float c) { outerCutOff = c; }
+  float getOuterCutOff() const { return outerCutOff; }
 
   glm::vec3 getEffectivePosition() const {
     if (type == LightType::Sun) {
@@ -43,83 +71,85 @@ class Light final {
     }
     return position;
   }
+
+ private:
+  std::string name;
+  glm::vec3 position;
+  glm::vec3 direction;
+  glm::vec3 color;
+  float intensity;
+  float constant;
+  float linear;
+  float quadratic;
+  float cutOff = 0.0f;
+  float outerCutOff = 0.0f;
+  LightType type;
+  uint32_t shadowMapIndex;
+  bool castsShadows;
 };
 
 class LightBuilder final {
  public:
-  inline LightBuilder() : light() {
-    light.type = LightType::Point;
-    light.name = "Unnamed Light";
-    light.position = glm::vec3(0.0f);
-    light.direction = glm::vec3(0.0f, -1.0f, 0.0f);
-    light.color = glm::vec3(1.0f);
-    light.intensity = 1.0f;
-    light.constant = 1.0f;
-    light.linear = 0.09f;
-    light.quadratic = 0.032f;
-    light.castsShadows = false;
-    light.shadowMapIndex = UINT32_MAX;
-  }
+  LightBuilder() = default;
 
-  inline LightBuilder& type(LightType t) {
-    light.type = t;
+  LightBuilder& type(LightType t) {
+    light.setType(t);
     return *this;
   }
 
-  inline LightBuilder& name(const std::string& n) {
-    light.name = n;
+  LightBuilder& name(const std::string& n) {
+    light.setName(n);
     return *this;
   }
 
-  inline LightBuilder& position(float x, float y, float z) {
-    light.position = glm::vec3(x, y, z);
+  LightBuilder& position(const glm::vec3& pos) {
+    light.setPosition(pos);
     return *this;
   }
 
-  inline LightBuilder& position(const glm::vec3& pos) {
-    light.position = pos;
+  LightBuilder& position(float x, float y, float z) {
+    light.setPosition(glm::vec3(x, y, z));
     return *this;
   }
 
-  inline LightBuilder& direction(float x, float y, float z) {
-    light.direction = glm::normalize(glm::vec3(x, y, z));
+  LightBuilder& direction(const glm::vec3& dir) {
+    light.setDirection(glm::normalize(dir));
     return *this;
   }
 
-  inline LightBuilder& direction(const glm::vec3& dir) {
-    light.direction = glm::normalize(dir);
+  LightBuilder& direction(float x, float y, float z) {
+    light.setDirection(glm::normalize(glm::vec3(x, y, z)));
     return *this;
   }
 
-  inline LightBuilder& color(float r, float g, float b) {
-    light.color = glm::vec3(r, g, b);
+  LightBuilder& color(const glm::vec3& c) {
+    light.setColor(c);
     return *this;
   }
 
-  inline LightBuilder& color(const glm::vec3& c) {
-    light.color = c;
+  LightBuilder& color(float r, float g, float b) {
+    light.setColor(glm::vec3(r, g, b));
     return *this;
   }
 
-  inline LightBuilder& intensity(float i) {
-    light.intensity = i;
+  LightBuilder& intensity(float i) {
+    light.setIntensity(i);
     return *this;
   }
 
-  inline LightBuilder& attenuation(float constant, float linear,
-                                   float quadratic) {
-    light.constant = constant;
-    light.linear = linear;
-    light.quadratic = quadratic;
+  LightBuilder& attenuation(float constant, float linear, float quadratic) {
+    light.setConstant(constant);
+    light.setLinear(linear);
+    light.setQuadratic(quadratic);
     return *this;
   }
 
-  inline LightBuilder& castsShadows(bool shadows) {
-    light.castsShadows = shadows;
+  LightBuilder& castsShadows(bool shadows) {
+    light.setCastsShadows(shadows);
     return *this;
   }
 
-  inline Light build() const { return light; }
+  Light build() const { return light; }
 
  private:
   Light light;

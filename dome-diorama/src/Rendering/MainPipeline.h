@@ -4,8 +4,8 @@
 #include <array>
 #include <vector>
 
-#include "Util/RenderUtils.h"
 #include "Resources/MeshManager.h"
+#include "Util/RenderUtils.h"
 
 class MainPipeline final {
  public:
@@ -232,16 +232,18 @@ class MainPipeline final {
     const std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
         vertShaderStageInfo, fragShaderStageInfo};
 
-    const VkPipelineInputAssemblyStateCreateInfo inputAssembly =
-        RenderUtils::createInputAssemblyState(
-            VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    // FIXED: Declare struct first, then pass by reference
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+    RenderUtils::createInputAssemblyState(inputAssembly,
+                                          VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
-    VkGraphicsPipelineCreateInfo pipelineInfo =
-        RenderUtils::createGraphicsPipelineCreateInfo(
-            pipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
-            &vertexInputInfo, &inputAssembly, &viewportState, &rasterizer,
-            &multisampling, &depthStencil, &colorBlending, &dynamicState,
-            &renderingCreateInfo);
+    // FIXED: Declare struct first, then pass by reference
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    RenderUtils::createGraphicsPipelineCreateInfo(
+        pipelineInfo, pipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
+        &vertexInputInfo, &inputAssembly, &viewportState, &rasterizer,
+        &multisampling, &depthStencil, &colorBlending, &dynamicState,
+        &renderingCreateInfo);
 
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
                                   nullptr, &pipeline) != VK_SUCCESS) {

@@ -44,7 +44,7 @@ class MaterialManager final {
   // 3. Small Scalars (4 bytes)
   MaterialID defaultMaterialID;
 
-  void createDescriptorSet(Material* material);
+  void createDescriptorSet(Material* material) const;
   void updateDescriptorSet(const Material* material) const;
   void createDefaultMaterial();
 };

@@ -11,26 +11,23 @@ layout(binding = 0, set = 0) uniform UniformBufferObject {
 
 struct LightData {
     mat4 lightSpaceMatrix;
-    vec3 position;
-    int type;
-    vec3 direction;
-    float intensity;
-    vec3 color;
-    float constant;
-    float linear;
+    vec4 position_intensity;
+    vec4 direction_constant;
+    vec4 color_linear;
     float quadratic;
     float cutOff;
     float outerCutOff;
+    int type;
     int castsShadows;
     int shadowMapIndex;
-    float padding;
+    vec2 padding;
 };
 
 layout(binding = 1, set = 0) uniform LightBuffer {
     LightData lights[8];
     int numLights;
     int numShadowMaps;
-    float padding[2];
+    vec2 padding;
 } lightBuffer;
 
 layout(binding = 0, set = 1) uniform MaterialProperties {
@@ -137,9 +134,15 @@ float calculateShadow(int lightIndex, vec3 fragPos, vec3 normal, vec3 lightDir) 
 }
 
 vec3 calculatePointLight(LightData light, int lightIndex, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo, float roughness, float metallic) {
-    vec3 lightDir = normalize(light.position - fragPos);
-    float distance = length(light.position - fragPos);
-    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+    vec3 position = light.position_intensity.xyz;
+    float intensity = light.position_intensity.w;
+    float constant = light.direction_constant.w;
+    float linear = light.color_linear.w;
+    vec3 color = light.color_linear.xyz;
+
+    vec3 lightDir = normalize(position - fragPos);
+    float distance = length(position - fragPos);
+    float attenuation = 1.0 / (constant + linear * distance + light.quadratic * (distance * distance));
     
     float diff = max(dot(normal, lightDir), 0.0);
     
@@ -157,11 +160,15 @@ vec3 calculatePointLight(LightData light, int lightIndex, vec3 normal, vec3 frag
     
     float shadow = calculateShadow(lightIndex, fragPos, normal, lightDir);
     
-    return (diffuse + specular) * light.color * light.intensity * diff * attenuation * shadow;
+    return (diffuse + specular) * color * intensity * diff * attenuation * shadow;
 }
 
 vec3 calculateSunLight(LightData light, int lightIndex, vec3 normal, vec3 viewDir, vec3 albedo, float roughness, float metallic) {
-    vec3 lightDir = normalize(-light.direction);
+    vec3 direction = light.direction_constant.xyz;
+    float intensity = light.position_intensity.w;
+    vec3 color = light.color_linear.xyz;
+
+    vec3 lightDir = normalize(-direction);
     
     float diff = max(dot(normal, lightDir), 0.0);
     
@@ -179,7 +186,7 @@ vec3 calculateSunLight(LightData light, int lightIndex, vec3 normal, vec3 viewDi
     
     float shadow = calculateShadow(lightIndex, fragWorldPos, normal, lightDir);
     
-    return (diffuse + specular) * light.color * light.intensity * diff * shadow;
+    return (diffuse + specular) * color * intensity * diff * shadow;
 }
 
 void main() {

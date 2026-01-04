@@ -85,6 +85,6 @@ class MeshManager final {
   MeshID defaultCubeID;
 
   MeshID registerMesh(Mesh* mesh);
-  void createBuffers(Mesh* mesh);
+  void createBuffers(Mesh* mesh) const;
   void createDefaultMeshes();
 };

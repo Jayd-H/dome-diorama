@@ -186,7 +186,7 @@ void MaterialManager::cleanup() {
   Debug::log(Debug::Category::MATERIALS, "MaterialManager: Cleanup complete");
 }
 
-void MaterialManager::createDescriptorSet(Material* material) {
+void MaterialManager::createDescriptorSet(Material* material) const {
   std::string matName;
   material->getName(matName);
   Debug::log(Debug::Category::MATERIALS,

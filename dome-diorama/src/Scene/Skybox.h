@@ -396,12 +396,12 @@ class Skybox final {
     std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
         vertShaderStageInfo, fragShaderStageInfo};
 
-    VkGraphicsPipelineCreateInfo pipelineInfo =
-        RenderUtils::createGraphicsPipelineCreateInfo(
-            pipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
-            &vertexInputInfo, &inputAssembly, &viewportState, &rasterizer,
-            &multisampling, &depthStencil, &colorBlending, &dynamicState,
-            &renderingCreateInfo);
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    RenderUtils::createGraphicsPipelineCreateInfo(
+        pipelineInfo, pipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
+        &vertexInputInfo, &inputAssembly, &viewportState, &rasterizer,
+        &multisampling, &depthStencil, &colorBlending, &dynamicState,
+        &renderingCreateInfo);
 
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
                                   nullptr, &pipeline) != VK_SUCCESS) {

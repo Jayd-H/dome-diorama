@@ -37,8 +37,11 @@ inline VkShaderModule createShaderModule(VkDevice device,
   return shaderModule;
 }
 
-inline VkGraphicsPipelineCreateInfo createGraphicsPipelineCreateInfo(
-    VkPipelineLayout layout, VkRenderPass renderPass, uint32_t stageCount,
+// Fixed OPT.33: Pass by reference instead of returning by value
+// Restored Name: createGraphicsPipelineCreateInfo
+inline void createGraphicsPipelineCreateInfo(
+    VkGraphicsPipelineCreateInfo& pipelineInfo, VkPipelineLayout layout,
+    VkRenderPass renderPass, uint32_t stageCount,
     const VkPipelineShaderStageCreateInfo* pStages,
     const VkPipelineVertexInputStateCreateInfo* pVertexInputState,
     const VkPipelineInputAssemblyStateCreateInfo* pInputAssemblyState,
@@ -48,10 +51,9 @@ inline VkGraphicsPipelineCreateInfo createGraphicsPipelineCreateInfo(
     const VkPipelineDepthStencilStateCreateInfo* pDepthStencilState,
     const VkPipelineColorBlendStateCreateInfo* pColorBlendState,
     const VkPipelineDynamicStateCreateInfo* pDynamicState,
-    const void* pNext = nullptr) {
-  VkGraphicsPipelineCreateInfo pipelineInfo{};
+    const VkPipelineRenderingCreateInfo* pNextRenderingInfo = nullptr) {
   pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  pipelineInfo.pNext = pNext;
+  pipelineInfo.pNext = pNextRenderingInfo;
   pipelineInfo.stageCount = stageCount;
   pipelineInfo.pStages = pStages;
   pipelineInfo.pVertexInputState = pVertexInputState;
@@ -67,38 +69,48 @@ inline VkGraphicsPipelineCreateInfo createGraphicsPipelineCreateInfo(
   pipelineInfo.subpass = 0;
   pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
   pipelineInfo.basePipelineIndex = -1;
-
-  return pipelineInfo;
 }
 
-inline VkPipelineInputAssemblyStateCreateInfo createInputAssemblyState(
+// Fixed OPT.33: Pass by reference instead of returning by value
+// Restored Name: createInputAssemblyState
+inline void createInputAssemblyState(
+    VkPipelineInputAssemblyStateCreateInfo& inputAssembly,
     VkPrimitiveTopology topology) {
-  VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
   inputAssembly.sType =
       VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+  inputAssembly.pNext = nullptr;
+  inputAssembly.flags = 0;
   inputAssembly.topology = topology;
   inputAssembly.primitiveRestartEnable = VK_FALSE;
-  return inputAssembly;
 }
 
-inline VkPipelineColorBlendAttachmentState createColorBlendAttachment() {
-  VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+// Fixed OPT.33: Pass by reference instead of returning by value
+// Restored Name: createColorBlendAttachment
+inline void createColorBlendAttachment(
+    VkPipelineColorBlendAttachmentState& colorBlendAttachment) {
   colorBlendAttachment.colorWriteMask =
       VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
       VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
   colorBlendAttachment.blendEnable = VK_FALSE;
-  return colorBlendAttachment;
+  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+  colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+  colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+  colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+  colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+  colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 }
 
-inline VkDescriptorSetLayoutBinding createSamplerLayoutBinding(
-    uint32_t binding, VkShaderStageFlags stageFlags) {
-  VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+// Fixed OPT.33: Pass by reference instead of returning by value
+// Restored Name: createSamplerLayoutBinding
+inline void createSamplerLayoutBinding(
+    VkDescriptorSetLayoutBinding& samplerLayoutBinding, uint32_t binding,
+    VkShaderStageFlags stageFlags) {
   samplerLayoutBinding.binding = binding;
   samplerLayoutBinding.descriptorCount = 1;
   samplerLayoutBinding.descriptorType =
       VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  samplerLayoutBinding.pImmutableSamplers = nullptr;
   samplerLayoutBinding.stageFlags = stageFlags;
-  return samplerLayoutBinding;
 }
 
 }  // namespace RenderUtils

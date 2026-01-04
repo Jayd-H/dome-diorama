@@ -3,9 +3,9 @@
 #include <array>
 #include <stdexcept>
 
-#include "Util/RenderUtils.h"
 #include "Rendering/RenderDevice.h"
 #include "Util/Debug.h"
+#include "Util/RenderUtils.h"
 
 PostProcessing::PostProcessing(RenderDevice* renderDeviceParam,
                                VkDevice deviceParam,
@@ -392,8 +392,9 @@ void PostProcessing::createDescriptorSetLayout() {
   Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Creating descriptor set layout");
 
-  VkDescriptorSetLayoutBinding samplerLayoutBinding =
-      RenderUtils::createSamplerLayoutBinding(0, VK_SHADER_STAGE_FRAGMENT_BIT);
+  VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+  RenderUtils::createSamplerLayoutBinding(samplerLayoutBinding, 0,
+                                          VK_SHADER_STAGE_FRAGMENT_BIT);
 
   VkDescriptorSetLayoutCreateInfo layoutInfo{};
   layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -420,9 +421,9 @@ void PostProcessing::createPipelines() {
   vertexInputInfo.vertexBindingDescriptionCount = 0;
   vertexInputInfo.vertexAttributeDescriptionCount = 0;
 
-  VkPipelineInputAssemblyStateCreateInfo inputAssembly =
-      RenderUtils::createInputAssemblyState(
-          VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+  VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+  RenderUtils::createInputAssemblyState(inputAssembly,
+                                        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
   VkPipelineViewportStateCreateInfo viewportState{};
   viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -451,8 +452,8 @@ void PostProcessing::createPipelines() {
   depthStencil.depthTestEnable = VK_FALSE;
   depthStencil.depthWriteEnable = VK_FALSE;
 
-  VkPipelineColorBlendAttachmentState colorBlendAttachment =
-      RenderUtils::createColorBlendAttachment();
+  VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+  RenderUtils::createColorBlendAttachment(colorBlendAttachment);
 
   VkPipelineColorBlendStateCreateInfo colorBlending{};
   colorBlending.sType =

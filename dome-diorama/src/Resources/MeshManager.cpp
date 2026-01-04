@@ -679,7 +679,7 @@ MeshID MeshManager::createProceduralTerrain(float radius, uint32_t segments,
   return id;
 }
 
-void MeshManager::createBuffers(Mesh* mesh) {
+void MeshManager::createBuffers(Mesh* mesh) const {
   Debug::log(Debug::Category::MESH, "MeshManager: Creating buffers for mesh '",
              mesh->name, "'");
 

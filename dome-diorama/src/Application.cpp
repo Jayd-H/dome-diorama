@@ -6,8 +6,10 @@
 #include <fstream>
 #include <iostream>
 
+#include "Particles/EmitterTypes.h"
 #include "Particles/ParticleEmitter.h"
 #include "Util/Debug.h"
+#include "Util/RenderUtils.h"
 #include "Vulkan/VulkanCommandBuffer.h"
 #include "Vulkan/VulkanDepthBuffer.h"
 #include "Vulkan/VulkanDescriptors.h"
@@ -15,23 +17,8 @@
 #include "Vulkan/VulkanInstance.h"
 #include "Vulkan/VulkanSwapchain.h"
 #include "Vulkan/VulkanSyncObjects.h"
-#include "Particles/EmitterTypes.h"
 
-// Private helper to avoid duplication and non-member function issues
-namespace {
-std::vector<char> readFile(const std::string& filename) {
-  std::ifstream file(filename, std::ios::ate | std::ios::binary);
-  if (!file.is_open()) {
-    throw std::runtime_error("failed to open file!");
-  }
-  const size_t fileSize = static_cast<size_t>(file.tellg());
-  std::vector<char> buffer(fileSize);
-  file.seekg(0);
-  file.read(buffer.data(), static_cast<std::streamsize>(fileSize));
-  file.close();
-  return buffer;
-}
-}  // namespace
+constexpr char ENTRY_POINT_MAIN[] = "main";
 
 Application::Application() {
   Debug::log(Debug::Category::MAIN, "Application: Constructor called");
@@ -227,7 +214,7 @@ void Application::mainLoop() {
     window->pollEvents();
 
     const float currentTime = static_cast<float>(glfwGetTime());
-    float deltaTime = currentTime - lastFrameTime;
+    const float deltaTime = currentTime - lastFrameTime;
     lastFrameTime = currentTime;
 
     scaledDeltaTime = deltaTime * timeScale;
@@ -453,7 +440,6 @@ void Application::updateCameraLayer() {
   }
 }
 
-
 void Application::updateUniformBuffer(uint32_t currentImage) {
   worldState.update(scaledDeltaTime);
 
@@ -474,7 +460,6 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     weatherSystem->update(worldState, scaledDeltaTime);
   }
 
-  const glm::vec3 sunDirection = worldState.getSunDirection();
   const glm::vec3 moonDirection = worldState.getMoonDirection();
 
   const TimeOfDay timeOfDay = worldState.getTime();
@@ -492,18 +477,20 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
 
   Light* const sunLight = lightManager->getLight(sunLightID);
   if (sunLight) {
-    sunLight->direction = -sunDirection;
+    const glm::vec3 sunDirection = worldState.getSunDirection();
+    sunLight->setDirection(-sunDirection);
+
     const float sunHeight = sunDirection.y;
 
     if (sunHeight > 0.0f) {
       const float t = glm::smoothstep(0.0f, 0.3f, sunHeight);
-      sunLight->color = glm::mix(glm::vec3(1.0f, 0.7f, 0.4f),
-                                 glm::vec3(1.0f, 0.98f, 0.95f), t);
+      sunLight->setColor(glm::mix(glm::vec3(1.0f, 0.7f, 0.4f),
+                                  glm::vec3(1.0f, 0.98f, 0.95f), t));
       const float normalizedIntensity = glm::smoothstep(0.0f, 0.2f, sunHeight);
-      sunLight->intensity = normalizedIntensity * 5.0f;
+      sunLight->setIntensity(normalizedIntensity * 5.0f);
     } else {
-      sunLight->intensity = 0.0f;
-      sunLight->color = glm::vec3(0.0f);
+      sunLight->setIntensity(0.0f);
+      sunLight->setColor(glm::vec3(0.0f));
     }
   }
 
@@ -544,7 +531,6 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
 
   memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
-
 
 void Application::recreateGraphicsPipeline() {
   vkDeviceWaitIdle(device);
@@ -791,7 +777,7 @@ void Application::setCameraPreset(int presetIndex) {
       const Plant& p = plantManager->getPlant(i);
       if (p.getType() == PlantType::Cactus) {
         const Object& obj = sceneObjects[plantManager->getPlantObjectIndex(i)];
-        glm::vec3 plantPos = obj.getPosition();
+        const glm::vec3 plantPos = obj.getPosition();
         camera.setPose(plantPos + glm::vec3(5.0f, 2.0f, 5.0f),
                        plantPos + glm::vec3(0.0f, 2.0f, 0.0f));
         Debug::log(Debug::Category::CAMERA, "Camera C3: Close-up on Cactus");
@@ -822,11 +808,11 @@ void Application::triggerFireEffect() {
   Plant& p = plantManager->getPlantMutable(selectedIndex);
   const Object& obj =
       sceneObjects[plantManager->getPlantObjectIndex(selectedIndex)];
-  glm::vec3 pos = obj.getPosition();
+  const glm::vec3 pos = obj.getPosition();
 
   plantManager->startFire(p, pos);
 
-  glm::vec3 camPos = pos + glm::vec3(5.0f, 5.0f, 5.0f);
+  const glm::vec3 camPos = pos + glm::vec3(5.0f, 5.0f, 5.0f);
   camera.setPose(camPos, pos);
 
   Debug::log(Debug::Category::MAIN, "F4: Fire started on cactus index ",
@@ -837,7 +823,7 @@ void Application::resetApplication() {
   timeScale = 1.0f;
   simulationTime = 0.0f;
   setCameraPreset(1);
-  WorldConfig defaultConfig;
+  const WorldConfig defaultConfig;
   setWorldConfig(defaultConfig);
   Debug::log(Debug::Category::MAIN, "Application Resetted");
 }
@@ -861,16 +847,17 @@ void Application::scrollCallback(GLFWwindow* win, double xoffset,
   app->input.onScroll(xoffset, yoffset);
 }
 
-void Application::createDefaultPipelineConfig(PipelineConfigInfo& configInfo) {
-  configInfo.inputAssembly.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-  configInfo.inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-  configInfo.inputAssembly.primitiveRestartEnable = VK_FALSE;
+void Application::createDefaultPipelineConfig(
+    PipelineConfigInfo& configInfo) const {
+  RenderUtils::createInputAssemblyState(configInfo.inputAssembly,
+                                        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
   configInfo.viewportState.sType =
       VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
   configInfo.viewportState.viewportCount = 1;
   configInfo.viewportState.scissorCount = 1;
+  configInfo.viewportState.pNext = nullptr;
+  configInfo.viewportState.flags = 0;
 
   configInfo.rasterizer.sType =
       VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -881,11 +868,19 @@ void Application::createDefaultPipelineConfig(PipelineConfigInfo& configInfo) {
   configInfo.rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
   configInfo.rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
   configInfo.rasterizer.depthBiasEnable = VK_FALSE;
+  configInfo.rasterizer.pNext = nullptr;
+  configInfo.rasterizer.flags = 0;
 
   configInfo.multisampling.sType =
       VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
   configInfo.multisampling.sampleShadingEnable = VK_FALSE;
   configInfo.multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+  configInfo.multisampling.pNext = nullptr;
+  configInfo.multisampling.flags = 0;
+  configInfo.multisampling.minSampleShading = 1.0f;
+  configInfo.multisampling.pSampleMask = nullptr;
+  configInfo.multisampling.alphaToCoverageEnable = VK_FALSE;
+  configInfo.multisampling.alphaToOneEnable = VK_FALSE;
 
   configInfo.depthStencil.sType =
       VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -894,23 +889,18 @@ void Application::createDefaultPipelineConfig(PipelineConfigInfo& configInfo) {
   configInfo.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
   configInfo.depthStencil.depthBoundsTestEnable = VK_FALSE;
   configInfo.depthStencil.stencilTestEnable = VK_FALSE;
+  configInfo.depthStencil.pNext = nullptr;
+  configInfo.depthStencil.flags = 0;
 
-  configInfo.colorBlendAttachment.colorWriteMask =
-      VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-  configInfo.colorBlendAttachment.blendEnable = VK_FALSE;
-  configInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-  configInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-  configInfo.colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-  configInfo.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-  configInfo.colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-  configInfo.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+  RenderUtils::createColorBlendAttachment(configInfo.colorBlendAttachment);
 
   configInfo.colorBlending.sType =
       VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
   configInfo.colorBlending.logicOpEnable = VK_FALSE;
   configInfo.colorBlending.attachmentCount = 1;
   configInfo.colorBlending.pAttachments = &configInfo.colorBlendAttachment;
+  configInfo.colorBlending.pNext = nullptr;
+  configInfo.colorBlending.flags = 0;
 
   configInfo.dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
                               VK_DYNAMIC_STATE_SCISSOR};
@@ -919,38 +909,65 @@ void Application::createDefaultPipelineConfig(PipelineConfigInfo& configInfo) {
   configInfo.dynamicState.dynamicStateCount =
       static_cast<uint32_t>(configInfo.dynamicStates.size());
   configInfo.dynamicState.pDynamicStates = configInfo.dynamicStates.data();
+  configInfo.dynamicState.pNext = nullptr;
+  configInfo.dynamicState.flags = 0;
 }
 
-void Application::createParticlePipeline() {
-  Debug::log(Debug::Category::VULKAN, "Creating particle pipeline...");
+void Application::getShaderStages(
+    const std::string& vertPath, const std::string& fragPath,
+    VkShaderModule& vertModule, VkShaderModule& fragModule,
+    std::array<VkPipelineShaderStageCreateInfo, 2>& stages) const {
+  Debug::log(Debug::Category::VULKAN, "Loading shaders: ", vertPath, " and ",
+             fragPath);
 
-  const auto vertShaderCode = readFile("shaders/particle_vert.spv");
-  const auto fragShaderCode = readFile("shaders/particle_frag.spv");
+  std::vector<char> vertShaderCode;
+  RenderUtils::readFile(vertPath, vertShaderCode);
+  std::vector<char> fragShaderCode;
+  RenderUtils::readFile(fragPath, fragShaderCode);
 
-  const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-  const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+  vertModule = RenderUtils::createShaderModule(device, vertShaderCode);
+  fragModule = RenderUtils::createShaderModule(device, fragShaderCode);
 
   VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
   vertShaderStageInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-  vertShaderStageInfo.module = vertShaderModule;
-  vertShaderStageInfo.pName = "main";
+  vertShaderStageInfo.module = vertModule;
+  vertShaderStageInfo.pName = ENTRY_POINT_MAIN;
 
   VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
   fragShaderStageInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-  fragShaderStageInfo.module = fragShaderModule;
-  fragShaderStageInfo.pName = "main";
+  fragShaderStageInfo.module = fragModule;
+  fragShaderStageInfo.pName = ENTRY_POINT_MAIN;
 
-  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
-      vertShaderStageInfo, fragShaderStageInfo};
+  stages = {vertShaderStageInfo, fragShaderStageInfo};
+}
+
+void Application::setupRenderingCreateInfo(
+    VkPipelineRenderingCreateInfo& createInfo) const {
+  createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+  createInfo.pNext = nullptr;
+  createInfo.colorAttachmentCount = 1;
+  createInfo.pColorAttachmentFormats = &swapChainImageFormat;
+  createInfo.depthAttachmentFormat = depthFormat;
+  createInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+  createInfo.viewMask = 0;
+}
+
+void Application::createParticlePipeline() {
+  Debug::log(Debug::Category::VULKAN, "Creating particle pipeline...");
+
+  VkShaderModule vertShaderModule = VK_NULL_HANDLE;
+  VkShaderModule fragShaderModule = VK_NULL_HANDLE;
+  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+  getShaderStages("shaders/particle_vert.spv", "shaders/particle_frag.spv",
+                  vertShaderModule, fragShaderModule, shaderStages);
 
   PipelineConfigInfo configInfo{};
   createDefaultPipelineConfig(configInfo);
 
-  // Customize for Particles
   configInfo.rasterizer.cullMode = VK_CULL_MODE_NONE;
   configInfo.depthStencil.depthWriteEnable = VK_FALSE;
 
@@ -1002,26 +1019,16 @@ void Application::createParticlePipeline() {
   }
 
   VkPipelineRenderingCreateInfo renderingCreateInfo{};
-  renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-  renderingCreateInfo.colorAttachmentCount = 1;
-  renderingCreateInfo.pColorAttachmentFormats = &swapChainImageFormat;
-  renderingCreateInfo.depthAttachmentFormat = depthFormat;
+  setupRenderingCreateInfo(renderingCreateInfo);
 
   VkGraphicsPipelineCreateInfo pipelineInfo{};
-  pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  pipelineInfo.pNext = &renderingCreateInfo;
-  pipelineInfo.stageCount = 2;
-  pipelineInfo.pStages = shaderStages.data();
-  pipelineInfo.pVertexInputState = &configInfo.vertexInputInfo;
-  pipelineInfo.pInputAssemblyState = &configInfo.inputAssembly;
-  pipelineInfo.pViewportState = &configInfo.viewportState;
-  pipelineInfo.pRasterizationState = &configInfo.rasterizer;
-  pipelineInfo.pMultisampleState = &configInfo.multisampling;
-  pipelineInfo.pDepthStencilState = &configInfo.depthStencil;
-  pipelineInfo.pColorBlendState = &configInfo.colorBlending;
-  pipelineInfo.pDynamicState = &configInfo.dynamicState;
-  pipelineInfo.layout = particlePipelineLayout;
-  pipelineInfo.renderPass = VK_NULL_HANDLE;
+  RenderUtils::createGraphicsPipelineCreateInfo(
+      pipelineInfo, particlePipelineLayout, VK_NULL_HANDLE, 2,
+      shaderStages.data(), &configInfo.vertexInputInfo,
+      &configInfo.inputAssembly, &configInfo.viewportState,
+      &configInfo.rasterizer, &configInfo.multisampling,
+      &configInfo.depthStencil, &configInfo.colorBlending,
+      &configInfo.dynamicState, &renderingCreateInfo);
 
   if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
                                 nullptr, &particlePipeline) != VK_SUCCESS) {
@@ -1037,33 +1044,15 @@ void Application::createParticlePipeline() {
 void Application::createShadowPipeline() {
   Debug::log(Debug::Category::VULKAN, "Creating shadow pipeline...");
 
-  const auto vertShaderCode = readFile("shaders/shadow_vert.spv");
-  const auto fragShaderCode = readFile("shaders/shadow_frag.spv");
-
-  const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-  const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
-
-  VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-  vertShaderStageInfo.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-  vertShaderStageInfo.module = vertShaderModule;
-  vertShaderStageInfo.pName = "main";
-
-  VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-  fragShaderStageInfo.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-  fragShaderStageInfo.module = fragShaderModule;
-  fragShaderStageInfo.pName = "main";
-
-  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
-      vertShaderStageInfo, fragShaderStageInfo};
+  VkShaderModule vertShaderModule = VK_NULL_HANDLE;
+  VkShaderModule fragShaderModule = VK_NULL_HANDLE;
+  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+  getShaderStages("shaders/shadow_vert.spv", "shaders/shadow_frag.spv",
+                  vertShaderModule, fragShaderModule, shaderStages);
 
   PipelineConfigInfo configInfo{};
   createDefaultPipelineConfig(configInfo);
 
-  // Customize for Shadows
   configInfo.rasterizer.depthBiasEnable = VK_TRUE;
   configInfo.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
   configInfo.colorBlending.attachmentCount = 0;
@@ -1110,20 +1099,13 @@ void Application::createShadowPipeline() {
   renderingCreateInfo.depthAttachmentFormat = shadowDepthFormat;
 
   VkGraphicsPipelineCreateInfo pipelineInfo{};
-  pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  pipelineInfo.pNext = &renderingCreateInfo;
-  pipelineInfo.stageCount = 2;
-  pipelineInfo.pStages = shaderStages.data();
-  pipelineInfo.pVertexInputState = &configInfo.vertexInputInfo;
-  pipelineInfo.pInputAssemblyState = &configInfo.inputAssembly;
-  pipelineInfo.pViewportState = &configInfo.viewportState;
-  pipelineInfo.pRasterizationState = &configInfo.rasterizer;
-  pipelineInfo.pMultisampleState = &configInfo.multisampling;
-  pipelineInfo.pDepthStencilState = &configInfo.depthStencil;
-  pipelineInfo.pColorBlendState = &configInfo.colorBlending;
-  pipelineInfo.pDynamicState = &configInfo.dynamicState;
-  pipelineInfo.layout = shadowPipelineLayout;
-  pipelineInfo.renderPass = VK_NULL_HANDLE;
+  RenderUtils::createGraphicsPipelineCreateInfo(
+      pipelineInfo, shadowPipelineLayout, VK_NULL_HANDLE, 2,
+      shaderStages.data(), &configInfo.vertexInputInfo,
+      &configInfo.inputAssembly, &configInfo.viewportState,
+      &configInfo.rasterizer, &configInfo.multisampling,
+      &configInfo.depthStencil, &configInfo.colorBlending,
+      &configInfo.dynamicState, &renderingCreateInfo);
 
   if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
                                 nullptr, &shadowPipeline) != VK_SUCCESS) {
@@ -1134,6 +1116,24 @@ void Application::createShadowPipeline() {
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
 
   Debug::log(Debug::Category::VULKAN, "Shadow pipeline created successfully");
+}
+
+void Application::setupViewportScissor(VkCommandBuffer commandBuffer,
+                                       float width, float height) const {
+  VkViewport viewport{};
+  viewport.x = 0.0f;
+  viewport.y = 0.0f;
+  viewport.width = width;
+  viewport.height = height;
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+  vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+  VkRect2D scissor{};
+  scissor.offset = {0, 0};
+  scissor.extent = {static_cast<uint32_t>(width),
+                    static_cast<uint32_t>(height)};
+  vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
 
 void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
@@ -1198,19 +1198,8 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       shadowPipeline);
 
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(shadowMapSize);
-    viewport.height = static_cast<float>(shadowMapSize);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = {shadowMapSize, shadowMapSize};
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    setupViewportScissor(commandBuffer, static_cast<float>(shadowMapSize),
+                         static_cast<float>(shadowMapSize));
 
     vkCmdSetDepthBias(commandBuffer, 0.0f, 0.0f, 0.0f);
 
@@ -1279,19 +1268,8 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     mainPipeline->getPipeline());
 
-  VkViewport viewport{};
-  viewport.x = 0.0f;
-  viewport.y = 0.0f;
-  viewport.width = static_cast<float>(swapChainExtent.width);
-  viewport.height = static_cast<float>(swapChainExtent.height);
-  viewport.minDepth = 0.0f;
-  viewport.maxDepth = 1.0f;
-  vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-  VkRect2D scissor{};
-  scissor.offset = {0, 0};
-  scissor.extent = swapChainExtent;
-  vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+  setupViewportScissor(commandBuffer, static_cast<float>(swapChainExtent.width),
+                       static_cast<float>(swapChainExtent.height));
 
   for (size_t i = 0; i < sceneObjects.size(); ++i) {
     if (plantObjectIndicesSet.count(i) > 0) {
@@ -1338,8 +1316,8 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
                             descriptorSetsToBind.data(), 0, nullptr);
 
     vkCmdDrawIndexed(commandBuffer,
-                     static_cast<uint32_t>(mesh->getIndices().size()),
-                     1, 0, 0, 0);
+                     static_cast<uint32_t>(mesh->getIndices().size()), 1, 0, 0,
+                     0);
   }
 
   renderPlants(commandBuffer, currentFrame);
@@ -1394,6 +1372,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     throw std::runtime_error("Failed to record command buffer!");
   }
 }
+
 void Application::renderPlants(VkCommandBuffer commandBuffer,
                                uint32_t frameIndex) {
   if (plantObjectIndicesSet.empty()) {
@@ -1403,19 +1382,8 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     plantPipeline);
 
-  VkViewport viewport{};
-  viewport.x = 0.0f;
-  viewport.y = 0.0f;
-  viewport.width = static_cast<float>(swapChainExtent.width);
-  viewport.height = static_cast<float>(swapChainExtent.height);
-  viewport.minDepth = 0.0f;
-  viewport.maxDepth = 1.0f;
-  vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-  VkRect2D scissor{};
-  scissor.offset = {0, 0};
-  scissor.extent = swapChainExtent;
-  vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+  setupViewportScissor(commandBuffer, static_cast<float>(swapChainExtent.width),
+                       static_cast<float>(swapChainExtent.height));
 
   const PlantWindData& windData = plantManager->getWindData();
 
@@ -1477,36 +1445,19 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
                             descriptorSetsToBind.data(), 0, nullptr);
 
     vkCmdDrawIndexed(commandBuffer,
-                     static_cast<uint32_t>(mesh->getIndices().size()),
-                     1, 0, 0, 0);
+                     static_cast<uint32_t>(mesh->getIndices().size()), 1, 0, 0,
+                     0);
   }
 }
 
 void Application::createPlantPipeline() {
   Debug::log(Debug::Category::VULKAN, "Creating plant pipeline...");
 
-  const auto vertShaderCode = readFile("SHADERS/plant_vert.spv");
-  const auto fragShaderCode = readFile("SHADERS/frag.spv");
-
-  const VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-  const VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
-
-  VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-  vertShaderStageInfo.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-  vertShaderStageInfo.module = vertShaderModule;
-  vertShaderStageInfo.pName = "main";
-
-  VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-  fragShaderStageInfo.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-  fragShaderStageInfo.module = fragShaderModule;
-  fragShaderStageInfo.pName = "main";
-
-  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
-      vertShaderStageInfo, fragShaderStageInfo};
+  VkShaderModule vertShaderModule = VK_NULL_HANDLE;
+  VkShaderModule fragShaderModule = VK_NULL_HANDLE;
+  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+  getShaderStages("SHADERS/plant_vert.spv", "SHADERS/frag.spv",
+                  vertShaderModule, fragShaderModule, shaderStages);
 
   PipelineConfigInfo configInfo{};
   createDefaultPipelineConfig(configInfo);
@@ -1546,26 +1497,16 @@ void Application::createPlantPipeline() {
   }
 
   VkPipelineRenderingCreateInfo renderingCreateInfo{};
-  renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-  renderingCreateInfo.colorAttachmentCount = 1;
-  renderingCreateInfo.pColorAttachmentFormats = &swapChainImageFormat;
-  renderingCreateInfo.depthAttachmentFormat = depthFormat;
+  setupRenderingCreateInfo(renderingCreateInfo);
 
   VkGraphicsPipelineCreateInfo pipelineInfo{};
-  pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  pipelineInfo.pNext = &renderingCreateInfo;
-  pipelineInfo.stageCount = 2;
-  pipelineInfo.pStages = shaderStages.data();
-  pipelineInfo.pVertexInputState = &configInfo.vertexInputInfo;
-  pipelineInfo.pInputAssemblyState = &configInfo.inputAssembly;
-  pipelineInfo.pViewportState = &configInfo.viewportState;
-  pipelineInfo.pRasterizationState = &configInfo.rasterizer;
-  pipelineInfo.pMultisampleState = &configInfo.multisampling;
-  pipelineInfo.pDepthStencilState = &configInfo.depthStencil;
-  pipelineInfo.pColorBlendState = &configInfo.colorBlending;
-  pipelineInfo.pDynamicState = &configInfo.dynamicState;
-  pipelineInfo.layout = plantPipelineLayout;
-  pipelineInfo.renderPass = VK_NULL_HANDLE;
+  RenderUtils::createGraphicsPipelineCreateInfo(
+      pipelineInfo, plantPipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
+      &configInfo.vertexInputInfo, &configInfo.inputAssembly,
+      &configInfo.viewportState, &configInfo.rasterizer,
+      &configInfo.multisampling, &configInfo.depthStencil,
+      &configInfo.colorBlending, &configInfo.dynamicState,
+      &renderingCreateInfo);
 
   if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
                                 nullptr, &plantPipeline) != VK_SUCCESS) {
@@ -1576,18 +1517,4 @@ void Application::createPlantPipeline() {
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
 
   Debug::log(Debug::Category::VULKAN, "Plant pipeline created successfully");
-}
-
-VkShaderModule Application::createShaderModule(
-    const std::vector<char>& code) const {
-  VkShaderModuleCreateInfo createInfo{};
-  createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  createInfo.codeSize = code.size();
-  createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-  VkShaderModule shaderModule;
-  if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create shader module!");
-  }
-  return shaderModule;
 }

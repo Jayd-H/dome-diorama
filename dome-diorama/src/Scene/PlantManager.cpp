@@ -642,7 +642,7 @@ void PlantManager::checkFireSpread(std::vector<Object>& sceneObjects) {
     for (size_t j = 0; j < plants.size(); ++j) {
       if (i == j) continue;
 
-      Plant& otherPlant = plants[j];
+      const Plant& otherPlant = plants[j];
       const PlantState& otherState = otherPlant.state_;
 
       if (otherState.isOnFire || otherState.isDead) continue;
