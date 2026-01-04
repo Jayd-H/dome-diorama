@@ -1,14 +1,15 @@
 #include "ParticleManager.h"
 
+#include <array>
+
 #include "Resources/Material.h"
 #include "Resources/MaterialManager.h"
 #include "Resources/MeshManager.h"
 #include "Util/Debug.h"
 
-ParticleManager::ParticleManager(RenderDevice* renderDevice,
-                                 MaterialManager* materialManager)
-    : renderDevice(renderDevice),
-      materialManager(materialManager),
+ParticleManager::ParticleManager(RenderDevice* rd, MaterialManager* mm)
+    : renderDevice(rd),
+      materialManager(mm),
       instanceBuffer(VK_NULL_HANDLE),
       instanceBufferMemory(VK_NULL_HANDLE),
       instanceBufferMapped(nullptr),
@@ -21,14 +22,16 @@ ParticleManager::ParticleManager(RenderDevice* renderDevice,
 
 ParticleManager::~ParticleManager() {
   Debug::log(Debug::Category::PARTICLES, "ParticleManager: Destructor called");
-  cleanup();
+  try {
+    cleanup();
+  } catch (...) {
+  }
 }
 
-void ParticleManager::init(VkDescriptorSetLayout materialDescriptorSetLayout,
-                           VkPipelineLayout pipelineLayout) {
+void ParticleManager::init(VkDescriptorSetLayout matDescriptorSetLayout) {
   Debug::log(Debug::Category::PARTICLES, "ParticleManager: Initializing");
 
-  this->materialDescriptorSetLayout = materialDescriptorSetLayout;
+  this->materialDescriptorSetLayout = matDescriptorSetLayout;
 
   createParticleDescriptorSetLayout();
   createInstanceBuffer();
@@ -47,7 +50,7 @@ EmitterID ParticleManager::registerEmitter(ParticleEmitter* emitter) {
   Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Registering emitter '", emitter->getName(), "'");
 
-  EmitterID id = static_cast<EmitterID>(emitters.size());
+  const EmitterID id = static_cast<EmitterID>(emitters.size());
   emitters.push_back(std::unique_ptr<ParticleEmitter>(emitter));
 
   const size_t frameCount = 2;
@@ -55,13 +58,10 @@ EmitterID ParticleManager::registerEmitter(ParticleEmitter* emitter) {
     createParticleDescriptorPool(frameCount);
   }
 
-  const size_t oldEmitterCount =
-      shaderParamsBuffers.empty() ? 0 : shaderParamsBuffers[0].size();
-
   if (shaderParamsBuffers.empty()) {
     createShaderParamsBuffers(frameCount);
   } else {
-    VkDeviceSize bufferSize = sizeof(ParticleShaderParams);
+    const VkDeviceSize bufferSize = sizeof(ParticleShaderParams);
     for (size_t frame = 0; frame < frameCount; ++frame) {
       shaderParamsBuffers[frame].resize(emitters.size());
       shaderParamsMemory[frame].resize(emitters.size());
@@ -97,10 +97,10 @@ ParticleEmitter* ParticleManager::getEmitter(EmitterID id) {
 
 void ParticleManager::update(float deltaTime, const glm::vec3& windDirection,
                              float windSpeed) {
-  for (auto& emitter : emitters) {
-    if (emitter) {
-      emitter->setWind(windDirection, windSpeed);
-      emitter->update(deltaTime);
+  for (const auto& emitterPtr : emitters) {
+    if (emitterPtr) {
+      emitterPtr->setWind(windDirection, windSpeed);
+      emitterPtr->update(deltaTime);
     }
   }
 }
@@ -109,7 +109,9 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
                              VkDescriptorSet cameraDescriptorSet,
                              VkPipelineLayout pipelineLayout,
                              uint32_t currentFrame, VkPipeline particlePipeline,
-                             Mesh* quadMesh) {
+                             Mesh* const quadMesh) {
+  static_cast<void>(pipelineLayout);
+
   if (emitters.empty()) return;
 
   if (shaderParamsMapped.empty() || currentFrame >= shaderParamsMapped.size()) {
@@ -122,9 +124,10 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     particlePipeline);
 
-  VkBuffer vertexBuffers[] = {quadMesh->vertexBuffer};
-  VkDeviceSize offsets[] = {0};
-  vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+  const std::array<VkBuffer, 1> vertexBuffers = {quadMesh->vertexBuffer};
+  const std::array<VkDeviceSize, 1> offsets = {0};
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers.data(),
+                         offsets.data());
   vkCmdBindIndexBuffer(commandBuffer, quadMesh->indexBuffer, 0,
                        VK_INDEX_TYPE_UINT16);
 
@@ -153,12 +156,13 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
     memcpy(shaderParamsMapped[currentFrame][i], &params,
            sizeof(ParticleShaderParams));
 
-    Material* material = materialManager->getMaterial(emitter->getMaterialID());
+    const Material* const material =
+        materialManager->getMaterial(emitter->getMaterialID());
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) {
       continue;
     }
 
-    std::array<VkDescriptorSet, 3> descriptorSets = {
+    const std::array<VkDescriptorSet, 3> descriptorSets = {
         cameraDescriptorSet, material->getDescriptorSet(),
         particleDescriptorSets[i][currentFrame]};
 
@@ -167,11 +171,11 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
                             static_cast<uint32_t>(descriptorSets.size()),
                             descriptorSets.data(), 0, nullptr);
 
-    VkDeviceSize instanceOffset = 0;
+    const VkDeviceSize instanceOffset = 0;
     vkCmdBindVertexBuffers(commandBuffer, 1, 1, &instanceBuffer,
                            &instanceOffset);
 
-    size_t particleCount = emitter->getMaxParticles();
+    const size_t particleCount = emitter->getMaxParticles();
     vkCmdDrawIndexed(commandBuffer, 6, static_cast<uint32_t>(particleCount), 0,
                      0, 0);
   }
@@ -246,7 +250,7 @@ void ParticleManager::createShaderParamsBuffers(size_t frameCount) {
   Debug::log(Debug::Category::PARTICLES,
              "ParticleManager: Creating shader params buffers");
 
-  VkDeviceSize bufferSize = sizeof(ParticleShaderParams);
+  const VkDeviceSize bufferSize = sizeof(ParticleShaderParams);
 
   shaderParamsBuffers.clear();
   shaderParamsMemory.clear();
@@ -342,7 +346,8 @@ void ParticleManager::createParticleDescriptorSets(size_t emitterIndex,
 
   particleDescriptorSets[emitterIndex].resize(frameCount);
 
-  std::vector<VkDescriptorSetLayout> layouts(frameCount, particleParamsLayout);
+  const std::vector<VkDescriptorSetLayout> layouts(frameCount,
+                                                   particleParamsLayout);
 
   VkDescriptorSetAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -350,7 +355,7 @@ void ParticleManager::createParticleDescriptorSets(size_t emitterIndex,
   allocInfo.descriptorSetCount = static_cast<uint32_t>(frameCount);
   allocInfo.pSetLayouts = layouts.data();
 
-  VkResult result =
+  const VkResult result =
       vkAllocateDescriptorSets(renderDevice->getDevice(), &allocInfo,
                                particleDescriptorSets[emitterIndex].data());
 

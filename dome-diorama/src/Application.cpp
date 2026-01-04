@@ -5,10 +5,7 @@
 #include <chrono>
 #include <iostream>
 
-#include "Particles/DustEmitter.h"
-#include "Particles/FireEmitter.h"
-#include "Particles/RainEmitter.h"
-#include "Particles/SmokeEmitter.h"
+#include "Particles/ParticleEmitter.h"
 #include "Util/Debug.h"
 #include "Vulkan/VulkanCommandBuffer.h"
 #include "Vulkan/VulkanDepthBuffer.h"
@@ -127,7 +124,7 @@ void Application::initVulkan() {
   Debug::log(Debug::Category::VULKAN, "Creating particle manager...");
   particleManager = new ParticleManager(renderDevice, materialManager);
   Debug::log(Debug::Category::VULKAN, "Initializing particle manager...");
-  particleManager->init(materialDescriptorSetLayout, VK_NULL_HANDLE);
+  particleManager->init(materialDescriptorSetLayout);
 
   Debug::log(Debug::Category::VULKAN, "Creating main pipeline...");
   mainPipeline =

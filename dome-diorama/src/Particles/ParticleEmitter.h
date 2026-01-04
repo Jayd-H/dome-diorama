@@ -2,10 +2,7 @@
 #include <vulkan/vulkan.h>
 
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
 #include <string>
-#include <vector>
 
 #include "Resources/Material.h"
 
@@ -37,170 +34,147 @@ struct ParticleShaderParams {
   alignas(4) float velocityRandomness;
   alignas(4) float scaleOverLifetime;
   alignas(4) float rotationSpeed;
+  alignas(4) float padding1;
   alignas(16) glm::vec3 windDirection;
   alignas(4) float windStrength;
   alignas(4) float windInfluence;
-  alignas(4) float padding1;
   alignas(4) float padding2;
-  alignas(4) float padding3;
 };
 
-class ParticleEmitter {
+class ParticleEmitter final {
  public:
   enum class BillboardMode { Spherical = 0, Cylindrical = 1, None = 2 };
-
   enum class ColorMode { Gradient = 0, BaseOnly = 1, TipOnly = 2 };
 
-  ParticleEmitter()
-      : maxParticles(1000),
-        particleLifetime(2.0f),
-        materialID(INVALID_MATERIAL_ID),
-        time(0.0f),
-        shaderParams{},
-        name("Unnamed Emitter"),
-        position(0.0f),
-        active(true),
-        windInfluence(0.0f) {
-    shaderParams.emitterPosition = position;
-    shaderParams.time = 0.0f;
-    shaderParams.particleLifetime = particleLifetime;
-    shaderParams.maxParticles = static_cast<float>(maxParticles);
-    shaderParams.gravity = glm::vec3(0.0f);
-    shaderParams.spawnRadius = 1.0f;
-    shaderParams.initialVelocity = glm::vec3(0.0f);
-    shaderParams.particleScale = 1.0f;
-    shaderParams.fadeInDuration = 0.1f;
-    shaderParams.fadeOutDuration = 0.3f;
-    shaderParams.billboardMode = static_cast<int>(BillboardMode::Spherical);
-    shaderParams.colorMode = static_cast<int>(ColorMode::Gradient);
-    shaderParams.velocityRandomness = 0.5f;
-    shaderParams.scaleOverLifetime = 1.0f;
-    shaderParams.rotationSpeed = 0.0f;
-    shaderParams.windDirection = glm::vec3(0.0f);
-    shaderParams.windStrength = 0.0f;
-    shaderParams.windInfluence = 1.0f;
-  }
+  ParticleEmitter();
+  ~ParticleEmitter();
 
-  virtual ~ParticleEmitter() = default;
+  ParticleEmitter(const ParticleEmitter&) = delete;
+  ParticleEmitter& operator=(const ParticleEmitter&) = delete;
 
-  virtual void update(float deltaTime) {
-    if (!active) return;
-    time += deltaTime;
-    shaderParams.time = time;
-    shaderParams.emitterPosition = position;
-    updateShaderParams();
-  }
+  void update(float deltaTime);
 
-  inline void setPosition(const glm::vec3& pos) {
-    position = pos;
-    shaderParams.emitterPosition = pos;
-  }
+  // Setters
+  void setPosition(const glm::vec3& pos);
+  void setActive(bool isActive);
+  void setWind(const glm::vec3& direction, float strength);
+  void setName(const std::string& n);
+  void setMaxParticles(size_t count);
+  void setParticleLifetime(float lifetime);
+  void setMaterialID(MaterialID id);
 
-  inline void setActive(bool isActive) { active = isActive; }
+  // Parameter Setters
+  void setBaseColor(const glm::vec3& color);
+  void setTipColor(const glm::vec3& color);
+  void setGravity(const glm::vec3& g);
+  void setInitialVelocity(const glm::vec3& v);
+  void setSpawnRadius(float radius);
+  void setParticleScale(float scale);
+  void setFadeInDuration(float duration);
+  void setFadeOutDuration(float duration);
+  void setBillboardMode(BillboardMode mode);
+  void setColorMode(ColorMode mode);
+  void setVelocityRandomness(float randomness);
+  void setScaleOverLifetime(float scale);
+  void setRotationSpeed(float speed);
+  void setWindInfluence(float influence);
 
-  inline void setWind(const glm::vec3& direction, float strength) {
-    shaderParams.windDirection = direction;
-    shaderParams.windStrength = strength;
-  }
+  // Getters
+  std::string getName() const;
+  glm::vec3 getPosition() const;
+  bool isActive() const;
+  size_t getMaxParticles() const;
+  MaterialID getMaterialID() const;
+  const ParticleShaderParams& getShaderParams() const;
 
-  inline void setWindInfluence(float influence) {
-    windInfluence = influence;
-    shaderParams.windInfluence = influence;
-  }
-
-  inline const std::string& getName() const { return name; }
-  inline void setName(const std::string& n) { name = n; }
-
-  inline const glm::vec3& getPosition() const { return position; }
-  inline bool isActive() const { return active; }
-
-  inline size_t getMaxParticles() const { return maxParticles; }
-  inline MaterialID getMaterialID() const { return materialID; }
-  inline ParticleShaderParams getShaderParams() const { return shaderParams; }
-
- protected:
+ private:
+  ParticleShaderParams shaderParams;
+  std::string name;
+  glm::vec3 position;
   size_t maxParticles;
   float particleLifetime;
   MaterialID materialID;
   float time;
-  ParticleShaderParams shaderParams;
-  float windInfluence;
-
-  virtual void updateShaderParams() = 0;
-
-  friend class ParticleEmitterBuilder;
-  friend class ParticleManager;
-
- private:
-  std::string name;
-  glm::vec3 position;
   bool active;
 };
 
-class ParticleEmitterBuilder {
- public:
-  ParticleEmitterBuilder() : emitter(nullptr) {}
+// Inline implementations
+inline void ParticleEmitter::update(float deltaTime) {
+  if (!active) return;
+  time += deltaTime;
+  shaderParams.time = time;
+  shaderParams.emitterPosition = position;
+}
 
-  virtual ~ParticleEmitterBuilder() = default;
+inline void ParticleEmitter::setPosition(const glm::vec3& pos) {
+  position = pos;
+  shaderParams.emitterPosition = pos;
+}
 
-  ParticleEmitterBuilder(const ParticleEmitterBuilder&) = delete;
-  ParticleEmitterBuilder& operator=(const ParticleEmitterBuilder&) = delete;
+inline void ParticleEmitter::setActive(bool isActive) { active = isActive; }
+inline void ParticleEmitter::setName(const std::string& n) { name = n; }
+inline void ParticleEmitter::setMaxParticles(size_t count) {
+  maxParticles = count;
+  shaderParams.maxParticles = static_cast<float>(count);
+}
+inline void ParticleEmitter::setParticleLifetime(float lifetime) {
+  particleLifetime = lifetime;
+  shaderParams.particleLifetime = lifetime;
+}
+inline void ParticleEmitter::setMaterialID(MaterialID id) { materialID = id; }
+inline void ParticleEmitter::setBaseColor(const glm::vec3& color) {
+  shaderParams.baseColor = color;
+}
+inline void ParticleEmitter::setTipColor(const glm::vec3& color) {
+  shaderParams.tipColor = color;
+}
+inline void ParticleEmitter::setGravity(const glm::vec3& g) {
+  shaderParams.gravity = g;
+}
+inline void ParticleEmitter::setInitialVelocity(const glm::vec3& v) {
+  shaderParams.initialVelocity = v;
+}
+inline void ParticleEmitter::setSpawnRadius(float radius) {
+  shaderParams.spawnRadius = radius;
+}
+inline void ParticleEmitter::setParticleScale(float scale) {
+  shaderParams.particleScale = scale;
+}
+inline void ParticleEmitter::setFadeInDuration(float duration) {
+  shaderParams.fadeInDuration = duration;
+}
+inline void ParticleEmitter::setFadeOutDuration(float duration) {
+  shaderParams.fadeOutDuration = duration;
+}
+inline void ParticleEmitter::setBillboardMode(BillboardMode mode) {
+  shaderParams.billboardMode = static_cast<int>(mode);
+}
+inline void ParticleEmitter::setColorMode(ColorMode mode) {
+  shaderParams.colorMode = static_cast<int>(mode);
+}
+inline void ParticleEmitter::setVelocityRandomness(float randomness) {
+  shaderParams.velocityRandomness = randomness;
+}
+inline void ParticleEmitter::setScaleOverLifetime(float scale) {
+  shaderParams.scaleOverLifetime = scale;
+}
+inline void ParticleEmitter::setRotationSpeed(float speed) {
+  shaderParams.rotationSpeed = speed;
+}
+inline void ParticleEmitter::setWindInfluence(float influence) {
+  shaderParams.windInfluence = influence;
+}
+inline void ParticleEmitter::setWind(const glm::vec3& direction,
+                                     float strength) {
+  shaderParams.windDirection = direction;
+  shaderParams.windStrength = strength;
+}
 
-  ParticleEmitterBuilder& name(const std::string& n) {
-    if (emitter) emitter->name = n;
-    return *this;
-  }
-
-  ParticleEmitterBuilder& position(const glm::vec3& pos) {
-    if (emitter) {
-      emitter->position = pos;
-      emitter->shaderParams.emitterPosition = pos;
-    }
-    return *this;
-  }
-
-  ParticleEmitterBuilder& position(float x, float y, float z) {
-    if (emitter) {
-      emitter->position = glm::vec3(x, y, z);
-      emitter->shaderParams.emitterPosition = glm::vec3(x, y, z);
-    }
-    return *this;
-  }
-
-  ParticleEmitterBuilder& maxParticles(size_t count) {
-    if (emitter) {
-      emitter->maxParticles = count;
-      emitter->shaderParams.maxParticles = static_cast<float>(count);
-    }
-    return *this;
-  }
-
-  ParticleEmitterBuilder& particleLifetime(float lifetime) {
-    if (emitter) {
-      emitter->particleLifetime = lifetime;
-      emitter->shaderParams.particleLifetime = lifetime;
-    }
-    return *this;
-  }
-
-  ParticleEmitterBuilder& material(MaterialID id) {
-    if (emitter) emitter->materialID = id;
-    return *this;
-  }
-
-  ParticleEmitterBuilder& active(bool isActive) {
-    if (emitter) emitter->active = isActive;
-    return *this;
-  }
-
-  ParticleEmitterBuilder& windInfluence(float influence) {
-    if (emitter) {
-      emitter->windInfluence = influence;
-      emitter->shaderParams.windInfluence = influence;
-    }
-    return *this;
-  }
-
- protected:
-  ParticleEmitter* emitter;
-};
+inline std::string ParticleEmitter::getName() const { return name; }
+inline glm::vec3 ParticleEmitter::getPosition() const { return position; }
+inline bool ParticleEmitter::isActive() const { return active; }
+inline size_t ParticleEmitter::getMaxParticles() const { return maxParticles; }
+inline MaterialID ParticleEmitter::getMaterialID() const { return materialID; }
+inline const ParticleShaderParams& ParticleEmitter::getShaderParams() const {
+  return shaderParams;
+}

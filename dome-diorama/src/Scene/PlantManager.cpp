@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 
-#include "Particles/FireEmitter.h"
+#include "Particles/EmitterTypes.h"
 #include "Particles/ParticleManager.h"
 #include "Util/Debug.h"
 
@@ -698,24 +698,26 @@ void PlantManager::startFire(Plant& plant, const glm::vec3& position) {
   if (particleManager && fireMaterialID != INVALID_MATERIAL_ID) {
     const glm::vec3 fireBasePosition = position + glm::vec3(0.0f, -0.3f, 0.0f);
 
-    FireEmitter* const fireEmitter =
-        FireEmitterBuilder()
+    ParticleEmitter* const fireEmitter =
+        ParticleEmitterBuilder()
             .name("PlantFire_" + std::to_string(plant.getObjectIndex()))
             .position(fireBasePosition)
             .maxParticles(400)
             .particleLifetime(3.5f)
             .material(fireMaterialID)
-            .baseColor(1.0f, 0.9f, 0.2f)
-            .tipColor(0.15f, 0.15f, 0.15f)
-            .upwardSpeed(5.0f)
+            .baseColor(glm::vec3(1.0f, 0.9f, 0.2f))
+            .tipColor(glm::vec3(0.15f, 0.15f, 0.15f))
+            .initialVelocity(
+                glm::vec3(0.0f, 5.0f, 0.0f))
             .spawnRadius(0.4f)
             .particleScale(0.7f)
-            .fadeInDuration(0.05f)
-            .fadeOutDuration(1.2f)
+            .fadeTimings(0.05f, 1.2f)
             .velocityRandomness(0.8f)
             .scaleOverLifetime(2.5f)
             .rotationSpeed(1.5f)
             .windInfluence(0.4f)
+            .billboardMode(ParticleEmitter::BillboardMode::Spherical)
+            .colorMode(ParticleEmitter::ColorMode::Gradient)
             .build();
 
     state.fireEmitterID = particleManager->registerEmitter(fireEmitter);

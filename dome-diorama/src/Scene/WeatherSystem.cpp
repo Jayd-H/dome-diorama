@@ -1,10 +1,10 @@
 #include "WeatherSystem.h"
 
-#include "Particles/DustEmitter.h"
+#include "Particles/EmitterTypes.h"
 #include "Particles/ParticleManager.h"
-#include "Particles/RainEmitter.h"
 #include "Resources/MaterialManager.h"
 #include "Resources/Object.h"
+#include "Util/Debug.h"
 
 void WeatherSystem::init() {
   particleMaterialID =
@@ -78,20 +78,21 @@ void WeatherSystem::updateWeatherEmitters(const WorldState& worldState) {
 
 void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
   if (rainEmitterID == INVALID_EMITTER_ID) {
-    RainEmitter* rainEmitter = RainEmitterBuilder()
-                                   .name("Weather Rain")
-                                   .position(0.0f, 50.0f, 0.0f)
-                                   .maxParticles(particleCount)
-                                   .particleLifetime(2.5f)
-                                   .material(particleMaterialID)
-                                   .baseColor(0.6f, 0.7f, 0.9f)
-                                   .tipColor(0.8f, 0.9f, 1.0f)
-                                   .downwardSpeed(15.0f * intensity)
-                                   .windStrength(2.0f)
-                                   .spawnRadius(80.0f)
-                                   .particleScale(0.1f)
-                                   .windInfluence(0.7f)
-                                   .build();
+    ParticleEmitter* rainEmitter =
+        EmitterPresets::createRain()
+            .name("Weather Rain")
+            .position(0.0f, 50.0f, 0.0f)
+            .maxParticles(particleCount)
+            .particleLifetime(2.5f)
+            .material(particleMaterialID)
+            .baseColor(glm::vec3(0.6f, 0.7f, 0.9f))
+            .tipColor(glm::vec3(0.8f, 0.9f, 1.0f))
+            .gravity(glm::vec3(0.0f, -15.0f * intensity, 0.0f))
+            .initialVelocity(glm::vec3(2.0f, 0.0f, 0.0f))
+            .spawnRadius(80.0f)
+            .particleScale(0.1f)
+            .windInfluence(0.7f)
+            .build();
 
     rainEmitterID = particleManager->registerEmitter(rainEmitter);
   } else {
@@ -104,20 +105,21 @@ void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
 
 void WeatherSystem::activateSnowEmitter(float intensity, size_t particleCount) {
   if (snowEmitterID == INVALID_EMITTER_ID) {
-    RainEmitter* snowEmitter = RainEmitterBuilder()
-                                   .name("Weather Snow")
-                                   .position(0.0f, 50.0f, 0.0f)
-                                   .maxParticles(particleCount)
-                                   .particleLifetime(4.0f)
-                                   .material(particleMaterialID)
-                                   .baseColor(0.95f, 0.95f, 1.0f)
-                                   .tipColor(1.0f, 1.0f, 1.0f)
-                                   .downwardSpeed(3.0f * intensity)
-                                   .windStrength(1.5f)
-                                   .spawnRadius(80.0f)
-                                   .particleScale(0.15f)
-                                   .windInfluence(0.9f)
-                                   .build();
+    ParticleEmitter* snowEmitter =
+        EmitterPresets::createRain()
+            .name("Weather Snow")
+            .position(0.0f, 50.0f, 0.0f)
+            .maxParticles(particleCount)
+            .particleLifetime(4.0f)
+            .material(particleMaterialID)
+            .baseColor(glm::vec3(0.95f, 0.95f, 1.0f))
+            .tipColor(glm::vec3(1.0f, 1.0f, 1.0f))
+            .gravity(glm::vec3(0.0f, -3.0f * intensity, 0.0f))
+            .initialVelocity(glm::vec3(1.5f, 0.0f, 0.0f))
+            .spawnRadius(80.0f)
+            .particleScale(0.15f)
+            .windInfluence(0.9f)
+            .build();
 
     snowEmitterID = particleManager->registerEmitter(snowEmitter);
   } else {
@@ -130,20 +132,20 @@ void WeatherSystem::activateSnowEmitter(float intensity, size_t particleCount) {
 
 void WeatherSystem::activateDustStormEmitter() {
   if (dustEmitterID == INVALID_EMITTER_ID) {
-    DustEmitter* dustEmitter = DustEmitterBuilder()
-                                   .name("Weather Dust Storm")
-                                   .position(0.0f, 5.0f, 0.0f)
-                                   .maxParticles(1500)
-                                   .particleLifetime(5.0f)
-                                   .material(particleMaterialID)
-                                   .baseColor(0.7f, 0.6f, 0.5f)
-                                   .tipColor(0.5f, 0.4f, 0.3f)
-                                   .swirlingSpeed(3.0f)
-                                   .driftSpeed(2.0f)
-                                   .spawnRadius(100.0f)
-                                   .particleScale(0.5f)
-                                   .windInfluence(1.0f)
-                                   .build();
+    ParticleEmitter* dustEmitter =
+        EmitterPresets::createDust()
+            .name("Weather Dust Storm")
+            .position(0.0f, 5.0f, 0.0f)
+            .maxParticles(1500)
+            .particleLifetime(5.0f)
+            .material(particleMaterialID)
+            .baseColor(glm::vec3(0.7f, 0.6f, 0.5f))
+            .tipColor(glm::vec3(0.5f, 0.4f, 0.3f))
+            .initialVelocity(glm::vec3(3.0f, 2.0f, 0.0f))
+            .spawnRadius(100.0f)
+            .particleScale(0.5f)
+            .windInfluence(1.0f)
+            .build();
 
     dustEmitterID = particleManager->registerEmitter(dustEmitter);
   } else {

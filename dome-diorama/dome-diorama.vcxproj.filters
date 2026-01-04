@@ -63,6 +63,9 @@
     <ClCompile Include="src\Scene\WeatherSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Particles\ParticleEmitter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="SHADERS\shader.vert">
@@ -145,9 +148,6 @@
     <ClInclude Include="src\Particles\ParticleEmitter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Particles\FireEmitter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\Particles\ParticleManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -164,15 +164,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Scene\Shadow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Particles\SmokeEmitter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Particles\RainEmitter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Particles\DustEmitter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanInstance.h">
@@ -215,6 +206,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Scene\WeatherSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Particles\EmitterTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

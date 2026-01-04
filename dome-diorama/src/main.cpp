@@ -8,10 +8,8 @@
 #include <stdexcept>
 
 #include "Application.h"
-#include "Particles/DustEmitter.h"
-#include "Particles/FireEmitter.h"
-#include "Particles/RainEmitter.h"
-#include "Particles/SmokeEmitter.h"
+#include "Particles/EmitterTypes.h"
+#include "Particles/ParticleEmitter.h"
 #include "Resources/Object.h"
 #include "Scene/WorldState.h"
 #include "Util/ConfigParser.h"
@@ -28,7 +26,6 @@ std::vector<Object> createScene(const ConfigParser& config,
 
   std::vector<Object> sceneObjects;
 
-  // Creating the celestial bodies!
   const MaterialID sunMaterialID =
       materialManager->registerMaterial(MaterialBuilder()
                                             .name("Sun Material")
@@ -66,7 +63,6 @@ std::vector<Object> createScene(const ConfigParser& config,
   sceneObjects.push_back(sun);
   sceneObjects.push_back(moon);
 
-  // Creating the sand terrain
   const MaterialID sandMaterialID = materialManager->registerMaterial(
       MaterialBuilder()
           .name("Sand Material")
@@ -96,7 +92,6 @@ std::vector<Object> createScene(const ConfigParser& config,
 
   sceneObjects.push_back(sandPlane);
 
-  // Creating skybox sphere
   const MeshID skyboxSphereMesh = meshManager->createSphere(100.0f, 64);
 
   const MaterialID skyboxMaterialID = materialManager->registerMaterial(
@@ -117,8 +112,6 @@ std::vector<Object> createScene(const ConfigParser& config,
                                   .build();
 
   sceneObjects.push_back(skyboxSphere);
-
-  // Creating pokeball
 
   const MeshID pokeballWhiteMesh =
       meshManager->loadFromOBJ("./Models/PokeWhite.obj");
@@ -149,8 +142,6 @@ std::vector<Object> createScene(const ConfigParser& config,
   sceneObjects.push_back(pokeballWhite);
   sceneObjects.push_back(pokeballBlack);
 
-  // Spawning plants on the terrain
-
   const Mesh* const terrainMesh = meshManager->getMesh(sandTerrainMesh);
 
   PlantSpawnConfig plantConfig;
@@ -170,8 +161,6 @@ std::vector<Object> createScene(const ConfigParser& config,
 
   plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
 
-  // Creating the sun light
-
   const Light sunLight = LightBuilder()
                              .type(LightType::Sun)
                              .name("Sun Light")
@@ -182,6 +171,24 @@ std::vector<Object> createScene(const ConfigParser& config,
                              .build();
 
   sunLightID = lightManager->addLight(sunLight);
+
+  const MaterialID particleMaterialID =
+      materialManager->registerMaterial(MaterialBuilder()
+                                            .name("Particle Material")
+                                            .albedoColor(1.0f, 1.0f, 1.0f)
+                                            .roughness(0.0f)
+                                            .metallic(0.0f)
+                                            .transparent(true));
+
+  ParticleEmitter* const fireEmitter = EmitterPresets::createFire()
+                                           .name("Test Fire Emitter")
+                                           .position(-5.0f, 0.5f, 0.0f)
+                                           .maxParticles(800)
+                                           .particleLifetime(2.0f)
+                                           .material(particleMaterialID)
+                                           .build();
+
+  particleManager->registerEmitter(fireEmitter);
 
   Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
              " scene objects and ", lightManager->getLightCount(), " lights");

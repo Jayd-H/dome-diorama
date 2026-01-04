@@ -10,13 +10,15 @@
 class MaterialManager;
 class Mesh;
 
-class ParticleManager {
+class ParticleManager final {
  public:
-  ParticleManager(RenderDevice* renderDevice, MaterialManager* materialManager);
+  ParticleManager(RenderDevice* rd, MaterialManager* mm);
   ~ParticleManager();
 
-  void init(VkDescriptorSetLayout materialDescriptorSetLayout,
-            VkPipelineLayout pipelineLayout);
+  ParticleManager(const ParticleManager&) = delete;
+  ParticleManager& operator=(const ParticleManager&) = delete;
+
+  void init(VkDescriptorSetLayout matDescriptorSetLayout);
 
   EmitterID registerEmitter(ParticleEmitter* emitter);
   ParticleEmitter* getEmitter(EmitterID id);
@@ -25,7 +27,7 @@ class ParticleManager {
   void render(VkCommandBuffer commandBuffer,
               VkDescriptorSet cameraDescriptorSet,
               VkPipelineLayout pipelineLayout, uint32_t currentFrame,
-              VkPipeline particlePipeline, Mesh* quadMesh);
+              VkPipeline particlePipeline, Mesh* const quadMesh);
 
   VkDescriptorSetLayout getParticleParamsLayout() const {
     return particleParamsLayout;
@@ -37,20 +39,19 @@ class ParticleManager {
   RenderDevice* renderDevice;
   MaterialManager* materialManager;
 
-  std::vector<std::unique_ptr<ParticleEmitter>> emitters;
-
   VkBuffer instanceBuffer;
   VkDeviceMemory instanceBufferMemory;
   void* instanceBufferMapped;
   VkDeviceSize instanceBufferSize;
 
-  std::vector<std::vector<VkBuffer>> shaderParamsBuffers;
-  std::vector<std::vector<VkDeviceMemory>> shaderParamsMemory;
-  std::vector<std::vector<void*>> shaderParamsMapped;
-
   VkDescriptorSetLayout materialDescriptorSetLayout;
   VkDescriptorSetLayout particleParamsLayout;
   VkDescriptorPool particleDescriptorPool;
+
+  std::vector<std::unique_ptr<ParticleEmitter>> emitters;
+  std::vector<std::vector<VkBuffer>> shaderParamsBuffers;
+  std::vector<std::vector<VkDeviceMemory>> shaderParamsMemory;
+  std::vector<std::vector<void*>> shaderParamsMapped;
   std::vector<std::vector<VkDescriptorSet>> particleDescriptorSets;
 
   void createInstanceBuffer();
