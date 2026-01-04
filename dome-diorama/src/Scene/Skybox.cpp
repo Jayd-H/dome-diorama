@@ -7,12 +7,13 @@
 #include <stdexcept>
 
 #include "../stb_image.h"
-#include "Util/Debug.h"
 #include "Resources/Object.h"
+#include "Util/Debug.h"
 
 void Skybox::render(VkCommandBuffer const commandBuffer,
                     VkDescriptorSet cameraDescriptorSet,
-                    const VkExtent2D& extent, const Object* domeObject) const {
+                    const VkExtent2D& extent, const Object* domeObject,
+                    float timeOfDay, float sunIntensity) const {
   if (domeObject && !domeObject->isVisible()) return;
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -37,11 +38,17 @@ void Skybox::render(VkCommandBuffer const commandBuffer,
     alignas(16) glm::mat4 model;
     alignas(16) glm::vec3 domeCenter;
     alignas(4) float domeRadiusSquared;
+    alignas(4) float timeOfDay;
+    alignas(4) float sunIntensity;
+    alignas(8) glm::vec2 padding;
   } pushConstants;
 
   pushConstants.model = glm::mat4(1.0f);
   pushConstants.domeCenter = glm::vec3(0.0f, 0.0f, 0.0f);
   pushConstants.domeRadiusSquared = SKYBOX_RADIUS * SKYBOX_RADIUS;
+  pushConstants.timeOfDay = timeOfDay;
+  pushConstants.sunIntensity = sunIntensity;
+  pushConstants.padding = glm::vec2(0.0f);
 
   vkCmdPushConstants(commandBuffer, pipelineLayout,
                      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,

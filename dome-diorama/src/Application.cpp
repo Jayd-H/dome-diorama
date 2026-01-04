@@ -486,9 +486,6 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   if (sunLight) {
     sunLight->direction = sunDirection;
 
-    const float sunLightOrbitRadius = 100.0f;
-    sunLight->position = -sunDirection * sunLightOrbitRadius;
-
     const float sunHeight = sunDirection.y;
 
     if (sunHeight > 0.0f) {
@@ -502,11 +499,13 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
       sunLight->intensity = 0.1f;
       sunLight->color = glm::vec3(0.3f, 0.3f, 0.5f);
     }
+
     const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
     const float orthoSize = 500.0f;
     const float nearPlane = 100.0f;
     const float farPlane = 5000.0f;
 
+    const float sunLightOrbitRadius = 2000.0f;
     const glm::vec3 lightEye = sceneCenter - sunDirection * sunLightOrbitRadius;
 
     glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -546,9 +545,7 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     if (sunLight) {
       Debug::log(Debug::Category::LIGHTS, "Sun Light - Dir: (",
                  sunLight->direction.x, ", ", sunLight->direction.y, ", ",
-                 sunLight->direction.z, ") Intensity: ", sunLight->intensity,
-                 " Pos: (", sunLight->position.x, ", ", sunLight->position.y,
-                 ", ", sunLight->position.z, ")");
+                 sunLight->direction.z, ") Intensity: ", sunLight->intensity);
     }
   }
 
@@ -1045,8 +1042,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
     VkRenderingInfo renderingInfo{};
     renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-    // Assuming SHADOW_MAP_SIZE is defined in header or constant
-    const int shadowMapSize = 2048;  // Hardcoded to match potential macro
+    const int shadowMapSize = 2048;
     renderingInfo.renderArea = {{0, 0}, {shadowMapSize, shadowMapSize}};
     renderingInfo.layerCount = 1;
     renderingInfo.colorAttachmentCount = 0;
@@ -1198,8 +1194,10 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
   renderPlants(commandBuffer, currentFrame);
 
   const Object* const domeGlassObject = &sceneObjects[2];
+  const float timeOfDay = worldState.getTime().normalizedTime;
+  const float sunIntensity = worldState.getSunIntensity();
   skybox->render(commandBuffer, descriptorSets[currentFrame], swapChainExtent,
-                 domeGlassObject);
+                 domeGlassObject, timeOfDay, sunIntensity);
 
   particleManager->render(
       commandBuffer, descriptorSets[currentFrame], particlePipelineLayout,

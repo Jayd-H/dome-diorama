@@ -71,7 +71,8 @@ class Skybox final {
 
   void render(VkCommandBuffer const commandBuffer,
               VkDescriptorSet cameraDescriptorSet, const VkExtent2D& extent,
-              const Object* domeObject) const;
+              const Object* domeObject, float timeOfDay,
+              float sunIntensity) const;
 
   VkDescriptorSetLayout getDescriptorSetLayout() const {
     return descriptorSetLayout;
@@ -366,8 +367,9 @@ class Skybox final {
     pushConstantRange.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
-    pushConstantRange.size =
-        sizeof(glm::mat4) + sizeof(glm::vec3) + sizeof(float);
+    pushConstantRange.size = sizeof(glm::mat4) + sizeof(glm::vec3) +
+                             sizeof(float) + sizeof(float) + sizeof(float) +
+                             sizeof(glm::vec2);
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

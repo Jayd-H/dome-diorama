@@ -36,6 +36,13 @@ class Light final {
   std::string name;
   bool castsShadows;
   uint32_t shadowMapIndex;
+
+  glm::vec3 getEffectivePosition() const {
+    if (type == LightType::Sun) {
+      return -direction * 1000.0f;
+    }
+    return position;
+  }
 };
 
 class LightBuilder final {
