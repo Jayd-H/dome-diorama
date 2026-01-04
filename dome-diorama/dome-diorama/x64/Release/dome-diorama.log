@@ -1,16 +1,7 @@
-﻿  Application.cpp
-  main.cpp
-D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\main.cpp(59,1): warning C4566: character represented by universal-character-name '\u2192' cannot be represented in the current code page (1252)
-  ParticleEmitter.cpp
-  MeshManager.cpp
-  ParticleManager.cpp
-  PlantManager.cpp
-  Shadow.cpp
-  Skybox.cpp
-  WeatherSystem.cpp
+﻿  main.cpp
   Generating code
-  1022 of 4851 functions (21.1%) were compiled, the rest were copied from previous compilation.
-    337 functions were new in current compilation
-    365 functions had inline decision re-evaluated but remain unchanged
+  6 of 4851 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    83 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   dome-diorama.vcxproj -> D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\x64\Release\dome-diorama.exe

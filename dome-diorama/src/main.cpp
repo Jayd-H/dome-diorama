@@ -24,39 +24,54 @@ void printControls() {
 |     ||     ||   |   ||     |
 |_____| \___/ |___|___||_____|
                               
+GENERAL CONTROLS
+----------------
+  ESC                - Exit the application
+  R                  - Reset application to initial state
+
+CAMERA PRESETS
+--------------
+  F1                 - Camera C1: Overview (Globe view)
+  F2                 - Camera C2: Navigation (Element view)
+  F3                 - Camera C3: Close-up (Cactus view)
+
 CAMERA CONTROLS
 ---------------
+  Arrow Keys         - Rotate Camera (Left/Right/Up/Down)
+  CTRL + Arrows      - Pan Camera (Left/Right/Forward/Backward)
+  CTRL + PgUp/PgDn   - Pan Up / Pan Down
   Enter              - Switch between Orbit and FPS camera modes
   Right Mouse Button - Rotate camera around scene (Orbit mode)
   Mouse Scroll       - Zoom in/out (Orbit) / Adjust speed (FPS)
-  W/A/S/D            - Move forward/left/backward/right (FPS mode)
-  Space              - Move up (FPS mode)
-  Shift              - Move down (FPS mode)
-  Mouse Movement     - Look around (FPS mode)
+  W/A/S/D            - Move (FPS mode)
+  Space/Shift        - Move Up/Down (FPS mode)
+
+EFFECTS & TIME
+--------------
+  F4                 - Trigger Particle Effect (Random Cactus Fire)
+  ]                  - Increase Time Scale
+  [                  - Decrease Time Scale
+  P                  - Pause/Resume time progression
 
 RENDERING CONTROLS
 ------------------
-  1 - Fill mode (solid rendering)
-  2 - Wireframe mode
-  3 - Point mode
-  4 - Nearest texture filtering
-  5 - Linear texture filtering
-  L - Toggle between Phong and Gouraud shading
+  1                  - Fill mode (solid rendering)
+  2                  - Wireframe mode
+  3                  - Point mode
+  4                  - Nearest texture filtering
+  5                  - Linear texture filtering
+  L                  - Toggle between Phong and Gouraud shading
 
-WEATHER & ENVIRONMENT CONTROLS
--------------------------------
-  T - Increase temperature (+5°C)
-  G - Decrease temperature (-5°C)
-  H - Increase humidity (+10%)
-  N - Decrease humidity (-10%)
-  U - Increase wind speed (+1 m/s)
-  J - Decrease wind speed (-1 m/s)
-  Y - Cycle through weather states
-  P - Pause/Resume time progression
+WEATHER CONTROLS
+----------------
+  T / G              - Increase / Decrease Temperature (+/- 5°C)
+  H / N              - Increase / Decrease Humidity (+/- 10%)
+  U / J              - Increase / Decrease Wind Speed (+/- 1 m/s)
+  Y                  - Cycle through weather states
 
 WEATHER STATES
 --------------
-  Clear → Cloudy → Light Rain → Heavy Rain → Light Snow → Heavy Snow → Dust Storm
+  Clear -> Cloudy -> Light Rain -> Heavy Rain -> Light Snow -> Heavy Snow -> Dust Storm
 )" << std::endl;
 }
 
@@ -277,7 +292,11 @@ int main() {
 #endif
 
   ConfigParser config;
-  if (!config.load("config.ini")) {
+  bool configLoaded = config.load("config.ini");
+
+#ifdef _DEBUG
+  // In Debug mode, load settings from config
+  if (!configLoaded) {
     Debug::log(Debug::Category::MAIN,
                "Warning: Could not load config.ini, using defaults");
   }
@@ -316,6 +335,27 @@ int main() {
                     config.getBool("Debug.debug_postprocessing", true));
   Debug::setEnabled(Debug::Category::SHADOWS,
                     config.getBool("Debug.debug_shadows", true));
+#else
+  // In Release mode (Visual Studio defines _DEBUG only in Debug mode),
+  // forcefully disable all debug output
+  Debug::setEnabled(Debug::Category::MAIN, false);
+  Debug::setEnabled(Debug::Category::CAMERA, false);
+  Debug::setEnabled(Debug::Category::INPUT, false);
+  Debug::setEnabled(Debug::Category::RENDERING, false);
+  Debug::setEnabled(Debug::Category::VULKAN, false);
+  Debug::setEnabled(Debug::Category::SKYBOX, false);
+  Debug::setEnabled(Debug::Category::PLANTMANAGER, false);
+  Debug::setEnabled(Debug::Category::WORLD, false);
+  Debug::setEnabled(Debug::Category::PARTICLES, false);
+  Debug::setEnabled(Debug::Category::MESH, false);
+  Debug::setEnabled(Debug::Category::LIGHTS, false);
+  Debug::setEnabled(Debug::Category::SCENE, false);
+  Debug::setEnabled(Debug::Category::OBJECTS, false);
+  Debug::setEnabled(Debug::Category::TEXTURE, false);
+  Debug::setEnabled(Debug::Category::MATERIALS, false);
+  Debug::setEnabled(Debug::Category::POSTPROCESSING, false);
+  Debug::setEnabled(Debug::Category::SHADOWS, false);
+#endif
 
   if (Debug::isEnabled(Debug::Category::MAIN)) {
     printControls();
