@@ -9,7 +9,9 @@ layout(location = 4) in float inParticleIndex;
 layout(set = 0, binding = 0) uniform CameraUBO {
     mat4 view;
     mat4 proj;
+    mat4 lightSpaceMatrices[4];
     vec3 eyePos;
+    float time;
 } camera;
 
 layout(set = 2, binding = 0) uniform ParticleParams {
