@@ -250,9 +250,9 @@ inline float getSunIntensity() const {
   inline WeatherState determineWeatherFromConditions() const {
     const bool isCold = currentTemperature < 5.0f;
     const bool isWarm = currentTemperature > 20.0f;
-    const bool isDry = humidity < 0.4f;
-    const bool isHumid = humidity > 0.7f;
-    const bool isWindy = windSpeed > 5.0f;
+    const bool isDry = humidity < 0.2f;
+    const bool isHumid = humidity > 0.3f;
+    const bool isWindy = windSpeed > 4.0f;
 
     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
     const float roll = dist(rng);

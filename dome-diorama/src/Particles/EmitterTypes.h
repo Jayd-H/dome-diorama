@@ -66,6 +66,7 @@ class EmitterPresets final {
   static ParticleEmitterBuilder createSmoke();
   static ParticleEmitterBuilder createDust();
   static ParticleEmitterBuilder createRain();
+  static ParticleEmitterBuilder createSnow();
 
  private:
   static ParticleEmitterBuilder createFromConfig(
@@ -261,9 +262,18 @@ inline ParticleEmitterBuilder EmitterPresets::createDust() {
 
 inline ParticleEmitterBuilder EmitterPresets::createRain() {
   return createFromConfig(
-      {"Rain Emitter", glm::vec3(0.6f, 0.7f, 0.9f), glm::vec3(0.8f, 0.9f, 1.0f),
-       glm::vec3(0.0f, -15.0f, 0.0f), glm::vec3(2.0f, 0.0f, 0.0f), 20.0f, 0.1f,
+      {"Rain Emitter", glm::vec3(0.5f, 0.6f, 0.9f), glm::vec3(0.7f, 0.8f, 1.0f),
+       glm::vec3(0.0f, -25.0f, 0.0f), glm::vec3(2.0f, 0.0f, 0.0f), 20.0f, 0.1f,
        0.0f, 0.1f, 0.2f, 1.0f, 0.0f,
        ParticleEmitter::BillboardMode::Cylindrical,
+       ParticleEmitter::ColorMode::BaseOnly});
+}
+
+inline ParticleEmitterBuilder EmitterPresets::createSnow() {
+  return createFromConfig(
+      {"Snow Emitter", glm::vec3(0.95f, 0.95f, 1.0f),
+       glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, -5.0f, 0.0f),
+       glm::vec3(0.5f, 0.0f, 0.0f), 20.0f, 0.2f, 0.0f, 0.1f, 0.3f, 1.0f, 0.2f,
+       ParticleEmitter::BillboardMode::Spherical,
        ParticleEmitter::ColorMode::BaseOnly});
 }

@@ -4,6 +4,7 @@ layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in float fragLifeRatio;
 layout(location = 3) in float fragHeightAboveEmitter;
+layout(location = 4) in vec3 fragWorldPos;
 
 layout(set = 2, binding = 0) uniform ParticleParams {
     vec3 emitterPosition;
@@ -29,6 +30,13 @@ layout(set = 2, binding = 0) uniform ParticleParams {
 layout(location = 0) out vec4 outColor;
 
 void main() {
+    const float SKYBOX_RADIUS = 300.0;
+    float distFromCenter = length(fragWorldPos - params.emitterPosition);
+    
+    if (distFromCenter > SKYBOX_RADIUS) {
+        discard;
+    }
+    
     vec2 coord = fragTexCoord * 2.0 - 1.0;
     float dist = length(coord);
     

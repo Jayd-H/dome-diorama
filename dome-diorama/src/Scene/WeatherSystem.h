@@ -32,7 +32,6 @@ class WeatherSystem final {
   void update(const WorldState& worldState, float deltaTime);
   void setSunObject(Object* sun) { sunObject = sun; }
   void setMoonObject(Object* moon) { moonObject = moon; }
-  void updateCelestialBodies(const WorldState& worldState);
 
  private:
   ParticleManager* particleManager;

@@ -25,25 +25,6 @@ void WeatherSystem::update(const WorldState& worldState, float deltaTime) {
   }
 }
 
-void WeatherSystem::updateCelestialBodies(const WorldState& worldState) {
-  if (sunObject) {
-    const glm::vec3 sunDir = worldState.getSunDirection();
-    const float sunOrbitRadius = 100.0f;
-    const glm::vec3 sunPos = -sunDir * sunOrbitRadius;
-    sunObject->setPosition(sunPos);
-
-    Debug::log(Debug::Category::WORLD, "Sun position: (", sunPos.x, ", ",
-               sunPos.y, ", ", sunPos.z, ")");
-  }
-
-  if (moonObject) {
-    const glm::vec3 moonDir = worldState.getMoonDirection();
-    const float moonOrbitRadius = 100.0f;
-    const glm::vec3 moonPos = -moonDir * moonOrbitRadius;
-    moonObject->setPosition(moonPos);
-  }
-}
-
 void WeatherSystem::updateWeatherEmitters(const WorldState& worldState) {
   const WeatherState newWeather = worldState.getWeather();
 
@@ -54,13 +35,22 @@ void WeatherSystem::updateWeatherEmitters(const WorldState& worldState) {
   deactivateAllWeatherEmitters();
 
   currentWeather = newWeather;
+  const float temperature = worldState.getTemperature();
 
   switch (currentWeather) {
     case WeatherState::LightRain:
-      activateRainEmitter(0.4f, 1000);
+      if (temperature <= 0.0f) {
+        activateSnowEmitter(0.4f, 1000);
+      } else {
+        activateRainEmitter(0.4f, 1000);
+      }
       break;
     case WeatherState::HeavyRain:
-      activateRainEmitter(0.8f, 2000);
+      if (temperature <= 0.0f) {
+        activateSnowEmitter(0.8f, 2000);
+      } else {
+        activateRainEmitter(0.8f, 2000);
+      }
       break;
     case WeatherState::LightSnow:
       activateSnowEmitter(0.3f, 800);
@@ -83,13 +73,13 @@ void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
             .name("Weather Rain")
             .position(0.0f, 50.0f, 0.0f)
             .maxParticles(particleCount)
-            .particleLifetime(2.5f)
+            .particleLifetime(2.0f)
             .material(particleMaterialID)
-            .baseColor(glm::vec3(0.6f, 0.7f, 0.9f))
-            .tipColor(glm::vec3(0.8f, 0.9f, 1.0f))
-            .gravity(glm::vec3(0.0f, -15.0f * intensity, 0.0f))
+            .baseColor(glm::vec3(0.5f, 0.6f, 0.9f))
+            .tipColor(glm::vec3(0.7f, 0.8f, 1.0f))
+            .gravity(glm::vec3(0.0f, -25.0f * intensity, 0.0f))
             .initialVelocity(glm::vec3(2.0f, 0.0f, 0.0f))
-            .spawnRadius(80.0f)
+            .spawnRadius(150.0f)
             .particleScale(0.1f)
             .windInfluence(0.7f)
             .build();
@@ -106,18 +96,18 @@ void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
 void WeatherSystem::activateSnowEmitter(float intensity, size_t particleCount) {
   if (snowEmitterID == INVALID_EMITTER_ID) {
     ParticleEmitter* const snowEmitter =
-        EmitterPresets::createRain()
+        EmitterPresets::createSnow()
             .name("Weather Snow")
             .position(0.0f, 50.0f, 0.0f)
             .maxParticles(particleCount)
-            .particleLifetime(4.0f)
+            .particleLifetime(6.0f)
             .material(particleMaterialID)
             .baseColor(glm::vec3(0.95f, 0.95f, 1.0f))
             .tipColor(glm::vec3(1.0f, 1.0f, 1.0f))
-            .gravity(glm::vec3(0.0f, -3.0f * intensity, 0.0f))
-            .initialVelocity(glm::vec3(1.5f, 0.0f, 0.0f))
-            .spawnRadius(80.0f)
-            .particleScale(0.15f)
+            .gravity(glm::vec3(0.0f, -5.0f * intensity, 0.0f))
+            .initialVelocity(glm::vec3(0.5f, 0.0f, 0.0f))
+            .spawnRadius(150.0f)
+            .particleScale(0.2f)
             .windInfluence(0.9f)
             .build();
 
@@ -142,7 +132,7 @@ void WeatherSystem::activateDustStormEmitter() {
             .baseColor(glm::vec3(0.7f, 0.6f, 0.5f))
             .tipColor(glm::vec3(0.5f, 0.4f, 0.3f))
             .initialVelocity(glm::vec3(3.0f, 2.0f, 0.0f))
-            .spawnRadius(100.0f)
+            .spawnRadius(150.0f)
             .particleScale(0.5f)
             .windInfluence(1.0f)
             .build();
