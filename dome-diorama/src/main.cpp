@@ -229,7 +229,7 @@ std::vector<Object> createScene(const ConfigParser& config,
                               .castsShadows(true)
                               .build();
 
-  //lightManager->addLight(testLight);
+  // lightManager->addLight(testLight);
 
   const Light testSun = LightBuilder()
                             .type(LightType::Sun)
@@ -240,7 +240,7 @@ std::vector<Object> createScene(const ConfigParser& config,
                             .castsShadows(true)
                             .build();
 
-  //lightManager->addLight(testSun);
+  // lightManager->addLight(testSun);
 
   const MaterialID particleMaterialID =
       materialManager->registerMaterial(MaterialBuilder()
@@ -249,6 +249,9 @@ std::vector<Object> createScene(const ConfigParser& config,
                                             .roughness(0.0f)
                                             .metallic(0.0f)
                                             .transparent(true));
+
+  // FIX: This line was missing, causing the fire effect to be invisible
+  plantManager->setFireMaterialID(particleMaterialID);
 
   ParticleEmitter* const fireEmitter = EmitterPresets::createFire()
                                            .name("Test Fire Emitter")

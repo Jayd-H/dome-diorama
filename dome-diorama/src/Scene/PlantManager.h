@@ -102,6 +102,7 @@ class PlantManager final {
 
   size_t getPlantCount() const { return plants.size(); }
   const Plant& getPlant(size_t index) const { return plants[index]; }
+  Plant& getPlantMutable(size_t index) { return plants[index]; }
 
   PlantWindData getWindData() const { return windData; }
 
@@ -110,6 +111,8 @@ class PlantManager final {
   }
 
   void setTerrainMesh(const Mesh* mesh) { terrainMesh = mesh; }
+
+  void startFire(Plant& plant, const glm::vec3& position);
 
  private:
   std::mt19937 rng;
@@ -153,7 +156,6 @@ class PlantManager final {
                             size_t plantIndex,
                             const EnvironmentConditions& conditions);
   void checkFireSpread(std::vector<Object>& sceneObjects);
-  void startFire(Plant& plant, const glm::vec3& position);
   void extinguishFire(Plant& plant);
   void killPlant(Plant& plant, std::vector<Object>& sceneObjects);
   void spawnOffspring(std::vector<Object>& sceneObjects, const Plant& parent,

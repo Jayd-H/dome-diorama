@@ -75,6 +75,10 @@ class Application final {
 
   WeatherSystem* getWeatherSystem() const { return weatherSystem.get(); }
 
+  void setCameraPreset(int presetIndex);
+  void triggerFireEffect();
+  void resetApplication();
+
  private:
   std::vector<Object> sceneObjects;
 
@@ -145,6 +149,10 @@ class Application final {
   VkFormat depthFormat = VK_FORMAT_UNDEFINED;
 
   float lastFrameTime = 0.0f;
+  float simulationTime = 0.0f;
+  float timeScale = 1.0f;
+  float scaledDeltaTime = 0.0f;
+
   uint32_t currentFrame = 0;
   bool framebufferResized = false;
 

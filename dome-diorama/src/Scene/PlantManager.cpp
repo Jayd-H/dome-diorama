@@ -684,6 +684,11 @@ void PlantManager::startFire(Plant& plant, const glm::vec3& position) {
   state.isOnFire = true;
   state.burnTimer = 0.0f;
 
+  std::uniform_real_distribution<float> timeDist(
+      PlantState::MIN_BURN_STAGE_REVERT_TIME,
+      PlantState::MAX_BURN_STAGE_REVERT_TIME);
+  plant.burnRevertTime_ = timeDist(rng);
+
   Debug::log(Debug::Category::PLANTMANAGER,
              "PlantManager: Starting fire at position (", position.x, ", ",
              position.y, ", ", position.z, ")");

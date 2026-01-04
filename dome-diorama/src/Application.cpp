@@ -15,6 +15,7 @@
 #include "Vulkan/VulkanInstance.h"
 #include "Vulkan/VulkanSwapchain.h"
 #include "Vulkan/VulkanSyncObjects.h"
+#include "Particles/EmitterTypes.h"
 
 // Private helper to avoid duplication and non-member function issues
 namespace {
@@ -220,12 +221,17 @@ void Application::initVulkan() {
 void Application::mainLoop() {
   Debug::log(Debug::Category::MAIN, "Entering main loop...");
 
+  setCameraPreset(1);
+
   while (!window->shouldClose()) {
     window->pollEvents();
 
     const float currentTime = static_cast<float>(glfwGetTime());
-    const float deltaTime = currentTime - lastFrameTime;
+    float deltaTime = currentTime - lastFrameTime;
     lastFrameTime = currentTime;
+
+    scaledDeltaTime = deltaTime * timeScale;
+    simulationTime += scaledDeltaTime;
 
     input.update();
     camera.update(input, deltaTime);
@@ -446,16 +452,7 @@ void Application::updateCameraLayer() {
 
 
 void Application::updateUniformBuffer(uint32_t currentImage) {
-  static const auto startTime = std::chrono::high_resolution_clock::now();
-  const auto currentTime = std::chrono::high_resolution_clock::now();
-  const float time =
-      std::chrono::duration<float>(currentTime - startTime).count();
-
-  static float lastTime = 0.0f;
-  const float deltaTime = time - lastTime;
-  lastTime = time;
-
-  worldState.update(deltaTime);
+  worldState.update(scaledDeltaTime);
 
   EnvironmentConditions conditions;
   conditions.temperature = worldState.getTemperature();
@@ -463,33 +460,15 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   conditions.precipitationIntensity = worldState.getPrecipitationIntensity();
   conditions.windDirection = worldState.getWindDirection();
   conditions.windStrength = worldState.getWindSpeed();
-  conditions.deltaTime = deltaTime;
+  conditions.deltaTime = scaledDeltaTime;
 
   plantManager->updateEnvironment(sceneObjects, conditions);
 
-  static float envDebugTimer = 0.0f;
-  envDebugTimer += deltaTime;
-  if (envDebugTimer >= 3.0f) {
-    envDebugTimer = 0.0f;
-    size_t alivePlants = 0;
-    size_t burningPlants = 0;
-    for (size_t i = 0; i < plantManager->getPlantCount(); ++i) {
-      const auto& plant = plantManager->getPlant(i);
-      if (!plant.getState().isDead) alivePlants++;
-      if (plant.getState().isOnFire) burningPlants++;
-    }
-    Debug::log(Debug::Category::PLANTMANAGER,
-               "Environment - Temp: ", conditions.temperature,
-               "C, Wind: ", conditions.windStrength,
-               " m/s, Humidity: ", conditions.humidity * 100.0f,
-               "%, Plants alive: ", alivePlants, ", Burning: ", burningPlants);
-  }
-
-  particleManager->update(deltaTime, worldState.getWindDirection(),
+  particleManager->update(scaledDeltaTime, worldState.getWindDirection(),
                           worldState.getWindSpeed());
 
   if (weatherSystem) {
-    weatherSystem->update(worldState, deltaTime);
+    weatherSystem->update(worldState, scaledDeltaTime);
   }
 
   const glm::vec3 sunDirection = worldState.getSunDirection();
@@ -550,7 +529,7 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   ubo.proj[1][1] *= -1;
 
   ubo.eyePos = camera.getPosition();
-  ubo.time = time;
+  ubo.time = simulationTime;
 
   const auto& shadowMaps = lightManager->getShadowSystem()->getShadowMaps();
   for (size_t i = 0; i < shadowMaps.size() && i < MAX_SHADOW_CASTERS; i++) {
@@ -731,29 +710,44 @@ void Application::keyCallback(GLFWwindow* win, int key, int scancode,
   app->input.onKey(key, scancode, action, mods);
 
   if (action == GLFW_PRESS) {
-    if (key == GLFW_KEY_1) {
+    if (key == GLFW_KEY_ESCAPE) {
+      glfwSetWindowShouldClose(win, true);
+    } else if (key == GLFW_KEY_R) {
+      app->resetApplication();
+    } else if (key == GLFW_KEY_F1) {
+      app->setCameraPreset(1);
+    } else if (key == GLFW_KEY_F2) {
+      app->setCameraPreset(2);
+    } else if (key == GLFW_KEY_F3) {
+      app->setCameraPreset(3);
+    } else if (key == GLFW_KEY_F4) {
+      app->triggerFireEffect();
+    } else if (key == GLFW_KEY_RIGHT_BRACKET) {  // Increase Time Scale
+      app->timeScale += 0.5f;
+      Debug::log(Debug::Category::MAIN,
+                 "Time Scale Increased: ", app->timeScale);
+    } else if (key == GLFW_KEY_LEFT_BRACKET) {  // Decrease Time Scale
+      app->timeScale = std::max(0.0f, app->timeScale - 0.5f);
+      Debug::log(Debug::Category::MAIN,
+                 "Time Scale Decreased: ", app->timeScale);
+    } else if (key == GLFW_KEY_1) {
       app->mainPipeline->setPolygonMode(VK_POLYGON_MODE_FILL);
       app->recreateGraphicsPipeline();
       app->window->setTitle("Dome Diorama - FILL MODE");
-      Debug::log(Debug::Category::INPUT, "Switched to FILL mode");
     } else if (key == GLFW_KEY_2) {
       app->mainPipeline->setPolygonMode(VK_POLYGON_MODE_LINE);
       app->recreateGraphicsPipeline();
       app->window->setTitle("Dome Diorama - WIREFRAME MODE");
-      Debug::log(Debug::Category::INPUT, "Switched to WIREFRAME mode");
     } else if (key == GLFW_KEY_3) {
       app->mainPipeline->setPolygonMode(VK_POLYGON_MODE_POINT);
       app->recreateGraphicsPipeline();
       app->window->setTitle("Dome Diorama - POINT MODE");
-      Debug::log(Debug::Category::INPUT, "Switched to POINT mode");
     } else if (key == GLFW_KEY_4) {
       app->recreateTextureSamplers(VK_FILTER_NEAREST, VK_FILTER_NEAREST);
       app->window->setTitle("Dome Diorama - NEAREST FILTERING");
-      Debug::log(Debug::Category::INPUT, "Switched to NEAREST filtering");
     } else if (key == GLFW_KEY_5) {
       app->recreateTextureSamplers(VK_FILTER_LINEAR, VK_FILTER_LINEAR);
       app->window->setTitle("Dome Diorama - LINEAR FILTERING");
-      Debug::log(Debug::Category::INPUT, "Switched to LINEAR filtering");
     } else if (key == GLFW_KEY_L) {
       app->toggleShadingMode();
     } else if (key == GLFW_KEY_T) {
@@ -775,6 +769,72 @@ void Application::keyCallback(GLFWwindow* win, int key, int scancode,
     }
   }
 }
+
+void Application::setCameraPreset(int presetIndex) {
+  if (presetIndex == 1) {
+    camera.setPose(glm::vec3(0.0f, 300.0f, 500.0f),
+                   glm::vec3(0.0f, 0.0f, 0.0f));
+    Debug::log(Debug::Category::CAMERA, "Camera C1: Overview");
+  } else if (presetIndex == 2) {
+    camera.setPose(glm::vec3(50.0f, 30.0f, 50.0f),
+                   glm::vec3(0.0f, 10.0f, 0.0f));
+    Debug::log(Debug::Category::CAMERA, "Camera C2: Navigation");
+  } else if (presetIndex == 3) {
+    for (size_t i = 0; i < plantManager->getPlantCount(); ++i) {
+      const Plant& p = plantManager->getPlant(i);
+      if (p.getType() == PlantType::Cactus) {
+        const Object& obj = sceneObjects[plantManager->getPlantObjectIndex(i)];
+        glm::vec3 plantPos = obj.getPosition();
+        camera.setPose(plantPos + glm::vec3(5.0f, 2.0f, 5.0f),
+                       plantPos + glm::vec3(0.0f, 2.0f, 0.0f));
+        Debug::log(Debug::Category::CAMERA, "Camera C3: Close-up on Cactus");
+        break;
+      }
+    }
+  }
+}
+
+void Application::triggerFireEffect() {
+  std::vector<size_t> validCacti;
+  for (size_t i = 0; i < plantManager->getPlantCount(); ++i) {
+    const Plant& p = plantManager->getPlant(i);
+    if (p.getType() == PlantType::Cactus && !p.state_.isOnFire &&
+        !p.state_.isDead) {
+      validCacti.push_back(i);
+    }
+  }
+
+  if (validCacti.empty()) return;
+
+  static std::random_device rd;
+  static std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(0,
+                                      static_cast<int>(validCacti.size()) - 1);
+  size_t selectedIndex = validCacti[dis(gen)];
+
+  Plant& p = plantManager->getPlantMutable(selectedIndex);
+  const Object& obj =
+      sceneObjects[plantManager->getPlantObjectIndex(selectedIndex)];
+  glm::vec3 pos = obj.getPosition();
+
+  plantManager->startFire(p, pos);
+
+  glm::vec3 camPos = pos + glm::vec3(5.0f, 5.0f, 5.0f);
+  camera.setPose(camPos, pos);
+
+  Debug::log(Debug::Category::MAIN, "F4: Fire started on cactus index ",
+             selectedIndex);
+}
+
+void Application::resetApplication() {
+  timeScale = 1.0f;
+  simulationTime = 0.0f;
+  setCameraPreset(1);
+  WorldConfig defaultConfig;
+  setWorldConfig(defaultConfig);
+  Debug::log(Debug::Category::MAIN, "Application Resetted");
+}
+
 void Application::cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
   auto* const app =
       reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
