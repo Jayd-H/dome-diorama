@@ -685,6 +685,78 @@ void Application::framebufferResizeCallback(GLFWwindow* win, int width,
   app->framebufferResized = true;
 }
 
+void Application::increaseTemperature() {
+  worldState.adjustTemperature(5.0f);
+  Debug::log(Debug::Category::MAIN,
+             "Temperature increased to: ", worldState.getTemperature(), "°C");
+}
+
+void Application::decreaseTemperature() {
+  worldState.adjustTemperature(-5.0f);
+  Debug::log(Debug::Category::MAIN,
+             "Temperature decreased to: ", worldState.getTemperature(), "°C");
+}
+
+void Application::increaseHumidity() {
+  worldState.adjustHumidity(0.1f);
+  Debug::log(Debug::Category::MAIN,
+             "Humidity increased to: ", worldState.getHumidity() * 100.0f, "%");
+}
+
+void Application::decreaseHumidity() {
+  worldState.adjustHumidity(-0.1f);
+  Debug::log(Debug::Category::MAIN,
+             "Humidity decreased to: ", worldState.getHumidity() * 100.0f, "%");
+}
+
+void Application::increaseWindSpeed() {
+  worldState.adjustWindSpeed(1.0f);
+  Debug::log(Debug::Category::MAIN,
+             "Wind speed increased to: ", worldState.getWindSpeed(), " m/s");
+}
+
+void Application::decreaseWindSpeed() {
+  worldState.adjustWindSpeed(-1.0f);
+  Debug::log(Debug::Category::MAIN,
+             "Wind speed decreased to: ", worldState.getWindSpeed(), " m/s");
+}
+
+void Application::cycleWeather() {
+  worldState.cycleWeather();
+  const WeatherState weather = worldState.getWeather();
+  std::string weatherName;
+  switch (weather) {
+    case WeatherState::Clear:
+      weatherName = "Clear";
+      break;
+    case WeatherState::Cloudy:
+      weatherName = "Cloudy";
+      break;
+    case WeatherState::LightRain:
+      weatherName = "Light Rain";
+      break;
+    case WeatherState::HeavyRain:
+      weatherName = "Heavy Rain";
+      break;
+    case WeatherState::LightSnow:
+      weatherName = "Light Snow";
+      break;
+    case WeatherState::HeavySnow:
+      weatherName = "Heavy Snow";
+      break;
+    case WeatherState::DustStorm:
+      weatherName = "Dust Storm";
+      break;
+  }
+  Debug::log(Debug::Category::MAIN, "Weather changed to: ", weatherName);
+}
+
+void Application::toggleTimePause() {
+  worldState.togglePause();
+  Debug::log(Debug::Category::MAIN, "Time ",
+             worldState.isPaused() ? "PAUSED" : "RESUMED");
+}
+
 void Application::keyCallback(GLFWwindow* win, int key, int scancode,
                               int action, int mods) {
   if (win == nullptr) return;
@@ -718,10 +790,25 @@ void Application::keyCallback(GLFWwindow* win, int key, int scancode,
       Debug::log(Debug::Category::INPUT, "Switched to LINEAR filtering");
     } else if (key == GLFW_KEY_L) {
       app->toggleShadingMode();
+    } else if (key == GLFW_KEY_T) {
+      app->increaseTemperature();
+    } else if (key == GLFW_KEY_G) {
+      app->decreaseTemperature();
+    } else if (key == GLFW_KEY_H) {
+      app->increaseHumidity();
+    } else if (key == GLFW_KEY_N) {
+      app->decreaseHumidity();
+    } else if (key == GLFW_KEY_U) {
+      app->increaseWindSpeed();
+    } else if (key == GLFW_KEY_J) {
+      app->decreaseWindSpeed();
+    } else if (key == GLFW_KEY_Y) {
+      app->cycleWeather();
+    } else if (key == GLFW_KEY_P) {
+      app->toggleTimePause();
     }
   }
 }
-
 void Application::cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
   auto* const app =
       reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));

@@ -184,6 +184,16 @@ class Application final {
   static void scrollCallback(GLFWwindow* window, double xoffset,
                              double yoffset);
 
+  // controls!
+  void increaseTemperature();
+  void decreaseTemperature();
+  void increaseHumidity();
+  void decreaseHumidity();
+  void increaseWindSpeed();
+  void decreaseWindSpeed();
+  void cycleWeather();
+  void toggleTimePause();
+
   VkShaderModule createShaderModule(const std::vector<char>& code) const;
 
   // Helper to reduce duplicated code in pipeline creation

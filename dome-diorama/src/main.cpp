@@ -1,4 +1,4 @@
-#ifdef _DEBUG
+﻿#ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 #endif
@@ -14,6 +14,52 @@
 #include "Scene/WorldState.h"
 #include "Util/ConfigParser.h"
 #include "Util/Debug.h"
+
+void printControls() {
+  std::cout << R"( ___     ___   ___ ___    ___ 
+|   \   /   \ |   |   |  /  _]
+|    \ |     || _   _ | /  [_ 
+|  D  ||  O  ||  \_/  ||    _]
+|     ||     ||   |   ||   [_ 
+|     ||     ||   |   ||     |
+|_____| \___/ |___|___||_____|
+                              
+CAMERA CONTROLS
+---------------
+  Enter              - Switch between Orbit and FPS camera modes
+  Right Mouse Button - Rotate camera around scene (Orbit mode)
+  Mouse Scroll       - Zoom in/out (Orbit) / Adjust speed (FPS)
+  W/A/S/D            - Move forward/left/backward/right (FPS mode)
+  Space              - Move up (FPS mode)
+  Shift              - Move down (FPS mode)
+  Mouse Movement     - Look around (FPS mode)
+
+RENDERING CONTROLS
+------------------
+  1 - Fill mode (solid rendering)
+  2 - Wireframe mode
+  3 - Point mode
+  4 - Nearest texture filtering
+  5 - Linear texture filtering
+  L - Toggle between Phong and Gouraud shading
+
+WEATHER & ENVIRONMENT CONTROLS
+-------------------------------
+  T - Increase temperature (+5°C)
+  G - Decrease temperature (-5°C)
+  H - Increase humidity (+10%)
+  N - Decrease humidity (-10%)
+  U - Increase wind speed (+1 m/s)
+  J - Decrease wind speed (-1 m/s)
+  Y - Cycle through weather states
+  P - Pause/Resume time progression
+
+WEATHER STATES
+--------------
+  Clear → Cloudy → Light Rain → Heavy Rain → Light Snow → Heavy Snow → Dust Storm
+
+)" << std::endl;
+}
 
 std::vector<Object> createScene(const ConfigParser& config,
                                 MeshManager* meshManager,
@@ -266,6 +312,10 @@ int main() {
                     config.getBool("Debug.debug_postprocessing", true));
   Debug::setEnabled(Debug::Category::SHADOWS,
                     config.getBool("Debug.debug_shadows", true));
+
+  if (Debug::isEnabled(Debug::Category::MAIN)) {
+    printControls();
+  }
 
   try {
     Application app;

@@ -152,6 +152,32 @@ inline float getSunIntensity() const {
     return intensity;
   }
 
+  inline void adjustTemperature(float delta) {
+    currentTemperature =
+        glm::clamp(currentTemperature + delta, minTemperature, maxTemperature);
+    targetTemperature = currentTemperature;
+  }
+
+  inline void adjustHumidity(float delta) {
+    humidity = glm::clamp(humidity + delta, minHumidity, maxHumidity);
+    targetHumidity = humidity;
+  }
+
+  inline void adjustWindSpeed(float delta) {
+    windSpeed = glm::clamp(windSpeed + delta, minWindSpeed, maxWindSpeed);
+    targetWindSpeed = windSpeed;
+  }
+
+  inline void cycleWeather() {
+    int weatherIndex = static_cast<int>(currentWeather);
+    weatherIndex = (weatherIndex + 1) % 7;
+    currentWeather = static_cast<WeatherState>(weatherIndex);
+  }
+
+  inline void togglePause() { timePaused = !timePaused; }
+
+  inline bool isPaused() const { return timePaused; }
+
  private:
   mutable std::mt19937 rng;
   glm::vec3 windDirection;
@@ -180,6 +206,8 @@ inline float getSunIntensity() const {
   float parameterUpdateTimer = 0.0f;
   float weatherChangeTimer = 0.0f;
 
+  bool timePaused = false;
+
   inline float smoothStep(float t) const { return t * t * (3.0f - 2.0f * t); }
 
   inline float easeInOutCubic(float t) const {
@@ -188,6 +216,8 @@ inline float getSunIntensity() const {
   }
 
   inline void updateTime(float deltaTime) {
+    if (timePaused) return;
+
     time.totalSeconds += deltaTime;
 
     const float dayProgress =
