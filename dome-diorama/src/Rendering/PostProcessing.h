@@ -31,6 +31,7 @@ class PostProcessing final {
               const VkExtent2D& extent, uint32_t frameIndex) const;
 
   VkImageView getOffscreenImageView() const { return offscreenImageView; }
+  void updateEnvironmentalParams(float temperature, float humidity);
 
  private:
   RenderDevice* renderDevice;
@@ -63,6 +64,9 @@ class PostProcessing final {
   void updateDescriptorSets();
   void cleanupOffscreenResources();
   void cleanupDepthResources();
+
+  float currentTemperature = 20.0f;
+  float currentHumidity = 0.5f;
 
   VkShaderModule createShaderModule(const std::vector<char>& code) const;
   static std::vector<char> readFile(const std::string& filename);

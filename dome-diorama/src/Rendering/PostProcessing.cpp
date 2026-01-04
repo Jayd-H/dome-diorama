@@ -1,4 +1,4 @@
-#include "PostProcessing.h"
+#include "Rendering/PostProcessing.h"
 
 #include <array>
 #include <fstream>
@@ -216,6 +216,18 @@ void PostProcessing::render(VkCommandBuffer commandBuffer,
                           pipelineLayout, 0, 1, &descriptorSets[frameIndex], 0,
                           nullptr);
 
+  struct PushConstants {
+    alignas(4) float temperature;
+    alignas(4) float humidity;
+  } pushConstants;
+
+  pushConstants.temperature = currentTemperature;
+  pushConstants.humidity = currentHumidity;
+
+  vkCmdPushConstants(commandBuffer, pipelineLayout,
+                     VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants),
+                     &pushConstants);
+
   vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
   vkCmdEndRendering(commandBuffer);
@@ -359,6 +371,12 @@ void PostProcessing::createDepthResources() {
              "PostProcessing: Depth resources created");
 }
 
+void PostProcessing::updateEnvironmentalParams(float temperature,
+                                               float humidity) {
+  currentTemperature = temperature;
+  currentHumidity = humidity;
+}
+
 void PostProcessing::createDescriptorSetLayout() {
   Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Creating descriptor set layout");
@@ -386,7 +404,8 @@ void PostProcessing::createDescriptorSetLayout() {
 }
 
 void PostProcessing::createPipeline() {
-  Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Creating pipeline");
+  Debug::log(Debug::Category::POSTPROCESSING,
+             "PostProcessing: Creating pipeline");
 
   const std::vector<char> vertShaderCode =
       readFile("shaders/postprocess_vert.spv");
@@ -472,10 +491,17 @@ void PostProcessing::createPipeline() {
   dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
   dynamicState.pDynamicStates = dynamicStates.data();
 
+  VkPushConstantRange pushConstantRange{};
+  pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  pushConstantRange.offset = 0;
+  pushConstantRange.size = sizeof(float) * 2;
+
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipelineLayoutInfo.setLayoutCount = 1;
   pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+  pipelineLayoutInfo.pushConstantRangeCount = 1;
+  pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
   if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
                              &pipelineLayout) != VK_SUCCESS) {
@@ -512,7 +538,8 @@ void PostProcessing::createPipeline() {
   vkDestroyShaderModule(device, fragShaderModule, nullptr);
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
 
-  Debug::log(Debug::Category::POSTPROCESSING, "PostProcessing: Pipeline created");
+  Debug::log(Debug::Category::POSTPROCESSING,
+             "PostProcessing: Pipeline created");
 }
 
 void PostProcessing::createDescriptorSets(VkDescriptorPool descriptorPool) {

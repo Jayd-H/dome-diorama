@@ -348,6 +348,9 @@ void Application::drawFrame() {
   vkResetCommandBuffer(commandBuffers[currentFrame], 0);
   recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
+  postProcessing->updateEnvironmentalParams(worldState.getTemperature(),
+                                            worldState.getHumidity());
+
   VkSubmitInfo submitInfo{};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
