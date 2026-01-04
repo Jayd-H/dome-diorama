@@ -182,6 +182,8 @@ std::vector<Object> createScene(const ConfigParser& config,
                               .castsShadows(true)
                               .build();
 
+  lightManager->addLight(testLight);
+
   const MaterialID particleMaterialID =
       materialManager->registerMaterial(MaterialBuilder()
                                             .name("Particle Material")
