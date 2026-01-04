@@ -100,11 +100,17 @@ void main() {
     
     if (params.billboardMode == 0) {
         vec3 worldUp = vec3(0.0, 1.0, 0.0);
+        
+        if (abs(dot(toCamera, worldUp)) > 0.99) {
+            worldUp = vec3(0.0, 0.0, 1.0);
+        }
+        
         right = normalize(cross(worldUp, toCamera));
-        up = cross(toCamera, right);
+        up = normalize(cross(toCamera, right));
     } else if (params.billboardMode == 1) {
         up = vec3(0.0, 1.0, 0.0);
         right = normalize(cross(up, toCamera));
+        toCamera = normalize(cross(right, up));
     } else {
         right = vec3(1.0, 0.0, 0.0);
         up = vec3(0.0, 1.0, 0.0);

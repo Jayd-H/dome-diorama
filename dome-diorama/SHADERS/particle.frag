@@ -31,7 +31,7 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     const float SKYBOX_RADIUS = 300.0;
-    float distFromCenter = length(fragWorldPos - params.emitterPosition);
+    float distFromCenter = length(fragWorldPos);
     
     if (distFromCenter > SKYBOX_RADIUS) {
         discard;

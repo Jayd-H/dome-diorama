@@ -482,97 +482,47 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   const glm::vec3 sunDirection = worldState.getSunDirection();
   const glm::vec3 moonDirection = worldState.getMoonDirection();
 
+  const TimeOfDay timeOfDay = worldState.getTime();
+  const float normalizedTime = timeOfDay.normalizedTime;
+
+  const float sunAngle = normalizedTime * glm::two_pi<float>();
+  const float sunRadius = 500.0f;
+  const glm::vec3 sunPosition =
+      glm::vec3(cos(sunAngle) * sunRadius, sin(sunAngle) * sunRadius, 0.0f);
+
+  const float moonAngle = (normalizedTime + 0.5f) * glm::two_pi<float>();
+  const float moonRadius = 450.0f;
+  const glm::vec3 moonPosition =
+      glm::vec3(cos(moonAngle) * moonRadius, sin(moonAngle) * moonRadius, 0.0f);
+
   Light* const sunLight = lightManager->getLight(sunLightID);
   if (sunLight) {
     sunLight->direction = -sunDirection;
-
     const float sunHeight = sunDirection.y;
 
-    if (sunHeight > -0.15f) {
-      const float sunIntensity = worldState.getSunIntensity();
-
-      const float horizonDistance = glm::abs(sunHeight);
-      const float atmosphereThickness =
-          glm::smoothstep(0.0f, 0.4f, horizonDistance);
-
-      glm::vec3 deepSunsetColor = glm::vec3(1.0f, 0.3f, 0.1f);
-      glm::vec3 sunsetColor = glm::vec3(1.0f, 0.5f, 0.2f);
-      glm::vec3 goldenHourColor = glm::vec3(1.0f, 0.85f, 0.6f);
-      glm::vec3 noonColor = glm::vec3(1.0f, 0.98f, 0.95f);
-
-      glm::vec3 currentColor;
-      float intensityMultiplier;
-
-      if (sunHeight < 0.0f) {
-        const float t = glm::smoothstep(-0.15f, 0.0f, sunHeight);
-        currentColor =
-            glm::mix(glm::vec3(0.8f, 0.2f, 0.05f), deepSunsetColor, t);
-        intensityMultiplier = t * 0.3f;
-      } else if (sunHeight < 0.1f) {
-        const float t = glm::smoothstep(0.0f, 0.1f, sunHeight);
-        currentColor = glm::mix(deepSunsetColor, sunsetColor, t);
-        intensityMultiplier = 0.3f + t * 0.4f;
-      } else if (sunHeight < 0.3f) {
-        const float t = glm::smoothstep(0.1f, 0.3f, sunHeight);
-        currentColor = glm::mix(sunsetColor, goldenHourColor, t);
-        intensityMultiplier = 0.7f + t * 0.8f;
-      } else if (sunHeight < 0.6f) {
-        const float t = glm::smoothstep(0.3f, 0.6f, sunHeight);
-        currentColor = glm::mix(goldenHourColor, noonColor, t);
-        intensityMultiplier = 1.5f + t * 1.5f;
-      } else {
-        currentColor = noonColor;
-        intensityMultiplier = 3.0f;
-      }
-
-      const float rayleighScattering =
-          glm::pow(1.0f - atmosphereThickness, 2.0f);
-      currentColor.r *= 1.0f;
-      currentColor.g *= glm::mix(0.6f, 1.0f, rayleighScattering);
-      currentColor.b *= glm::mix(0.3f, 1.0f, rayleighScattering);
-
-      sunLight->color =
-          glm::normalize(currentColor) * glm::length(currentColor);
-      sunLight->intensity = intensityMultiplier * 2.5f * sunIntensity;
-
+    if (sunHeight > 0.0f) {
+      const float t = glm::smoothstep(0.0f, 0.3f, sunHeight);
+      sunLight->color = glm::mix(glm::vec3(1.0f, 0.7f, 0.4f),
+                                 glm::vec3(1.0f, 0.98f, 0.95f), t);
+      const float normalizedIntensity = glm::smoothstep(0.0f, 0.2f, sunHeight);
+      sunLight->intensity = normalizedIntensity * 5.0f;
     } else {
       sunLight->intensity = 0.0f;
       sunLight->color = glm::vec3(0.0f);
-    }
-
-    static float sunDebugTimer = 0.0f;
-    sunDebugTimer += deltaTime;
-    if (sunDebugTimer >= 3.0f) {
-      sunDebugTimer = 0.0f;
-      Debug::log(Debug::Category::LIGHTS, "Sun - Height: ", sunHeight,
-                 " Intensity: ", sunLight->intensity, " Color: (",
-                 sunLight->color.r, ", ", sunLight->color.g, ", ",
-                 sunLight->color.b, ")");
     }
   }
 
   for (auto& object : sceneObjects) {
     if (object.getName() == "Sun") {
-      object.setPosition(-sunDirection * 100.0f);
+      object.setPosition(sunPosition);
     } else if (object.getName() == "Moon") {
-      object.setPosition(-moonDirection * 100.0f);
+      object.setPosition(moonPosition);
     }
   }
 
   const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
   const float sceneRadius = 200.0f;
   lightManager->updateAllShadowMatrices(sceneCenter, sceneRadius);
-
-  static float lightDebugTimer = 0.0f;
-  lightDebugTimer += deltaTime;
-  if (lightDebugTimer >= 2.0f) {
-    lightDebugTimer = 0.0f;
-    if (sunLight) {
-      Debug::log(Debug::Category::LIGHTS, "Sun Light - Dir: (",
-                 sunLight->direction.x, ", ", sunLight->direction.y, ", ",
-                 sunLight->direction.z, ") Intensity: ", sunLight->intensity);
-    }
-  }
 
   lightManager->updateLightBuffer();
 

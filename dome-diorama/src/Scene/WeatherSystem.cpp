@@ -40,23 +40,23 @@ void WeatherSystem::updateWeatherEmitters(const WorldState& worldState) {
   switch (currentWeather) {
     case WeatherState::LightRain:
       if (temperature <= 0.0f) {
-        activateSnowEmitter(0.4f, 1000);
+        activateSnowEmitter(0.4f, 10000);
       } else {
-        activateRainEmitter(0.4f, 1000);
+        activateRainEmitter(0.4f, 10000);
       }
       break;
     case WeatherState::HeavyRain:
       if (temperature <= 0.0f) {
-        activateSnowEmitter(0.8f, 2000);
+        activateSnowEmitter(0.8f, 20000);
       } else {
-        activateRainEmitter(0.8f, 2000);
+        activateRainEmitter(0.8f, 20000);
       }
       break;
     case WeatherState::LightSnow:
-      activateSnowEmitter(0.3f, 800);
+      activateSnowEmitter(0.3f, 10000);
       break;
     case WeatherState::HeavySnow:
-      activateSnowEmitter(0.6f, 1500);
+      activateSnowEmitter(0.6f, 20000);
       break;
     case WeatherState::DustStorm:
       activateDustStormEmitter();
@@ -71,15 +71,15 @@ void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
     ParticleEmitter* const rainEmitter =
         EmitterPresets::createRain()
             .name("Weather Rain")
-            .position(0.0f, 50.0f, 0.0f)
+            .position(0.0f, 150.0f, 0.0f)
             .maxParticles(particleCount)
-            .particleLifetime(2.0f)
+            .particleLifetime(8.0f)
             .material(particleMaterialID)
             .baseColor(glm::vec3(0.5f, 0.6f, 0.9f))
             .tipColor(glm::vec3(0.7f, 0.8f, 1.0f))
             .gravity(glm::vec3(0.0f, -25.0f * intensity, 0.0f))
             .initialVelocity(glm::vec3(2.0f, 0.0f, 0.0f))
-            .spawnRadius(150.0f)
+            .spawnRadius(300.0f)
             .particleScale(0.1f)
             .windInfluence(0.7f)
             .build();
@@ -98,15 +98,15 @@ void WeatherSystem::activateSnowEmitter(float intensity, size_t particleCount) {
     ParticleEmitter* const snowEmitter =
         EmitterPresets::createSnow()
             .name("Weather Snow")
-            .position(0.0f, 50.0f, 0.0f)
+            .position(0.0f, 150.0f, 0.0f)
             .maxParticles(particleCount)
-            .particleLifetime(6.0f)
+            .particleLifetime(15.0f)
             .material(particleMaterialID)
             .baseColor(glm::vec3(0.95f, 0.95f, 1.0f))
             .tipColor(glm::vec3(1.0f, 1.0f, 1.0f))
             .gravity(glm::vec3(0.0f, -5.0f * intensity, 0.0f))
             .initialVelocity(glm::vec3(0.5f, 0.0f, 0.0f))
-            .spawnRadius(150.0f)
+            .spawnRadius(300.0f)
             .particleScale(0.2f)
             .windInfluence(0.9f)
             .build();
@@ -125,14 +125,14 @@ void WeatherSystem::activateDustStormEmitter() {
     ParticleEmitter* const dustEmitter =
         EmitterPresets::createDust()
             .name("Weather Dust Storm")
-            .position(0.0f, 5.0f, 0.0f)
-            .maxParticles(1500)
-            .particleLifetime(5.0f)
+            .position(0.0f, 80.0f, 0.0f)
+            .maxParticles(2500)
+            .particleLifetime(10.0f)
             .material(particleMaterialID)
             .baseColor(glm::vec3(0.7f, 0.6f, 0.5f))
             .tipColor(glm::vec3(0.5f, 0.4f, 0.3f))
             .initialVelocity(glm::vec3(3.0f, 2.0f, 0.0f))
-            .spawnRadius(150.0f)
+            .spawnRadius(300.0f)
             .particleScale(0.5f)
             .windInfluence(1.0f)
             .build();

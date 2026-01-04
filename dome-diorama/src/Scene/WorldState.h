@@ -107,20 +107,22 @@ class WorldState final {
   }
   inline float getHumidity() const { return humidity; }
 
-  inline glm::vec3 getSunDirection() const {
+inline glm::vec3 getSunDirection() const {
     const float angle = time.normalizedTime * glm::two_pi<float>();
-    const float x = cos(angle) * 0.3f;
-    const float y = sin(angle);
+    const float radius = 500.0f;
+    const float x = cos(angle) * radius * 0.3f;
+    const float y = sin(angle) * radius;
     const float z = 0.0f;
-    return glm::normalize(glm::vec3(x, y, z));
+    return glm::vec3(x, y, z);
   }
 
   inline glm::vec3 getMoonDirection() const {
     const float angle = (time.normalizedTime + 0.5f) * glm::two_pi<float>();
-    const float x = cos(angle) * 0.3f;
-    const float y = sin(angle);
+    const float radius = 450.0f;
+    const float x = cos(angle) * radius * 0.3f;
+    const float y = sin(angle) * radius;
     const float z = 0.0f;
-    return glm::normalize(glm::vec3(x, y, z));
+    return glm::vec3(x, y, z);
   }
 
 inline float getSunIntensity() const {
@@ -136,7 +138,7 @@ inline float getSunIntensity() const {
       intensity *= 0.4f;
     }
 
-    return intensity;
+    return glm::clamp(intensity, 0.0f, 1.0f);
   }
 
   inline float getMoonIntensity() const {
