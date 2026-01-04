@@ -127,7 +127,8 @@ inline glm::vec3 getSunDirection() const {
 
 inline float getSunIntensity() const {
     const float sunY = getSunDirection().y;
-    float intensity = glm::smoothstep(-0.1f, 0.1f, sunY) * glm::max(0.0f, sunY);
+
+    float intensity = glm::smoothstep(-100.0f, 200.0f, sunY);
 
     if (currentWeather == WeatherState::Cloudy) {
       intensity *= 0.6f;
