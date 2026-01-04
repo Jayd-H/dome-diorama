@@ -205,7 +205,7 @@ class MainPipeline final {
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
     pushConstantRange.size =
-        sizeof(glm::mat4) + sizeof(uint32_t) + sizeof(uint32_t);
+        sizeof(glm::mat4) + sizeof(glm::vec3) + sizeof(float);
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
