@@ -2,6 +2,46 @@
 
 Little desert world built with a custom rendering engine in Vulkan.
 
+## Controls
+
+### Camera Controls
+- **Enter** - Switch between Orbit and FPS camera modes
+- **Right Mouse Button** (Orbit mode) - Rotate camera around scene
+- **Mouse Scroll** (Orbit mode) - Zoom in/out
+- **W/A/S/D** (FPS mode) - Move forward/left/backward/right
+- **Space** (FPS mode) - Move up
+- **Shift** (FPS mode) - Move down
+- **Mouse Movement** (FPS mode) - Look around
+- **Mouse Scroll** (FPS mode) - Adjust movement speed
+
+### Rendering Controls
+- **1** - Fill mode (solid rendering)
+- **2** - Wireframe mode
+- **3** - Point mode
+- **4** - Nearest texture filtering
+- **5** - Linear texture filtering
+- **L** - Toggle between Phong and Gouraud shading
+
+### Weather & Environment Controls
+- **T** - Increase temperature (+5°C)
+- **G** - Decrease temperature (-5°C)
+- **H** - Increase humidity (+10%)
+- **N** - Decrease humidity (-10%)
+- **U** - Increase wind speed (+1 m/s)
+- **J** - Decrease wind speed (-1 m/s)
+- **Y** - Cycle through weather states (Clear → Cloudy → Light Rain → Heavy Rain → Light Snow → Heavy Snow → Dust Storm)
+- **P** - Pause/Resume time progression
+
+### Weather States
+The weather system cycles through these states:
+- **Clear** - Sunny skies
+- **Cloudy** - Overcast conditions
+- **Light Rain** - Light precipitation (rain or snow depending on temperature)
+- **Heavy Rain** - Heavy precipitation
+- **Light Snow** - Light snowfall (when temperature ≤ 0°C)
+- **Heavy Snow** - Heavy snowfall (when temperature ≤ 0°C)
+- **Dust Storm** - Sandy wind conditions
+
 ## C++ Programming & Design
 
 The scene is built in 'CreateScene()'. There are lights, textures, materials, and objects. You can add new things to the scene with a friendly API. 
