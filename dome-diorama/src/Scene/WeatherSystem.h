@@ -16,14 +16,17 @@ class WeatherSystem final {
   WeatherSystem(ParticleManager* particleMgr, MaterialManager* materialMgr)
       : particleManager(particleMgr),
         materialManager(materialMgr),
-        currentWeather(WeatherState::Clear),
+        sunObject(nullptr),
+        moonObject(nullptr),
         rainEmitterID(INVALID_EMITTER_ID),
         dustEmitterID(INVALID_EMITTER_ID),
         snowEmitterID(INVALID_EMITTER_ID),
         particleMaterialID(INVALID_MATERIAL_ID),
-        sunObject(nullptr),
-        moonObject(nullptr),
+        currentWeather(WeatherState::Clear),
         lastWeatherCheck(0.0f) {}
+
+  WeatherSystem(const WeatherSystem&) = delete;
+  WeatherSystem& operator=(const WeatherSystem&) = delete;
 
   void init();
   void update(const WorldState& worldState, float deltaTime);
@@ -34,13 +37,15 @@ class WeatherSystem final {
  private:
   ParticleManager* particleManager;
   MaterialManager* materialManager;
-  WeatherState currentWeather;
+  Object* sunObject;
+  Object* moonObject;
+
   EmitterID rainEmitterID;
   EmitterID dustEmitterID;
   EmitterID snowEmitterID;
   MaterialID particleMaterialID;
-  Object* sunObject;
-  Object* moonObject;
+
+  WeatherState currentWeather;
   float lastWeatherCheck;
 
   void updateWeatherEmitters(const WorldState& worldState);

@@ -19,6 +19,7 @@
 #include "Scene/PlantManager.h"
 #include "Scene/PlantState.h"
 #include "Scene/Skybox.h"
+#include "Scene/WeatherSystem.h"
 #include "Scene/WorldState.h"
 #include "Util/Camera.h"
 #include "Util/Input.h"
@@ -48,9 +49,9 @@ class Application final {
     sceneObjects = objects;
 
     plantObjectIndicesSet.clear();
-    const auto& plantIndices = plantManager->getPlantObjectIndices();
-    for (size_t const idx : plantIndices) {
-      plantObjectIndicesSet.insert(idx);
+    const size_t count = plantManager->getPlantCount();
+    for (size_t i = 0; i < count; ++i) {
+      plantObjectIndicesSet.insert(plantManager->getPlantObjectIndex(i));
     }
 
     Debug::log(Debug::Category::PLANTMANAGER, "Application: Registered ",

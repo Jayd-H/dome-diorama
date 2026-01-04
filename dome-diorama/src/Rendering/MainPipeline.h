@@ -18,6 +18,9 @@ class MainPipeline final {
         depthFormat(depthFormat),
         pipeline(VK_NULL_HANDLE),
         pipelineLayout(VK_NULL_HANDLE),
+        descriptorSetLayout(VK_NULL_HANDLE),
+        materialDescriptorSetLayout(VK_NULL_HANDLE),
+        shadowDescriptorSetLayout(VK_NULL_HANDLE),
         currentPolygonMode(VK_POLYGON_MODE_FILL),
         currentShadingMode(ShadingMode::Phong) {}
 

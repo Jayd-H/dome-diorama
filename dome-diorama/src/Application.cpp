@@ -121,6 +121,11 @@ void Application::initVulkan() {
   Debug::log(Debug::Category::VULKAN, "Initializing plant manager...");
   plantManager->init();
 
+  plantObjectIndicesSet.clear();
+  for (size_t i = 0; i < plantManager->getPlantCount(); ++i) {
+    plantObjectIndicesSet.insert(plantManager->getPlantObjectIndex(i));
+  }
+
   Debug::log(Debug::Category::VULKAN, "Creating particle manager...");
   particleManager = new ParticleManager(renderDevice, materialManager);
   Debug::log(Debug::Category::VULKAN, "Initializing particle manager...");
@@ -449,7 +454,8 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     envDebugTimer = 0.0f;
     size_t alivePlants = 0;
     size_t burningPlants = 0;
-    for (const auto& plant : plantManager->getPlants()) {
+    for (size_t i = 0; i < plantManager->getPlantCount(); ++i) {
+      const auto& plant = plantManager->getPlant(i);
       if (!plant.getState().isDead) alivePlants++;
       if (plant.getState().isOnFire) burningPlants++;
     }
@@ -697,7 +703,7 @@ void Application::cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
 
 void Application::mouseButtonCallback(GLFWwindow* win, int button, int action,
                                       int mods) {
-  auto* const const app =
+  auto* const app =
       reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
   app->input.onMouseButton(button, action, mods);
 }

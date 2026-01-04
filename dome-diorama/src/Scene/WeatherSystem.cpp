@@ -78,7 +78,7 @@ void WeatherSystem::updateWeatherEmitters(const WorldState& worldState) {
 
 void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
   if (rainEmitterID == INVALID_EMITTER_ID) {
-    ParticleEmitter* rainEmitter =
+    ParticleEmitter* const rainEmitter =
         EmitterPresets::createRain()
             .name("Weather Rain")
             .position(0.0f, 50.0f, 0.0f)
@@ -96,7 +96,7 @@ void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
 
     rainEmitterID = particleManager->registerEmitter(rainEmitter);
   } else {
-    ParticleEmitter* emitter = particleManager->getEmitter(rainEmitterID);
+    ParticleEmitter* const emitter = particleManager->getEmitter(rainEmitterID);
     if (emitter) {
       emitter->setActive(true);
     }
@@ -105,7 +105,7 @@ void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
 
 void WeatherSystem::activateSnowEmitter(float intensity, size_t particleCount) {
   if (snowEmitterID == INVALID_EMITTER_ID) {
-    ParticleEmitter* snowEmitter =
+    ParticleEmitter* const snowEmitter =
         EmitterPresets::createRain()
             .name("Weather Snow")
             .position(0.0f, 50.0f, 0.0f)
@@ -123,7 +123,7 @@ void WeatherSystem::activateSnowEmitter(float intensity, size_t particleCount) {
 
     snowEmitterID = particleManager->registerEmitter(snowEmitter);
   } else {
-    ParticleEmitter* emitter = particleManager->getEmitter(snowEmitterID);
+    ParticleEmitter* const emitter = particleManager->getEmitter(snowEmitterID);
     if (emitter) {
       emitter->setActive(true);
     }
@@ -132,7 +132,7 @@ void WeatherSystem::activateSnowEmitter(float intensity, size_t particleCount) {
 
 void WeatherSystem::activateDustStormEmitter() {
   if (dustEmitterID == INVALID_EMITTER_ID) {
-    ParticleEmitter* dustEmitter =
+    ParticleEmitter* const dustEmitter =
         EmitterPresets::createDust()
             .name("Weather Dust Storm")
             .position(0.0f, 5.0f, 0.0f)
@@ -149,7 +149,7 @@ void WeatherSystem::activateDustStormEmitter() {
 
     dustEmitterID = particleManager->registerEmitter(dustEmitter);
   } else {
-    ParticleEmitter* emitter = particleManager->getEmitter(dustEmitterID);
+    ParticleEmitter* const emitter = particleManager->getEmitter(dustEmitterID);
     if (emitter) {
       emitter->setActive(true);
     }
@@ -158,21 +158,21 @@ void WeatherSystem::activateDustStormEmitter() {
 
 void WeatherSystem::deactivateAllWeatherEmitters() {
   if (rainEmitterID != INVALID_EMITTER_ID) {
-    ParticleEmitter* emitter = particleManager->getEmitter(rainEmitterID);
+    ParticleEmitter* const emitter = particleManager->getEmitter(rainEmitterID);
     if (emitter) {
       emitter->setActive(false);
     }
   }
 
   if (snowEmitterID != INVALID_EMITTER_ID) {
-    ParticleEmitter* emitter = particleManager->getEmitter(snowEmitterID);
+    ParticleEmitter* const emitter = particleManager->getEmitter(snowEmitterID);
     if (emitter) {
       emitter->setActive(false);
     }
   }
 
   if (dustEmitterID != INVALID_EMITTER_ID) {
-    ParticleEmitter* emitter = particleManager->getEmitter(dustEmitterID);
+    ParticleEmitter* const emitter = particleManager->getEmitter(dustEmitterID);
     if (emitter) {
       emitter->setActive(false);
     }

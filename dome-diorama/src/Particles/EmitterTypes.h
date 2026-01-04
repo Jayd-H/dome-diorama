@@ -43,12 +43,33 @@ class ParticleEmitterBuilder final {
   std::unique_ptr<ParticleEmitter> emitter;
 };
 
+struct ParticleEmitterConfig {
+  const char* name;
+  glm::vec3 baseColor;
+  glm::vec3 tipColor;
+  glm::vec3 gravity;
+  glm::vec3 initialVelocity;
+  float spawnRadius;
+  float particleScale;
+  float fadeIn;
+  float fadeOut;
+  float velocityRandomness;
+  float scaleOverLifetime;
+  float rotationSpeed;
+  ParticleEmitter::BillboardMode billboardMode;
+  ParticleEmitter::ColorMode colorMode;
+};
+
 class EmitterPresets final {
  public:
   static ParticleEmitterBuilder createFire();
   static ParticleEmitterBuilder createSmoke();
   static ParticleEmitterBuilder createDust();
   static ParticleEmitterBuilder createRain();
+
+ private:
+  static ParticleEmitterBuilder createFromConfig(
+      const ParticleEmitterConfig& config);
 };
 
 inline ParticleEmitterBuilder::ParticleEmitterBuilder()
@@ -194,74 +215,55 @@ inline ParticleEmitter* ParticleEmitterBuilder::build() {
   return emitter.release();
 }
 
-inline ParticleEmitterBuilder EmitterPresets::createFire() {
+inline ParticleEmitterBuilder EmitterPresets::createFromConfig(
+    const ParticleEmitterConfig& config) {
   ParticleEmitterBuilder builder;
-  builder.name("Fire Emitter")
-      .baseColor(glm::vec3(1.0f, 0.9f, 0.1f))
-      .tipColor(glm::vec3(1.0f, 0.3f, 0.0f))
-      .gravity(glm::vec3(0.0f))
-      .initialVelocity(glm::vec3(0.0f, 2.0f, 0.0f))
-      .spawnRadius(0.2f)
-      .particleScale(0.5f)
-      .fadeTimings(0.1f, 0.5f)
-      .velocityRandomness(0.5f)
-      .scaleOverLifetime(0.3f)
-      .rotationSpeed(1.0f)
-      .billboardMode(ParticleEmitter::BillboardMode::Spherical)
-      .colorMode(ParticleEmitter::ColorMode::Gradient);
+  builder.name(config.name)
+      .baseColor(config.baseColor)
+      .tipColor(config.tipColor)
+      .gravity(config.gravity)
+      .initialVelocity(config.initialVelocity)
+      .spawnRadius(config.spawnRadius)
+      .particleScale(config.particleScale)
+      .fadeTimings(config.fadeIn, config.fadeOut)
+      .velocityRandomness(config.velocityRandomness)
+      .scaleOverLifetime(config.scaleOverLifetime)
+      .rotationSpeed(config.rotationSpeed)
+      .billboardMode(config.billboardMode)
+      .colorMode(config.colorMode);
   return builder;
+}
+
+inline ParticleEmitterBuilder EmitterPresets::createFire() {
+  return createFromConfig(
+      {"Fire Emitter", glm::vec3(1.0f, 0.9f, 0.1f), glm::vec3(1.0f, 0.3f, 0.0f),
+       glm::vec3(0.0f), glm::vec3(0.0f, 2.0f, 0.0f), 0.2f, 0.5f, 0.1f, 0.5f,
+       0.5f, 0.3f, 1.0f, ParticleEmitter::BillboardMode::Spherical,
+       ParticleEmitter::ColorMode::Gradient});
 }
 
 inline ParticleEmitterBuilder EmitterPresets::createSmoke() {
-  ParticleEmitterBuilder builder;
-  builder.name("Smoke Emitter")
-      .baseColor(glm::vec3(0.3f, 0.3f, 0.3f))
-      .tipColor(glm::vec3(0.6f, 0.6f, 0.6f))
-      .gravity(glm::vec3(0.0f))
-      .initialVelocity(glm::vec3(0.0f, 1.5f, 0.0f))
-      .spawnRadius(0.3f)
-      .particleScale(1.5f)
-      .fadeTimings(0.2f, 0.8f)
-      .velocityRandomness(0.8f)
-      .scaleOverLifetime(2.5f)
-      .rotationSpeed(0.5f)
-      .billboardMode(ParticleEmitter::BillboardMode::Spherical)
-      .colorMode(ParticleEmitter::ColorMode::Gradient);
-  return builder;
+  return createFromConfig({"Smoke Emitter", glm::vec3(0.3f, 0.3f, 0.3f),
+                           glm::vec3(0.6f, 0.6f, 0.6f), glm::vec3(0.0f),
+                           glm::vec3(0.0f, 1.5f, 0.0f), 0.3f, 1.5f, 0.2f, 0.8f,
+                           0.8f, 2.5f, 0.5f,
+                           ParticleEmitter::BillboardMode::Spherical,
+                           ParticleEmitter::ColorMode::Gradient});
 }
 
 inline ParticleEmitterBuilder EmitterPresets::createDust() {
-  ParticleEmitterBuilder builder;
-  builder.name("Dust Emitter")
-      .baseColor(glm::vec3(0.7f, 0.6f, 0.5f))
-      .tipColor(glm::vec3(0.5f, 0.4f, 0.3f))
-      .gravity(glm::vec3(0.0f))
-      .initialVelocity(glm::vec3(1.0f, 0.5f, 0.0f))
-      .spawnRadius(5.0f)
-      .particleScale(0.3f)
-      .fadeTimings(0.3f, 0.5f)
-      .velocityRandomness(1.0f)
-      .scaleOverLifetime(1.2f)
-      .rotationSpeed(0.3f)
-      .billboardMode(ParticleEmitter::BillboardMode::Spherical)
-      .colorMode(ParticleEmitter::ColorMode::Gradient);
-  return builder;
+  return createFromConfig(
+      {"Dust Emitter", glm::vec3(0.7f, 0.6f, 0.5f), glm::vec3(0.5f, 0.4f, 0.3f),
+       glm::vec3(0.0f), glm::vec3(1.0f, 0.5f, 0.0f), 5.0f, 0.3f, 0.3f, 0.5f,
+       1.0f, 1.2f, 0.3f, ParticleEmitter::BillboardMode::Spherical,
+       ParticleEmitter::ColorMode::Gradient});
 }
 
 inline ParticleEmitterBuilder EmitterPresets::createRain() {
-  ParticleEmitterBuilder builder;
-  builder.name("Rain Emitter")
-      .baseColor(glm::vec3(0.6f, 0.7f, 0.9f))
-      .tipColor(glm::vec3(0.8f, 0.9f, 1.0f))
-      .gravity(glm::vec3(0.0f, -15.0f, 0.0f))
-      .initialVelocity(glm::vec3(2.0f, 0.0f, 0.0f))
-      .spawnRadius(20.0f)
-      .particleScale(0.1f)
-      .fadeTimings(0.0f, 0.1f)
-      .velocityRandomness(0.2f)
-      .scaleOverLifetime(1.0f)
-      .rotationSpeed(0.0f)
-      .billboardMode(ParticleEmitter::BillboardMode::Cylindrical)
-      .colorMode(ParticleEmitter::ColorMode::BaseOnly);
-  return builder;
+  return createFromConfig(
+      {"Rain Emitter", glm::vec3(0.6f, 0.7f, 0.9f), glm::vec3(0.8f, 0.9f, 1.0f),
+       glm::vec3(0.0f, -15.0f, 0.0f), glm::vec3(2.0f, 0.0f, 0.0f), 20.0f, 0.1f,
+       0.0f, 0.1f, 0.2f, 1.0f, 0.0f,
+       ParticleEmitter::BillboardMode::Cylindrical,
+       ParticleEmitter::ColorMode::BaseOnly});
 }

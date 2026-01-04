@@ -192,8 +192,8 @@ std::vector<Object> createScene(const ConfigParser& config,
 
   Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
              " scene objects and ", lightManager->getLightCount(), " lights");
-  Debug::log(Debug::Category::MAIN, "Spawned ",
-             plantManager->getPlants().size(), " plants");
+  Debug::log(Debug::Category::MAIN, "Spawned ", plantManager->getPlantCount(),
+             " plants");
 
   return sceneObjects;
 }

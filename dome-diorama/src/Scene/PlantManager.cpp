@@ -112,12 +112,12 @@ void PlantManager::loadTreeModels() {
              treeMeshes.size(), " tree growth stages");
 }
 
-float PlantManager::getTerrainHeightAt(const Mesh* terrainMesh, float x,
+float PlantManager::getTerrainHeightAt(const Mesh* terrainData, float x,
                                        float z) const {
   float closestDistSq = std::numeric_limits<float>::max();
   float height = 0.0f;
 
-  for (const auto& vertex : terrainMesh->vertices) {
+  for (const auto& vertex : terrainData->vertices) {
     const float dx = vertex.pos.x - x;
     const float dz = vertex.pos.z - z;
     const float distSq = dx * dx + dz * dz;
@@ -131,12 +131,12 @@ float PlantManager::getTerrainHeightAt(const Mesh* terrainMesh, float x,
   return height;
 }
 
-glm::vec3 PlantManager::getTerrainNormalAt(const Mesh* terrainMesh, float x,
+glm::vec3 PlantManager::getTerrainNormalAt(const Mesh* terrainData, float x,
                                            float z) const {
   float closestDistSq = std::numeric_limits<float>::max();
   glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
 
-  for (const auto& vertex : terrainMesh->vertices) {
+  for (const auto& vertex : terrainData->vertices) {
     const float dx = vertex.pos.x - x;
     const float dz = vertex.pos.z - z;
     const float distSq = dx * dx + dz * dz;
@@ -164,21 +164,20 @@ float PlantManager::calculateMeshBottomOffset(const Mesh* mesh) const {
   return minY;
 }
 
-PlantTransformData PlantManager::calculatePlantTransform(
-    const Mesh* terrainMesh, const PlantSpawnConfig& config, float radius,
-    float angle) {
-  PlantTransformData data{};
-
+void PlantManager::calculatePlantTransform(const Mesh* terrainData,
+                                           const PlantSpawnConfig& config,
+                                           float radius, float angle,
+                                           PlantTransformData& outData) {
   std::uniform_real_distribution<float> rotationDist(0.0f, 360.0f);
   std::uniform_real_distribution<float> varianceDist(-1.0f, 1.0f);
   std::uniform_real_distribution<float> sinkDist(0.2f, 0.5f);
 
-  data.x = radius * std::cos(angle);
-  data.z = radius * std::sin(angle);
-  data.y = getTerrainHeightAt(terrainMesh, data.x, data.z);
+  outData.x = radius * std::cos(angle);
+  outData.z = radius * std::sin(angle);
+  outData.y = getTerrainHeightAt(terrainData, outData.x, outData.z);
 
   const glm::vec3 terrainNormal =
-      getTerrainNormalAt(terrainMesh, data.x, data.z);
+      getTerrainNormalAt(terrainData, outData.x, outData.z);
 
   const float baseYaw = rotationDist(rng);
   const float rotationVariance =
@@ -187,27 +186,25 @@ PlantTransformData PlantManager::calculatePlantTransform(
   const float tiltAngle =
       std::acos(glm::clamp(glm::dot(up, terrainNormal), -1.0f, 1.0f));
 
-  data.pitch =
+  outData.pitch =
       tiltAngle * config.rotationVariance * (180.0f / glm::pi<float>());
-  data.yaw = baseYaw + rotationVariance;
-  data.roll = 0.0f;
+  outData.yaw = baseYaw + rotationVariance;
+  outData.roll = 0.0f;
 
   const float baseScale = 1.0f;
   const float scaleVarianceX = varianceDist(rng) * config.scaleVariance;
   const float scaleVarianceY = varianceDist(rng) * config.scaleVariance;
   const float scaleVarianceZ = varianceDist(rng) * config.scaleVariance;
 
-  data.scaleX = baseScale + scaleVarianceX;
-  data.scaleY = baseScale + scaleVarianceY;
-  data.scaleZ = baseScale + scaleVarianceZ;
+  outData.scaleX = baseScale + scaleVarianceX;
+  outData.scaleY = baseScale + scaleVarianceY;
+  outData.scaleZ = baseScale + scaleVarianceZ;
 
-  data.sinkAmount = sinkDist(rng);
-
-  return data;
+  outData.sinkAmount = sinkDist(rng);
 }
 
 void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
-                                        const Mesh* terrainMesh,
+                                        const Mesh* targetTerrain,
                                         const PlantSpawnConfig& config) {
   Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Spawning ",
              config.numCacti, " cacti and ", config.numTrees,
@@ -222,8 +219,8 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
   for (int i = 0; i < config.numCacti; i++) {
     const float radius = radiusDist(rng);
     const float angle = angleDist(rng);
-    const PlantTransformData trans =
-        calculatePlantTransform(terrainMesh, config, radius, angle);
+    PlantTransformData trans{};
+    calculatePlantTransform(targetTerrain, config, radius, angle, trans);
 
     int stage = 0;
     if (config.randomGrowthStages) {
@@ -259,8 +256,8 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
   for (int i = 0; i < config.numTrees; i++) {
     const float radius = radiusDist(rng);
     const float angle = angleDist(rng);
-    const PlantTransformData trans =
-        calculatePlantTransform(terrainMesh, config, radius, angle);
+    PlantTransformData trans{};
+    calculatePlantTransform(targetTerrain, config, radius, angle, trans);
 
     int stage = 0;
     if (config.randomGrowthStages) {
@@ -302,6 +299,16 @@ void PlantManager::updatePlantVisuals(Object& obj, const Plant& plant) {
   }
 }
 
+void PlantManager::ensureValidCactusVariant(Plant& plant) {
+  int variant = plant.getVariant();
+  if (variant >= static_cast<int>(cactusMeshes[plant.getStage()].size())) {
+    std::uniform_int_distribution<int> variantDist(
+        0, static_cast<int>(cactusMeshes[plant.getStage()].size()) - 1);
+    variant = variantDist(rng);
+    plant.setVariant(variant);
+  }
+}
+
 void PlantManager::growPlant(std::vector<Object>& sceneObjects,
                              size_t plantIndex) {
   if (plantIndex >= plants.size()) {
@@ -312,22 +319,14 @@ void PlantManager::growPlant(std::vector<Object>& sceneObjects,
 
   Plant& plant = plants[plantIndex];
 
-  if (plant.getState().isDead) return;
+  if (plant.state_.isDead) return;
 
   Object& obj = sceneObjects[plant.getObjectIndex()];
 
   if (plant.getType() == PlantType::Cactus) {
     if (plant.getStage() < 2) {
       plant.setStage(plant.getStage() + 1);
-
-      int variant = plant.getVariant();
-      if (variant >= static_cast<int>(cactusMeshes[plant.getStage()].size())) {
-        std::uniform_int_distribution<int> variantDist(
-            0, static_cast<int>(cactusMeshes[plant.getStage()].size()) - 1);
-        variant = variantDist(rng);
-        plant.setVariant(variant);
-      }
-
+      ensureValidCactusVariant(plant);
       updatePlantVisuals(obj, plant);
       Debug::log(Debug::Category::PLANTMANAGER,
                  "PlantManager: Cactus grew to stage ", plant.getStage());
@@ -350,7 +349,7 @@ void PlantManager::shrinkPlant(std::vector<Object>& sceneObjects,
 
   Plant& plant = plants[plantIndex];
 
-  if (plant.getState().isDead) return;
+  if (plant.state_.isDead) return;
 
   Object& obj = sceneObjects[plant.getObjectIndex()];
 
@@ -359,21 +358,15 @@ void PlantManager::shrinkPlant(std::vector<Object>& sceneObjects,
     plant.setStage(plant.getStage() - 1);
 
     if (plant.getType() == PlantType::Cactus) {
-      int variant = plant.getVariant();
-      if (variant >= static_cast<int>(cactusMeshes[plant.getStage()].size())) {
-        std::uniform_int_distribution<int> variantDist(
-            0, static_cast<int>(cactusMeshes[plant.getStage()].size()) - 1);
-        variant = variantDist(rng);
-        plant.setVariant(variant);
-      }
+      ensureValidCactusVariant(plant);
     }
 
-    const Mesh* oldMesh =
+    const Mesh* const oldMesh =
         plant.getType() == PlantType::Cactus
             ? meshManager->getMesh(cactusMeshes[oldStage][plant.getVariant()])
             : meshManager->getMesh(treeMeshes[oldStage]);
 
-    const Mesh* newMesh =
+    const Mesh* const newMesh =
         plant.getType() == PlantType::Cactus
             ? meshManager->getMesh(
                   cactusMeshes[plant.getStage()][plant.getVariant()])
@@ -414,15 +407,15 @@ void PlantManager::updateEnvironment(std::vector<Object>& sceneObjects,
   for (size_t i = 0; i < plants.size(); ++i) {
     Plant& plant = plants[i];
 
-    if (plant.getState().isDead) continue;
+    if (plant.state_.isDead) continue;
 
     updatePlantHealth(plant, conditions);
     updatePlantFire(plant, sceneObjects, i, conditions);
     updatePlantGrowth(plant, sceneObjects, i, conditions);
     updatePlantSpreading(plant, sceneObjects, i, conditions);
 
-    if (plant.getState().health <= 0.0f && !plant.getState().isDead &&
-        !plant.getState().isOnFire) {
+    if (plant.state_.health <= 0.0f && !plant.state_.isDead &&
+        !plant.state_.isOnFire) {
       Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Plant ", i,
                  " health <= 0 (not burning), starting death sequence");
       if (plant.getStage() > 0) {
@@ -707,8 +700,7 @@ void PlantManager::startFire(Plant& plant, const glm::vec3& position) {
             .material(fireMaterialID)
             .baseColor(glm::vec3(1.0f, 0.9f, 0.2f))
             .tipColor(glm::vec3(0.15f, 0.15f, 0.15f))
-            .initialVelocity(
-                glm::vec3(0.0f, 5.0f, 0.0f))
+            .initialVelocity(glm::vec3(0.0f, 5.0f, 0.0f))
             .spawnRadius(0.4f)
             .particleScale(0.7f)
             .fadeTimings(0.05f, 1.2f)
@@ -859,7 +851,7 @@ void PlantManager::spawnOffspring(std::vector<Object>& sceneObjects,
     newMaterial = treeMaterials[newStage];
   }
 
-  const Mesh* mesh = meshManager->getMesh(newMesh);
+  const Mesh* const mesh = meshManager->getMesh(newMesh);
   const float yOffset = calculateMeshBottomOffset(mesh);
   const float scaledYOffset = yOffset * scaleY;
 
