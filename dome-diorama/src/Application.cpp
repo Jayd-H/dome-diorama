@@ -1,3 +1,4 @@
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "Application.h"
 
 #include <array>
@@ -467,15 +468,18 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
 
   if (weatherSystem) {
     weatherSystem->update(worldState, deltaTime);
-    weatherSystem->updateCelestialBodies(worldState);
   }
 
+
   const glm::vec3 sunDirection = worldState.getSunDirection();
+  const glm::vec3 moonDirection = worldState.getMoonDirection();
 
   Light* const sunLight = lightManager->getLight(sunLightID);
   if (sunLight) {
     sunLight->direction = sunDirection;
-    sunLight->position = -sunDirection * 2000.0f;
+
+    const float sunLightOrbitRadius = 100.0f;
+    sunLight->position = -sunDirection * sunLightOrbitRadius;
 
     const float sunHeight = sunDirection.y;
 
@@ -490,14 +494,12 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
       sunLight->intensity = 0.1f;
       sunLight->color = glm::vec3(0.3f, 0.3f, 0.5f);
     }
-
     const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
     const float orthoSize = 500.0f;
-    const float nearPlane = 0.1f;
-    const float farPlane = 4000.0f;
+    const float nearPlane = 100.0f;
+    const float farPlane = 5000.0f;
 
-    const float shadowDistance = 2500.0f;
-    const glm::vec3 lightEye = sceneCenter - sunDirection * shadowDistance;
+    const glm::vec3 lightEye = sceneCenter - sunDirection * sunLightOrbitRadius;
 
     glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
     if (glm::abs(glm::dot(sunDirection, upVector)) > 0.99f) {
@@ -516,6 +518,16 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     if (sunLight->shadowMapIndex != UINT32_MAX) {
       lightManager->getShadowSystem()->updateLightSpaceMatrix(
           sunLight->shadowMapIndex, lightSpaceMatrix);
+    }
+  }
+
+  const float visualOrbitRadius = 100.0f;
+
+  for (auto& object : sceneObjects) {
+    if (object.getName() == "Sun") {
+      object.setPosition(-sunDirection * visualOrbitRadius);
+    } else if (object.getName() == "Moon") {
+      object.setPosition(-moonDirection * visualOrbitRadius);
     }
   }
 
@@ -1156,7 +1168,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
   scissor.extent = swapChainExtent;
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-  for (size_t i = 0; i < sceneObjects.size(); ++i) {
+ for (size_t i = 0; i < sceneObjects.size(); ++i) {
     if (plantObjectIndicesSet.count(i) > 0) {
       continue;
     }
@@ -1165,6 +1177,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     if (!object.isVisible()) continue;
     if (object.getMeshID() == INVALID_MESH_ID) continue;
     if (object.getMaterialID() == INVALID_MATERIAL_ID) continue;
+    if (object.getName() == "Skybox Sphere") continue;
 
     const Mesh* const mesh = meshManager->getMesh(object.getMeshID());
     const Material* const material =

@@ -28,7 +28,7 @@ void WeatherSystem::update(const WorldState& worldState, float deltaTime) {
 void WeatherSystem::updateCelestialBodies(const WorldState& worldState) {
   if (sunObject) {
     const glm::vec3 sunDir = worldState.getSunDirection();
-    const float sunOrbitRadius = 500.0f;
+    const float sunOrbitRadius = 100.0f;
     const glm::vec3 sunPos = -sunDir * sunOrbitRadius;
     sunObject->setPosition(sunPos);
 
@@ -38,7 +38,7 @@ void WeatherSystem::updateCelestialBodies(const WorldState& worldState) {
 
   if (moonObject) {
     const glm::vec3 moonDir = worldState.getMoonDirection();
-    const float moonOrbitRadius = 450.0f;
+    const float moonOrbitRadius = 100.0f;
     const glm::vec3 moonPos = -moonDir * moonOrbitRadius;
     moonObject->setPosition(moonPos);
   }
