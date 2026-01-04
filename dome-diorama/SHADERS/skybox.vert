@@ -23,5 +23,6 @@ void main() {
     fragWorldPos = worldPos.xyz;
     fragViewPos = camera.eyePos;
     
-    gl_Position = camera.proj * camera.view * worldPos;
+    vec4 pos = camera.proj * camera.view * worldPos;
+    gl_Position = pos.xyww;
 }

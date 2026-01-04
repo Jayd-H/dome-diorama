@@ -19,18 +19,18 @@ layout(location = 2) in vec3 fragViewPos;
 layout(location = 0) out vec4 outColor;
 
 vec3 adjustForTimeOfDay(vec3 color, float sunIntensity) {
-    float brightness = max(0.05, sunIntensity);
+    float brightness = max(0.1, sunIntensity);
     
-    float saturation = mix(0.15, 1.0, sunIntensity);
+    float saturation = mix(0.2, 1.0, smoothstep(0.0, 1.0, sunIntensity));
     
     vec3 grayscale = vec3(dot(color, vec3(0.299, 0.587, 0.114)));
     vec3 desaturated = mix(grayscale, color, saturation);
     
     vec3 finalColor = desaturated * brightness;
     
-    if (sunIntensity < 0.3) {
-        vec3 nightTint = vec3(0.15, 0.2, 0.35);
-        float nightAmount = 1.0 - (sunIntensity / 0.3);
+    if (sunIntensity < 0.35) {
+        vec3 nightTint = vec3(0.2, 0.25, 0.4);
+        float nightAmount = smoothstep(0.35, 0.0, sunIntensity);
         finalColor = mix(finalColor, finalColor * nightTint, nightAmount);
     }
     

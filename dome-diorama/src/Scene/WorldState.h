@@ -4,6 +4,8 @@
 #include <glm/gtc/constants.hpp>
 #include <random>
 
+#include "Util/Debug.h"
+
 enum class WeatherState {
   Clear,
   Cloudy,
@@ -85,7 +87,13 @@ class WorldState final {
   inline void update(float deltaTime) {
     updateTime(deltaTime);
     updateEnvironmentalParameters(deltaTime);
-    currentWeather = determineWeatherFromConditions();
+
+    weatherChangeTimer += deltaTime;
+    if (weatherChangeTimer >= 10.0f) {
+      weatherChangeTimer = 0.0f;
+      currentWeather = determineWeatherFromConditions();
+    }
+
     updatePrecipitation(deltaTime);
   }
 
@@ -115,8 +123,9 @@ class WorldState final {
     return glm::normalize(glm::vec3(x, y, z));
   }
 
-  inline float getSunIntensity() const {
-    float intensity = glm::max(0.0f, getSunDirection().y);
+inline float getSunIntensity() const {
+    const float sunY = getSunDirection().y;
+    float intensity = glm::smoothstep(-0.1f, 0.1f, sunY) * glm::max(0.0f, sunY);
 
     if (currentWeather == WeatherState::Cloudy) {
       intensity *= 0.6f;
@@ -169,6 +178,7 @@ class WorldState final {
   float dayNightTempVariation;
   float transitionSmoothness;
   float parameterUpdateTimer = 0.0f;
+  float weatherChangeTimer = 0.0f;
 
   inline float smoothStep(float t) const { return t * t * (3.0f - 2.0f * t); }
 
