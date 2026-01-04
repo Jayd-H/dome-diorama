@@ -1,5 +1,7 @@
 #include "Shadow.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+
 ShadowSystem::ShadowSystem(RenderDevice* device) : renderDevice(device) {
   Debug::log(Debug::Category::SHADOWS, "ShadowSystem: Constructor called");
 }
@@ -402,4 +404,73 @@ void ShadowSystem::updateDescriptorSet() {
                          nullptr);
 
   Debug::log(Debug::Category::SHADOWS, "ShadowSystem: Descriptor set updated");
+}
+
+void ShadowSystem::updateLightSpaceMatrix(uint32_t shadowMapIndex,
+                                          const glm::mat4& matrix) {
+  if (shadowMapIndex < shadowMaps.size()) {
+    shadowMaps[shadowMapIndex].lightSpaceMatrix = matrix;
+  } else {
+    Debug::log(Debug::Category::SHADOWS,
+               "ShadowSystem: WARNING - Invalid shadow map index ",
+               shadowMapIndex, " for light space matrix update");
+  }
+}
+
+glm::mat4 ShadowSystem::calculateLightSpaceMatrix(const Light& light,
+                                                  const glm::vec3& sceneCenter,
+                                                  float sceneRadius) const {
+  glm::mat4 lightProjection;
+  glm::mat4 lightView;
+
+  if (light.type == LightType::Sun) {
+    const float orthoSize = sceneRadius * 1.2f;
+    const float nearPlane = 1.0f;
+    const float farPlane = sceneRadius * 6.0f;
+
+    const glm::vec3 lightPos =
+        sceneCenter - glm::normalize(light.direction) * (sceneRadius * 3.0f);
+
+    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
+    if (glm::abs(glm::dot(glm::normalize(light.direction), upVector)) > 0.99f) {
+      upVector = glm::vec3(1.0f, 0.0f, 0.0f);
+    }
+
+    lightView = glm::lookAt(lightPos, sceneCenter, upVector);
+    lightProjection = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize,
+                                 nearPlane, farPlane);
+    lightProjection[1][1] *= -1;
+
+  } else if (light.type == LightType::Point) {
+    const float fov = glm::radians(120.0f);
+    const float aspect = 1.0f;
+    const float nearPlane = 0.1f;
+
+    const float maxDistance =
+        glm::sqrt(light.intensity / (light.quadratic * 0.01f));
+    const float farPlane = glm::min(maxDistance, 500.0f);
+
+    glm::vec3 targetPos = sceneCenter;
+    const glm::vec3 toScene = targetPos - light.position;
+    if (glm::length(toScene) > 0.001f) {
+      targetPos = light.position + glm::normalize(toScene) * 10.0f;
+    }
+
+    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 forward = glm::normalize(targetPos - light.position);
+    if (glm::abs(glm::dot(forward, upVector)) > 0.99f) {
+      upVector = glm::vec3(1.0f, 0.0f, 0.0f);
+    }
+
+    lightView = glm::lookAt(light.position, targetPos, upVector);
+    lightProjection = glm::perspective(fov, aspect, nearPlane, farPlane);
+    lightProjection[1][1] *= -1;
+
+    Debug::log(Debug::Category::SHADOWS, "Point light shadow - Pos: (",
+               light.position.x, ", ", light.position.y, ", ", light.position.z,
+               ") Target: (", targetPos.x, ", ", targetPos.y, ", ", targetPos.z,
+               ") Far: ", farPlane);
+  }
+
+  return lightProjection * lightView;
 }

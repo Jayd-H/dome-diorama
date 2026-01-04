@@ -199,6 +199,75 @@ class LightManager final {
 
   ShadowSystem* getShadowSystem() const { return shadowSystem.get(); }
 
+  void updateAllShadowMatrices(const glm::vec3& sceneCenter,
+                               float sceneRadius) {
+    for (size_t i = 0; i < lights.size(); i++) {
+      Light* light = lights[i].get();
+
+      if (light->castsShadows && light->shadowMapIndex != UINT32_MAX) {
+        const glm::mat4 lightSpaceMatrix =
+            shadowSystem->calculateLightSpaceMatrix(*light, sceneCenter,
+                                                    sceneRadius);
+
+        shadowSystem->updateLightSpaceMatrix(light->shadowMapIndex,
+                                             lightSpaceMatrix);
+      }
+    }
+
+    updateLightBuffer();
+  }
+  void setShadowCastingEnabled(LightID id, bool enabled) {
+    if (id == INVALID_LIGHT_ID || id > lights.size()) {
+      return;
+    }
+
+    Light* light = lights[id - 1].get();
+    const bool wasEnabled = light->castsShadows;
+    light->castsShadows = enabled;
+
+    if (enabled && !wasEnabled && light->shadowMapIndex == UINT32_MAX) {
+      if (shadowSystem->getShadowMaps().size() < MAX_SHADOW_CASTERS) {
+        uint32_t shadowMapIndex =
+            shadowSystem->createShadowMap(static_cast<uint32_t>(id - 1));
+        light->shadowMapIndex = shadowMapIndex;
+        Debug::log(Debug::Category::LIGHTS,
+                   "LightManager: Enabled shadows for light '", light->name,
+                   "' with shadow map index: ", shadowMapIndex);
+      }
+    } else if (!enabled && wasEnabled) {
+      light->shadowMapIndex = UINT32_MAX;
+      Debug::log(Debug::Category::LIGHTS,
+                 "LightManager: Disabled shadows for light '", light->name,
+                 "'");
+    }
+
+    updateLightBuffer();
+  }
+
+  void debugPrintLightInfo() const {
+    Debug::log(Debug::Category::LIGHTS, "=== Light System Debug Info ===");
+    Debug::log(Debug::Category::LIGHTS, "Total lights: ", lights.size());
+
+    for (size_t i = 0; i < lights.size(); i++) {
+      const Light* light = lights[i].get();
+      Debug::log(Debug::Category::LIGHTS, "Light ", i, ": ", light->name);
+      Debug::log(Debug::Category::LIGHTS,
+                 "  Type: ", (light->type == LightType::Sun ? "Sun" : "Point"));
+      Debug::log(Debug::Category::LIGHTS, "  Position: (", light->position.x,
+                 ", ", light->position.y, ", ", light->position.z, ")");
+      Debug::log(Debug::Category::LIGHTS, "  Direction: (", light->direction.x,
+                 ", ", light->direction.y, ", ", light->direction.z, ")");
+      Debug::log(Debug::Category::LIGHTS, "  Intensity: ", light->intensity);
+      Debug::log(Debug::Category::LIGHTS,
+                 "  Casts Shadows: ", (light->castsShadows ? "Yes" : "No"));
+      Debug::log(Debug::Category::LIGHTS,
+                 "  Shadow Map Index: ", light->shadowMapIndex);
+    }
+
+    Debug::log(Debug::Category::LIGHTS,
+               "Shadow maps: ", shadowSystem->getShadowMapCount());
+  }
+
  private:
   std::vector<std::unique_ptr<Light>> lights;
   RenderDevice* renderDevice;

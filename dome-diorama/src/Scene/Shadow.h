@@ -1,5 +1,4 @@
 #pragma once
-
 #include <vulkan/vulkan.h>
 
 #include <cstdint>
@@ -47,16 +46,11 @@ class ShadowSystem final {
   uint32_t createShadowMap(uint32_t lightIndex);
   void cleanup();
 
-  inline void updateLightSpaceMatrix(uint32_t shadowMapIndex,
-                                     const glm::mat4& matrix) {
-    if (shadowMapIndex < shadowMaps.size()) {
-      shadowMaps[shadowMapIndex].lightSpaceMatrix = matrix;
-    } else {
-      Debug::log(Debug::Category::SHADOWS,
-                 "ShadowSystem: WARNING - Invalid shadow map index ",
-                 shadowMapIndex, " for light space matrix update");
-    }
-  }
+  glm::mat4 calculateLightSpaceMatrix(const Light& light,
+                                      const glm::vec3& sceneCenter,
+                                      float sceneRadius) const;
+
+  void updateLightSpaceMatrix(uint32_t shadowMapIndex, const glm::mat4& matrix);
 
   inline glm::mat4 getLightSpaceMatrix(uint32_t shadowMapIndex) const {
     if (shadowMapIndex < shadowMaps.size()) {

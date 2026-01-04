@@ -484,59 +484,84 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
 
   Light* const sunLight = lightManager->getLight(sunLightID);
   if (sunLight) {
-    sunLight->direction = sunDirection;
+    sunLight->direction = -sunDirection;
 
     const float sunHeight = sunDirection.y;
 
-    if (sunHeight > 0.0f) {
+    if (sunHeight > -0.15f) {
       const float sunIntensity = worldState.getSunIntensity();
-      sunLight->intensity = glm::mix(2.0f, 10.0f, sunIntensity);
 
-      const float sunBrightness = glm::clamp(sunHeight, 0.0f, 1.0f);
-      sunLight->color = glm::mix(glm::vec3(1.0f, 0.5f, 0.3f),
-                                 glm::vec3(1.0f, 0.98f, 0.9f), sunBrightness);
+      const float horizonDistance = glm::abs(sunHeight);
+      const float atmosphereThickness =
+          glm::smoothstep(0.0f, 0.4f, horizonDistance);
+
+      glm::vec3 deepSunsetColor = glm::vec3(1.0f, 0.3f, 0.1f);
+      glm::vec3 sunsetColor = glm::vec3(1.0f, 0.5f, 0.2f);
+      glm::vec3 goldenHourColor = glm::vec3(1.0f, 0.85f, 0.6f);
+      glm::vec3 noonColor = glm::vec3(1.0f, 0.98f, 0.95f);
+
+      glm::vec3 currentColor;
+      float intensityMultiplier;
+
+      if (sunHeight < 0.0f) {
+        const float t = glm::smoothstep(-0.15f, 0.0f, sunHeight);
+        currentColor =
+            glm::mix(glm::vec3(0.8f, 0.2f, 0.05f), deepSunsetColor, t);
+        intensityMultiplier = t * 0.3f;
+      } else if (sunHeight < 0.1f) {
+        const float t = glm::smoothstep(0.0f, 0.1f, sunHeight);
+        currentColor = glm::mix(deepSunsetColor, sunsetColor, t);
+        intensityMultiplier = 0.3f + t * 0.4f;
+      } else if (sunHeight < 0.3f) {
+        const float t = glm::smoothstep(0.1f, 0.3f, sunHeight);
+        currentColor = glm::mix(sunsetColor, goldenHourColor, t);
+        intensityMultiplier = 0.7f + t * 0.8f;
+      } else if (sunHeight < 0.6f) {
+        const float t = glm::smoothstep(0.3f, 0.6f, sunHeight);
+        currentColor = glm::mix(goldenHourColor, noonColor, t);
+        intensityMultiplier = 1.5f + t * 1.5f;
+      } else {
+        currentColor = noonColor;
+        intensityMultiplier = 3.0f;
+      }
+
+      const float rayleighScattering =
+          glm::pow(1.0f - atmosphereThickness, 2.0f);
+      currentColor.r *= 1.0f;
+      currentColor.g *= glm::mix(0.6f, 1.0f, rayleighScattering);
+      currentColor.b *= glm::mix(0.3f, 1.0f, rayleighScattering);
+
+      sunLight->color =
+          glm::normalize(currentColor) * glm::length(currentColor);
+      sunLight->intensity = intensityMultiplier * 2.5f * sunIntensity;
+
     } else {
-      sunLight->intensity = 0.1f;
-      sunLight->color = glm::vec3(0.3f, 0.3f, 0.5f);
+      sunLight->intensity = 0.0f;
+      sunLight->color = glm::vec3(0.0f);
     }
 
-    const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
-    const float orthoSize = 500.0f;
-    const float nearPlane = 100.0f;
-    const float farPlane = 5000.0f;
-
-    const float sunLightOrbitRadius = 2000.0f;
-    const glm::vec3 lightEye = sceneCenter - sunDirection * sunLightOrbitRadius;
-
-    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
-    if (glm::abs(glm::dot(sunDirection, upVector)) > 0.99f) {
-      upVector = glm::vec3(1.0f, 0.0f, 0.0f);
-    }
-
-    const glm::mat4 lightView = glm::lookAt(lightEye, sceneCenter, upVector);
-
-    glm::mat4 lightProjection = glm::ortho(-orthoSize, orthoSize, -orthoSize,
-                                           orthoSize, nearPlane, farPlane);
-
-    lightProjection[1][1] *= -1;
-
-    const glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-    if (sunLight->shadowMapIndex != UINT32_MAX) {
-      lightManager->getShadowSystem()->updateLightSpaceMatrix(
-          sunLight->shadowMapIndex, lightSpaceMatrix);
+    static float sunDebugTimer = 0.0f;
+    sunDebugTimer += deltaTime;
+    if (sunDebugTimer >= 3.0f) {
+      sunDebugTimer = 0.0f;
+      Debug::log(Debug::Category::LIGHTS, "Sun - Height: ", sunHeight,
+                 " Intensity: ", sunLight->intensity, " Color: (",
+                 sunLight->color.r, ", ", sunLight->color.g, ", ",
+                 sunLight->color.b, ")");
     }
   }
-
-  const float visualOrbitRadius = 100.0f;
 
   for (auto& object : sceneObjects) {
     if (object.getName() == "Sun") {
-      object.setPosition(-sunDirection * visualOrbitRadius);
+      object.setPosition(-sunDirection * 100.0f);
     } else if (object.getName() == "Moon") {
-      object.setPosition(-moonDirection * visualOrbitRadius);
+      object.setPosition(-moonDirection * 100.0f);
     }
   }
+
+  const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
+  const float sceneRadius = 200.0f;
+  lightManager->updateAllShadowMatrices(sceneCenter, sceneRadius);
 
   static float lightDebugTimer = 0.0f;
   lightDebugTimer += deltaTime;
@@ -1042,7 +1067,7 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
     VkRenderingInfo renderingInfo{};
     renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-    const int shadowMapSize = 2048;
+    const int shadowMapSize = 16384;
     renderingInfo.renderArea = {{0, 0}, {shadowMapSize, shadowMapSize}};
     renderingInfo.layerCount = 1;
     renderingInfo.colorAttachmentCount = 0;

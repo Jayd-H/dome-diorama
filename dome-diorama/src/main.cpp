@@ -182,7 +182,18 @@ std::vector<Object> createScene(const ConfigParser& config,
                               .castsShadows(true)
                               .build();
 
-  lightManager->addLight(testLight);
+  //lightManager->addLight(testLight);
+
+  const Light testSun = LightBuilder()
+                            .type(LightType::Sun)
+                            .name("Test Sun")
+                            .direction(-1.0f, -1.0f, -0.5f)
+                            .color(1.0f, 0.95f, 0.8f)
+                            .intensity(2.0f)
+                            .castsShadows(true)
+                            .build();
+
+  //lightManager->addLight(testSun);
 
   const MaterialID particleMaterialID =
       materialManager->registerMaterial(MaterialBuilder()
@@ -271,6 +282,7 @@ int main() {
 
     app.setSunLightID(sunLightID);
     app.setScene(sceneObjects);
+    app.getLightManager()->debugPrintLightInfo();
 
     app.getWeatherSystem()->init();
     app.getWeatherSystem()->setSunObject(&sceneObjects[0]);
