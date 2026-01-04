@@ -57,7 +57,6 @@ WEATHER & ENVIRONMENT CONTROLS
 WEATHER STATES
 --------------
   Clear → Cloudy → Light Rain → Heavy Rain → Light Snow → Heavy Snow → Dust Storm
-
 )" << std::endl;
 }
 
@@ -96,6 +95,7 @@ std::vector<Object> createScene(const ConfigParser& config,
                          .mesh(sphereMesh)
                          .material(sunMaterialID)
                          .scale(1.5f)
+                         .layerMask(0x00000001)
                          .build();
 
   const Object moon = ObjectBuilder()
@@ -104,6 +104,7 @@ std::vector<Object> createScene(const ConfigParser& config,
                           .mesh(sphereMesh)
                           .material(moonMaterialID)
                           .scale(0.7f)
+                          .layerMask(0x00000001)
                           .build();
 
   sceneObjects.push_back(sun);

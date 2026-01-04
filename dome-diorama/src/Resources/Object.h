@@ -20,7 +20,8 @@ class Object final {
         scale(1.0f, 1.0f, 1.0f),
         meshID(INVALID_MESH_ID),
         materialID(INVALID_MATERIAL_ID),
-        visible(true) {}
+        visible(true),
+        layerMask(0xFFFFFFFF) {}
 
   glm::mat4 getModelMatrix() const {
     glm::mat4 model = glm::mat4(1.0f);
@@ -61,6 +62,9 @@ class Object final {
   void setVisible(bool v) { visible = v; }
   bool isVisible() const { return visible; }
 
+  void setLayerMask(uint32_t mask) { layerMask = mask; }
+  uint32_t getLayerMask() const { return layerMask; }
+
  private:
   std::string name;
   glm::vec3 position;
@@ -69,6 +73,7 @@ class Object final {
   MeshID meshID;
   MaterialID materialID;
   bool visible;
+  uint32_t layerMask;
 };
 
 class ObjectBuilder final {
@@ -132,6 +137,11 @@ class ObjectBuilder final {
 
   ObjectBuilder& visible(bool isVisible) {
     object.setVisible(isVisible);
+    return *this;
+  }
+
+  ObjectBuilder& layerMask(uint32_t mask) {
+    object.setLayerMask(mask);
     return *this;
   }
 

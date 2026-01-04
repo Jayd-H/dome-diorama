@@ -55,6 +55,12 @@ layout(binding = 7, set = 1) uniform sampler2D aoMap;
 
 layout(binding = 0, set = 2) uniform sampler2D shadowMaps[4];
 
+layout(push_constant) uniform PushConstants {
+    mat4 model;
+    uint layerMask;
+    uint cameraLayer;
+} pushConstants;
+
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragNormal;
@@ -177,13 +183,16 @@ vec3 calculateSunLight(LightData light, int lightIndex, vec3 normal, vec3 viewDi
 }
 
 void main() {
+    if ((pushConstants.layerMask & pushConstants.cameraLayer) == 0) {
+        discard;
+    }
+
     vec2 scaledTexCoord = fragTexCoord * material.textureScale;
     
     vec4 albedoSample = texture(albedoMap, scaledTexCoord) * material.albedoColor;
     vec3 albedo = albedoSample.rgb;
     float alpha = albedoSample.a * material.opacity;
     
-    // Normal rendering (won't reach here with debug active)
     if (SHADING_MODE == 0) {
         vec3 normal = normalize(fragNormal);
         vec3 viewDir = normalize(ubo.eyePos - fragWorldPos);

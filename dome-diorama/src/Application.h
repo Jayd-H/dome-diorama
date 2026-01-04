@@ -151,6 +151,7 @@ class Application final {
   MeshID particleQuadMesh = 0;
   LightID sunLightID = INVALID_LIGHT_ID;
   LightID moonLightID = INVALID_LIGHT_ID;
+  uint32_t currentCameraLayer = 0xFFFFFFFF;
 
   void initWindow();
   void initVulkan();
@@ -173,6 +174,7 @@ class Application final {
 
   void recreateTextureSamplers(VkFilter magFilter, VkFilter minFilter);
   void toggleShadingMode();
+  void updateCameraLayer();
 
   static void framebufferResizeCallback(GLFWwindow* window, int width,
                                         int height);
@@ -184,7 +186,6 @@ class Application final {
   static void scrollCallback(GLFWwindow* window, double xoffset,
                              double yoffset);
 
-  // controls!
   void increaseTemperature();
   void decreaseTemperature();
   void increaseHumidity();
@@ -196,6 +197,5 @@ class Application final {
 
   VkShaderModule createShaderModule(const std::vector<char>& code) const;
 
-  // Helper to reduce duplicated code in pipeline creation
   void createDefaultPipelineConfig(PipelineConfigInfo& configInfo);
 };

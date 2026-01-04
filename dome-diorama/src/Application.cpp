@@ -432,6 +432,19 @@ void Application::cleanupSwapChain() {
   vkDestroySwapchainKHR(device, swapChain, nullptr);
 }
 
+void Application::updateCameraLayer() {
+  const float SKYBOX_RADIUS = 300.0f;
+  const glm::vec3 cameraPos = camera.getPosition();
+  const float distanceFromOrigin = glm::length(cameraPos);
+
+  if (distanceFromOrigin <= SKYBOX_RADIUS) {
+    currentCameraLayer = 0xFFFFFFFF;
+  } else {
+    currentCameraLayer = 0xFFFFFFFE;
+  }
+}
+
+
 void Application::updateUniformBuffer(uint32_t currentImage) {
   static const auto startTime = std::chrono::high_resolution_clock::now();
   const auto currentTime = std::chrono::high_resolution_clock::now();
@@ -520,6 +533,8 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     }
   }
 
+  updateCameraLayer();
+
   const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
   const float sceneRadius = 200.0f;
   lightManager->updateAllShadowMatrices(sceneCenter, sceneRadius);
@@ -547,6 +562,7 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
 
   memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
+
 
 void Application::recreateGraphicsPipeline() {
   vkDeviceWaitIdle(device);
@@ -1227,11 +1243,15 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     if (!mesh || mesh->vertexBuffer == VK_NULL_HANDLE) continue;
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
 
-    const glm::mat4 modelMatrix = object.getModelMatrix();
+    StandardPushConstants pushConstants;
+    pushConstants.model = object.getModelMatrix();
+    pushConstants.layerMask = object.getLayerMask();
+    pushConstants.cameraLayer = currentCameraLayer;
+
     vkCmdPushConstants(
         commandBuffer, mainPipeline->getPipelineLayout(),
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-        sizeof(glm::mat4), &modelMatrix);
+        sizeof(StandardPushConstants), &pushConstants);
 
     std::array<VkBuffer, 1> vertexBuffers = {mesh->vertexBuffer};
     std::array<VkDeviceSize, 1> offsets = {0};
@@ -1305,7 +1325,6 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     throw std::runtime_error("Failed to record command buffer!");
   }
 }
-
 void Application::renderPlants(VkCommandBuffer commandBuffer,
                                uint32_t frameIndex) {
   if (plantObjectIndicesSet.empty()) {
