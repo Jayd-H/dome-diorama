@@ -83,7 +83,7 @@ void WeatherSystem::activateRainEmitter(float intensity, size_t particleCount) {
             .initialVelocity(glm::vec3(2.0f, 0.0f, 0.0f))
             .spawnRadius(300.0f)
             .particleScale(0.1f)
-            .windInfluence(0.7f)
+            .windInfluence(0.3f)
             .build();
 
     rainEmitterID = particleManager->registerEmitter(rainEmitter);
@@ -112,7 +112,7 @@ void WeatherSystem::activateSnowEmitter(float intensity, size_t particleCount) {
             .initialVelocity(glm::vec3(0.5f, 0.0f, 0.0f))
             .spawnRadius(300.0f)
             .particleScale(0.2f)
-            .windInfluence(0.9f)
+            .windInfluence(0.2f)
             .build();
 
     snowEmitterID = particleManager->registerEmitter(snowEmitter);
@@ -140,7 +140,7 @@ void WeatherSystem::activateDustStormEmitter() {
             .initialVelocity(glm::vec3(3.0f, 2.0f, 0.0f))
             .spawnRadius(300.0f)
             .particleScale(0.5f)
-            .windInfluence(1.0f)
+            .windInfluence(0.3f)
             .build();
 
     dustEmitterID = particleManager->registerEmitter(dustEmitter);

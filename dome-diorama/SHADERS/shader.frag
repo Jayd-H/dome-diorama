@@ -181,9 +181,8 @@ vec3 calculateSunLight(LightData light, int lightIndex, vec3 normal, vec3 viewDi
     vec3 diffuse = kD * albedo / PI;
     vec3 specular = kS * spec;
 
-    float shadow = 1.0;
-    
-    //float shadow = calculateShadow(lightIndex, fragWorldPos, normal, lightDir);
+    //float shadow = 1.0;
+    float shadow = calculateShadow(lightIndex, fragWorldPos, normal, lightDir);
     
     return (diffuse + specular) * light.color.xyz * light.intensity * diff * shadow;
 }
@@ -198,6 +197,11 @@ void main() {
     vec4 albedoSample = texture(albedoMap, scaledTexCoord) * material.albedoColor;
     vec3 albedo = albedoSample.rgb;
     float alpha = albedoSample.a * material.opacity;
+    
+    // DEBUG: Uncomment to test if light data is reaching the shader
+    // outColor = vec4(float(lightBuffer.numLights) / 8.0, 0.0, 0.0, 1.0); return;
+    // outColor = vec4(lightBuffer.lights[0].color.rgb, 1.0); return;
+    // outColor = vec4(lightBuffer.lights[0].intensity / 10.0, 0.0, 0.0, 1.0); return;
     
     if (SHADING_MODE == 0) {
         vec3 normal = normalize(fragNormal);

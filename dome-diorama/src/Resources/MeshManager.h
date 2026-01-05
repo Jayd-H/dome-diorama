@@ -32,12 +32,12 @@ class Mesh final {
   Mesh(Mesh&&) = default;
   Mesh& operator=(Mesh&&) = default;
 
-  [[nodiscard]] const std::vector<Vertex>& getVertices() const {
-    return vertices;
-  }
-  [[nodiscard]] const std::vector<uint16_t>& getIndices() const {
-    return indices;
-  }
+  [[nodiscard]] std::vector<Vertex> getVertices() const { return vertices; }
+
+  [[nodiscard]] std::vector<uint16_t> getIndices() const { return indices; }
+
+  [[nodiscard]] std::string getName() const { return name; }
+
   [[nodiscard]] VkBuffer getVertexBuffer() const { return vertexBuffer; }
   [[nodiscard]] VkDeviceMemory getVertexBufferMemory() const {
     return vertexBufferMemory;
@@ -47,7 +47,6 @@ class Mesh final {
     return indexBufferMemory;
   }
   [[nodiscard]] MeshType getType() const { return type; }
-  [[nodiscard]] const std::string& getName() const { return name; }
 
  private:
   friend class MeshManager;

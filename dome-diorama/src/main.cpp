@@ -183,7 +183,7 @@ std::vector<Object> createScene(const ConfigParser& config,
                                             .transparent(true));
   plantManager->setFireMaterialID(partMat);
 
-  const Light sunLight2 = LightBuilder()
+  const Light pointlight = LightBuilder()
                               .type(LightType::Point)
                               .name("Point Light")
                               .position(0.0f, 50.0f, 0.0f)
@@ -192,7 +192,7 @@ std::vector<Object> createScene(const ConfigParser& config,
                               .intensity(5.0f)
                               .castsShadows(true)
                               .build();
-  sunLightID = lightManager->addLight(sunLight2);
+  lightManager->addLight(pointlight);
 
   Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
              " objects, ", lightManager->getLightCount(), " lights, ",

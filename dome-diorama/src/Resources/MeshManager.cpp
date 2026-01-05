@@ -8,7 +8,7 @@
 #include "Util/PerlinNoise.h"
 
 const VkVertexInputBindingDescription& Vertex::getBindingDescription() {
-  static VkVertexInputBindingDescription bindingDescription = {
+  static VkVertexInputBindingDescription const bindingDescription = {
       0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX};
   return bindingDescription;
 }
@@ -16,7 +16,7 @@ const VkVertexInputBindingDescription& Vertex::getBindingDescription() {
 const std::array<VkVertexInputAttributeDescription, 4>&
 Vertex::getAttributeDescriptions() {
   static std::array<VkVertexInputAttributeDescription, 4>
-      attributeDescriptions = {
+      const attributeDescriptions = {
           {{0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)},
            {0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)},
            {0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)},

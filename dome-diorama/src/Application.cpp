@@ -450,6 +450,7 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   conditions.windDirection = worldState.getWindDirection();
   conditions.windStrength = worldState.getWindSpeed();
   conditions.deltaTime = scaledDeltaTime;
+  conditions.time = simulationTime;
 
   plantManager->updateEnvironment(sceneObjects, conditions);
 
@@ -460,17 +461,17 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     weatherSystem->update(worldState, scaledDeltaTime);
   }
 
-  const glm::vec3 moonDirection = worldState.getMoonDirection();
-
   const TimeOfDay timeOfDay = worldState.getTime();
   const float normalizedTime = timeOfDay.normalizedTime;
 
-  const float sunAngle = normalizedTime * glm::two_pi<float>();
+  const float sunAngle =
+      normalizedTime * glm::two_pi<float>() - glm::half_pi<float>();
   const float sunRadius = 500.0f;
   const glm::vec3 sunPosition =
       glm::vec3(cos(sunAngle) * sunRadius, sin(sunAngle) * sunRadius, 0.0f);
 
-  const float moonAngle = (normalizedTime + 0.5f) * glm::two_pi<float>();
+  const float moonAngle =
+      (normalizedTime + 0.5f) * glm::two_pi<float>() - glm::half_pi<float>();
   const float moonRadius = 450.0f;
   const glm::vec3 moonPosition =
       glm::vec3(cos(moonAngle) * moonRadius, sin(moonAngle) * moonRadius, 0.0f);
@@ -791,8 +792,8 @@ void Application::triggerFireEffect() {
   std::vector<size_t> validCacti;
   for (size_t i = 0; i < plantManager->getPlantCount(); ++i) {
     const Plant& p = plantManager->getPlant(i);
-    if (p.getType() == PlantType::Cactus && !p.state_.isOnFire &&
-        !p.state_.isDead) {
+    if (p.getType() == PlantType::Cactus && !p.isOnFire() &&
+        !p.isDead()) {
       validCacti.push_back(i);
     }
   }

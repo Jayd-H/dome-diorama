@@ -32,11 +32,17 @@ class Object final {
   }
 
   void setName(const std::string& n) { name = n; }
-  const std::string& getName() const { return name; }
+
+  void getName(std::string& outName) const { outName = name; }
+
+  void getPosition(glm::vec3& outPosition) const { outPosition = position; }
+
+  void getRotation(glm::quat& outRotation) const { outRotation = rotation; }
+
+  void getScale(glm::vec3& outScale) const { outScale = scale; }
 
   void setPosition(const glm::vec3& pos) { position = pos; }
   void setPosition(float x, float y, float z) { position = glm::vec3(x, y, z); }
-  const glm::vec3& getPosition() const { return position; }
 
   void setRotation(const glm::quat& rot) { rotation = rot; }
   void setRotationEuler(float pitch, float yaw, float roll) {
@@ -46,12 +52,10 @@ class Object final {
   void setRotationEuler(const glm::vec3& euler) {
     rotation = glm::quat(glm::radians(euler));
   }
-  const glm::quat& getRotation() const { return rotation; }
 
   void setScale(const glm::vec3& s) { scale = s; }
   void setScale(float x, float y, float z) { scale = glm::vec3(x, y, z); }
   void setScale(float uniform) { scale = glm::vec3(uniform); }
-  const glm::vec3& getScale() const { return scale; }
 
   void setMesh(MeshID mesh) { meshID = mesh; }
   MeshID getMeshID() const { return meshID; }
@@ -145,21 +149,25 @@ class ObjectBuilder final {
     return *this;
   }
 
-  Object build() {
+  void build(Object& outObject) const {
+    std::string currentName;
+    object.getName(currentName);
+
     if (object.getMeshID() == INVALID_MESH_ID) {
       Debug::log(Debug::Category::OBJECTS,
-                 "ObjectBuilder: Warning - building object '", object.getName(),
+                 "ObjectBuilder: Warning - building object '", currentName,
                  "' with invalid mesh ID");
     }
     if (object.getMaterialID() == INVALID_MATERIAL_ID) {
       Debug::log(Debug::Category::OBJECTS,
-                 "ObjectBuilder: Warning - building object '", object.getName(),
+                 "ObjectBuilder: Warning - building object '", currentName,
                  "' with invalid material ID");
     }
     Debug::log(Debug::Category::OBJECTS, "ObjectBuilder: Built object '",
-               object.getName(), "' (Mesh: ", object.getMeshID(),
+               currentName, "' (Mesh: ", object.getMeshID(),
                ", Material: ", object.getMaterialID(), ")");
-    return std::move(object);
+
+    outObject = object;
   }
 
  private:
