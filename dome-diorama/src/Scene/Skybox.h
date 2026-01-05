@@ -147,11 +147,11 @@ class Skybox final {
   VkPipeline pipeline;
   VkPipelineLayout pipelineLayout;
 
-  std::vector<glm::vec3> vertices;
-  std::vector<uint16_t> indices;
-
   VkFormat swapchainFormat;
   VkFormat depthFormat;
+
+  std::vector<glm::vec3> vertices;
+  std::vector<uint16_t> indices;
 
   void loadCubemap(const std::string& folderPath);
   void createSkyboxGeometry();
@@ -277,14 +277,14 @@ class Skybox final {
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
     vertShaderStageInfo.module = vertShaderModule;
-    vertShaderStageInfo.pName = "main";
+    vertShaderStageInfo.pName = RenderUtils::ENTRY_POINT_MAIN;
 
     VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
     fragShaderStageInfo.sType =
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     fragShaderStageInfo.module = fragShaderModule;
-    fragShaderStageInfo.pName = "main";
+    fragShaderStageInfo.pName = RenderUtils::ENTRY_POINT_MAIN;
 
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;

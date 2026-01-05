@@ -21,8 +21,8 @@ ParticleManager::ParticleManager(RenderDevice* rd, MaterialManager* mm)
 }
 
 ParticleManager::~ParticleManager() {
-  Debug::log(Debug::Category::PARTICLES, "ParticleManager: Destructor called");
   try {
+    Debug::log(Debug::Category::PARTICLES, "ParticleManager: Destructor called");
     cleanup();
   } catch (...) {
   }
@@ -111,7 +111,7 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
                              VkDescriptorSet cameraDescriptorSet,
                              VkPipelineLayout pipelineLayout,
                              uint32_t currentFrame, VkPipeline particlePipeline,
-                             Mesh* const quadMesh) {
+                             const Mesh* const quadMesh) {
   static_cast<void>(pipelineLayout);
 
   if (emitters.empty()) return;

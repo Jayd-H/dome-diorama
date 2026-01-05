@@ -40,15 +40,11 @@ T/G - Temp | H/N - Humidity | U/J - Wind | Y - Cycle
 )" << std::endl;
 }
 
-std::vector<Object> createScene(const ConfigParser& config,
-                                MeshManager* meshManager,
-                                MaterialManager* materialManager,
-                                PlantManager* plantManager,
-                                ParticleManager* particleManager,
-                                LightManager* lightManager,
-                                LightID& sunLightID) {
+void createScene(const ConfigParser& config, MeshManager* meshManager,
+                 MaterialManager* materialManager, PlantManager* plantManager,
+                 ParticleManager* particleManager, LightManager* lightManager,
+                 LightID& sunLightID, std::vector<Object>& sceneObjects) {
   Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
-  std::vector<Object> sceneObjects;
 
   const MaterialID sunMat =
       materialManager->registerMaterial(MaterialBuilder()
@@ -215,7 +211,6 @@ std::vector<Object> createScene(const ConfigParser& config,
   Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
              " objects, ", lightManager->getLightCount(), " lights, ",
              plantManager->getPlantCount(), " plants");
-  return sceneObjects;
 }
 
 int main() {
@@ -293,10 +288,10 @@ int main() {
 
     Debug::log(Debug::Category::MAIN, "Creating scene...");
     LightID sunLightID = INVALID_LIGHT_ID;
-    std::vector<Object> sceneObjects =
-        createScene(config, app.getMeshManager(), app.getMaterialManager(),
-                    app.getPlantManager(), app.getParticleManager(),
-                    app.getLightManager(), sunLightID);
+    std::vector<Object> sceneObjects;
+    createScene(config, app.getMeshManager(), app.getMaterialManager(),
+                app.getPlantManager(), app.getParticleManager(),
+                app.getLightManager(), sunLightID, sceneObjects);
 
     app.setSunLightID(sunLightID);
     app.setScene(sceneObjects);

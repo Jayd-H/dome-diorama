@@ -53,7 +53,7 @@ MeshID MeshManager::createCube(float size) {
 
   const float h = size * 0.5f;
 
-  std::vector<Vertex> vertices = {
+  const std::vector<Vertex> vertices = {
       {{-h, -h, -h}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, -1.0f}},
       {{h, -h, -h}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}, {0.0f, 0.0f, -1.0f}},
       {{h, h, -h}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f, -1.0f}},
@@ -86,7 +86,7 @@ MeshID MeshManager::createCube(float size) {
 
   mesh->setVertices(vertices);
 
-  std::vector<uint16_t> indices = {
+  const std::vector<uint16_t> indices = {
       0,  2,  1,  0,  3,  2,  4,  6,  5,  4,  7,  6,  8,  10, 9,  8,  11, 10,
       12, 14, 13, 12, 15, 14, 16, 18, 17, 16, 19, 18, 20, 22, 21, 20, 23, 22};
   mesh->setIndices(indices);
@@ -203,7 +203,7 @@ MeshID MeshManager::createPlane(float width, float height) {
   const float halfW = width * 0.5f;
   const float halfH = height * 0.5f;
 
-  std::vector<Vertex> vertices = {
+  const std::vector<Vertex> vertices = {
       {{-halfW, 0.0f, -halfH},
        {1.0f, 1.0f, 1.0f},
        {0.0f, 0.0f},
@@ -224,7 +224,7 @@ MeshID MeshManager::createPlane(float width, float height) {
 
   mesh->setVertices(vertices);
 
-  std::vector<uint16_t> indices = {0, 2, 1, 2, 0, 3};
+  const std::vector<uint16_t> indices = {0, 2, 1, 2, 0, 3};
   mesh->setIndices(indices);
 
   createBuffers(mesh);
@@ -347,7 +347,7 @@ MeshID MeshManager::createParticleQuad() {
   mesh->setName("Particle Quad");
   mesh->setType(MeshType::Plane);
 
-  std::vector<Vertex> vertices = {
+  const std::vector<Vertex> vertices = {
       {{-0.5f, -0.5f, 0.0f},
        {1.0f, 1.0f, 1.0f},
        {0.0f, 0.0f},
@@ -367,7 +367,7 @@ MeshID MeshManager::createParticleQuad() {
   };
   mesh->setVertices(vertices);
 
-  std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
+  const std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
   mesh->setIndices(indices);
 
   createBuffers(mesh);

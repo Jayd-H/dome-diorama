@@ -40,7 +40,8 @@ void Skybox::render(VkCommandBuffer const commandBuffer,
     alignas(4) float domeRadiusSquared;
     alignas(4) float timeOfDay;
     alignas(4) float sunIntensity;
-    alignas(8) glm::vec2 padding;
+    alignas(4) float padding1;
+    alignas(4) float padding2;
   } pushConstants;
 
   pushConstants.model = glm::mat4(1.0f);
@@ -48,7 +49,8 @@ void Skybox::render(VkCommandBuffer const commandBuffer,
   pushConstants.domeRadiusSquared = SKYBOX_RADIUS * SKYBOX_RADIUS;
   pushConstants.timeOfDay = timeOfDay;
   pushConstants.sunIntensity = sunIntensity;
-  pushConstants.padding = glm::vec2(0.0f);
+  pushConstants.padding1 = 0.0f;
+  pushConstants.padding2 = 0.0f;
 
   vkCmdPushConstants(commandBuffer, pipelineLayout,
                      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,

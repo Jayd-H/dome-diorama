@@ -51,12 +51,12 @@ class TextureManager final {
   VkCommandPool commandPool;
   VkQueue graphicsQueue;
 
-  std::vector<TextureData> textures;
-  std::unordered_map<std::string, TextureID> filepathToID;
-
   TextureID defaultWhiteTexture;
   TextureID defaultNormalTexture;
   TextureID defaultBlackTexture;
+
+  std::vector<TextureData> textures;
+  std::unordered_map<std::string, TextureID> filepathToID;
 
   TextureID createTexture(const TextureCreateInfo& createInfo);
   TextureID createDefaultTexture(const unsigned char* pixelData, uint32_t width,

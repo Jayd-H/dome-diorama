@@ -249,20 +249,9 @@ void PostProcessing::createOffscreenResources() {
              "PostProcessing: Creating offscreen resources");
 
   VkImageCreateInfo imageInfo{};
-  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  imageInfo.imageType = VK_IMAGE_TYPE_2D;
-  imageInfo.extent.width = width;
-  imageInfo.extent.height = height;
-  imageInfo.extent.depth = 1;
-  imageInfo.mipLevels = 1;
-  imageInfo.arrayLayers = 1;
-  imageInfo.format = swapchainFormat;
-  imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageInfo.usage =
-      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-  imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  RenderUtils::createImageCreateInfo(
+      imageInfo, width, height, swapchainFormat,
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
   if (vkCreateImage(device, &imageInfo, nullptr, &offscreenImage) !=
       VK_SUCCESS) {
@@ -328,19 +317,9 @@ void PostProcessing::createDepthResources() {
              "PostProcessing: Creating depth resources");
 
   VkImageCreateInfo imageInfo{};
-  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  imageInfo.imageType = VK_IMAGE_TYPE_2D;
-  imageInfo.extent.width = width;
-  imageInfo.extent.height = height;
-  imageInfo.extent.depth = 1;
-  imageInfo.mipLevels = 1;
-  imageInfo.arrayLayers = 1;
-  imageInfo.format = depthFormat;
-  imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  RenderUtils::createImageCreateInfo(
+      imageInfo, width, height, depthFormat,
+      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
   if (vkCreateImage(device, &imageInfo, nullptr, &depthImage) != VK_SUCCESS) {
     throw std::runtime_error("failed to create depth image!");
@@ -456,11 +435,8 @@ void PostProcessing::createPipelines() {
   RenderUtils::createColorBlendAttachment(colorBlendAttachment);
 
   VkPipelineColorBlendStateCreateInfo colorBlending{};
-  colorBlending.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-  colorBlending.logicOpEnable = VK_FALSE;
-  colorBlending.attachmentCount = 1;
-  colorBlending.pAttachments = &colorBlendAttachment;
+  RenderUtils::createPipelineColorBlendStateCreateInfo(colorBlending,
+                                                       colorBlendAttachment);
 
   std::array<VkDynamicState, 2> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
                                                  VK_DYNAMIC_STATE_SCISSOR};
@@ -520,13 +496,13 @@ void PostProcessing::createPipelines() {
     vertStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertStage.stage = VK_SHADER_STAGE_VERTEX_BIT;
     vertStage.module = vertModule;
-    vertStage.pName = "main";
+    vertStage.pName = RenderUtils::ENTRY_POINT_MAIN;
 
     VkPipelineShaderStageCreateInfo fragStage{};
     fragStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragStage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     fragStage.module = fragModule;
-    fragStage.pName = "main";
+    fragStage.pName = RenderUtils::ENTRY_POINT_MAIN;
 
     const std::array<VkPipelineShaderStageCreateInfo, 2> stages = {vertStage,
                                                                    fragStage};

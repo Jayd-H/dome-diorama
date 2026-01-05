@@ -27,7 +27,7 @@ class ParticleManager final {
   void render(VkCommandBuffer commandBuffer,
               VkDescriptorSet cameraDescriptorSet,
               VkPipelineLayout pipelineLayout, uint32_t currentFrame,
-              VkPipeline particlePipeline, Mesh* const quadMesh);
+              VkPipeline particlePipeline, const Mesh* const quadMesh);
 
   VkDescriptorSetLayout getParticleParamsLayout() const {
     return particleParamsLayout;
@@ -48,11 +48,11 @@ class ParticleManager final {
   VkDescriptorSetLayout particleParamsLayout;
   VkDescriptorPool particleDescriptorPool;
 
-  std::vector<std::vector<VkBuffer>> shaderParamsBuffers;
-  std::vector<std::vector<VkDeviceMemory>> shaderParamsMemory;
-  std::vector<std::vector<void*>> shaderParamsMapped;
-  std::vector<std::vector<VkDescriptorSet>> particleDescriptorSets;
   std::vector<std::unique_ptr<ParticleEmitter>> emitters;
+  std::vector<std::vector<VkDescriptorSet>> particleDescriptorSets;
+  std::vector<std::vector<VkBuffer>> shaderParamsBuffers;
+  std::vector<std::vector<void*>> shaderParamsMapped;
+  std::vector<std::vector<VkDeviceMemory>> shaderParamsMemory;
 
   void createInstanceBuffer();
   void createShaderParamsBuffers(size_t frameCount);

@@ -148,9 +148,9 @@ class Application final {
   float timeScale = 1.0f;
   float scaledDeltaTime = 0.0f;
 
+  VkExtent2D swapChainExtent{0, 0};
   VkFormat swapChainImageFormat = VK_FORMAT_UNDEFINED;
   VkFormat depthFormat = VK_FORMAT_UNDEFINED;
-  VkExtent2D swapChainExtent{0, 0};
 
   uint32_t currentFrame = 0;
 

@@ -8,6 +8,8 @@
 
 namespace RenderUtils {
 
+constexpr char ENTRY_POINT_MAIN[] = "main";
+
 inline void readFile(const std::string& filename, std::vector<char>& buffer) {
   std::ifstream file(filename, std::ios::ate | std::ios::binary);
   if (!file.is_open()) {
@@ -35,6 +37,32 @@ inline VkShaderModule createShaderModule(VkDevice device,
     throw std::runtime_error("Failed to create shader module!");
   }
   return shaderModule;
+}
+
+inline void createImageCreateInfo(VkImageCreateInfo& imageInfo, uint32_t width,
+                                  uint32_t height, VkFormat format,
+                                  VkImageUsageFlags usage,
+                                  uint32_t mipLevels = 1,
+                                  uint32_t arrayLayers = 1,
+                                  VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT,
+                                  VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL) {
+  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageInfo.pNext = nullptr;
+  imageInfo.flags = 0;
+  imageInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageInfo.extent.width = width;
+  imageInfo.extent.height = height;
+  imageInfo.extent.depth = 1;
+  imageInfo.mipLevels = mipLevels;
+  imageInfo.arrayLayers = arrayLayers;
+  imageInfo.format = format;
+  imageInfo.tiling = tiling;
+  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  imageInfo.usage = usage;
+  imageInfo.samples = samples;
+  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  imageInfo.queueFamilyIndexCount = 0;
+  imageInfo.pQueueFamilyIndices = nullptr;
 }
 
 // Fixed OPT.33: Pass by reference instead of returning by value
@@ -98,6 +126,23 @@ inline void createColorBlendAttachment(
   colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
   colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
   colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+}
+
+inline void createPipelineColorBlendStateCreateInfo(
+    VkPipelineColorBlendStateCreateInfo& colorBlending,
+    const VkPipelineColorBlendAttachmentState& colorBlendAttachment) {
+  colorBlending.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+  colorBlending.pNext = nullptr;
+  colorBlending.flags = 0;
+  colorBlending.logicOpEnable = VK_FALSE;
+  colorBlending.logicOp = VK_LOGIC_OP_COPY;
+  colorBlending.attachmentCount = 1;
+  colorBlending.pAttachments = &colorBlendAttachment;
+  colorBlending.blendConstants[0] = 0.0f;
+  colorBlending.blendConstants[1] = 0.0f;
+  colorBlending.blendConstants[2] = 0.0f;
+  colorBlending.blendConstants[3] = 0.0f;
 }
 
 // Fixed OPT.33: Pass by reference instead of returning by value

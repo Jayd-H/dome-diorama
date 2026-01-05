@@ -18,8 +18,6 @@
 #include "Vulkan/VulkanSwapchain.h"
 #include "Vulkan/VulkanSyncObjects.h"
 
-constexpr char ENTRY_POINT_MAIN[] = "main";
-
 Application::Application() {
   Debug::log(Debug::Category::MAIN, "Application: Constructor called");
 }
@@ -566,19 +564,9 @@ void Application::toggleShadingMode() {
 
 void Application::createDepthResources() {
   VkImageCreateInfo imageInfo{};
-  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  imageInfo.imageType = VK_IMAGE_TYPE_2D;
-  imageInfo.extent.width = swapChainExtent.width;
-  imageInfo.extent.height = swapChainExtent.height;
-  imageInfo.extent.depth = 1;
-  imageInfo.mipLevels = 1;
-  imageInfo.arrayLayers = 1;
-  imageInfo.format = depthFormat;
-  imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  RenderUtils::createImageCreateInfo(
+      imageInfo, swapChainExtent.width, swapChainExtent.height, depthFormat,
+      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
   if (vkCreateImage(device, &imageInfo, nullptr, &depthImage) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create depth image!");
@@ -849,7 +837,8 @@ void Application::mouseButtonCallback(GLFWwindow* win, int button, int action,
 
 void Application::scrollCallback(GLFWwindow* win, double xoffset,
                                  double yoffset) {
-  auto* app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
+  auto* const app =
+      reinterpret_cast<Application*>(glfwGetWindowUserPointer(win));
   app->input.onScroll(xoffset, yoffset);
 }
 
@@ -939,14 +928,14 @@ void Application::getShaderStages(
       VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
   vertShaderStageInfo.module = vertModule;
-  vertShaderStageInfo.pName = ENTRY_POINT_MAIN;
+  vertShaderStageInfo.pName = RenderUtils::ENTRY_POINT_MAIN;
 
   VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
   fragShaderStageInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
   fragShaderStageInfo.module = fragModule;
-  fragShaderStageInfo.pName = ENTRY_POINT_MAIN;
+  fragShaderStageInfo.pName = RenderUtils::ENTRY_POINT_MAIN;
 
   stages = {vertShaderStageInfo, fragShaderStageInfo};
 }
@@ -1045,6 +1034,77 @@ void Application::createParticlePipeline() {
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
 
   Debug::log(Debug::Category::VULKAN, "Particle pipeline created successfully");
+}
+
+void Application::createPlantPipeline() {
+  Debug::log(Debug::Category::VULKAN, "Creating plant pipeline...");
+
+  VkShaderModule vertShaderModule = VK_NULL_HANDLE;
+  VkShaderModule fragShaderModule = VK_NULL_HANDLE;
+  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+  getShaderStages("shaders/plant_vert.spv", "shaders/frag.spv",
+                  vertShaderModule, fragShaderModule, shaderStages);
+
+  PipelineConfigInfo configInfo{};
+  createDefaultPipelineConfig(configInfo);
+
+  configInfo.rasterizer.cullMode = VK_CULL_MODE_NONE;
+
+  const auto bindingDescription = Vertex::getBindingDescription();
+  const auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+  configInfo.vertexInputInfo.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  configInfo.vertexInputInfo.vertexBindingDescriptionCount = 1;
+  configInfo.vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+  configInfo.vertexInputInfo.vertexAttributeDescriptionCount =
+      static_cast<uint32_t>(attributeDescriptions.size());
+  configInfo.vertexInputInfo.pVertexAttributeDescriptions =
+      attributeDescriptions.data();
+
+  VkPushConstantRange pushConstantRange{};
+  pushConstantRange.stageFlags =
+      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+  pushConstantRange.offset = 0;
+  pushConstantRange.size = sizeof(PlantPushConstants);
+
+  std::array<VkDescriptorSetLayout, 3> layouts = {
+      descriptorSetLayout, materialDescriptorSetLayout,
+      lightManager->getShadowDescriptorSetLayout()};
+
+  VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+  pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
+  pipelineLayoutInfo.pSetLayouts = layouts.data();
+  pipelineLayoutInfo.pushConstantRangeCount = 1;
+  pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+
+  if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
+                             &plantPipelineLayout) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create plant pipeline layout!");
+  }
+
+  VkPipelineRenderingCreateInfo renderingCreateInfo{};
+  setupRenderingCreateInfo(renderingCreateInfo);
+
+  VkGraphicsPipelineCreateInfo pipelineInfo{};
+  RenderUtils::createGraphicsPipelineCreateInfo(
+      pipelineInfo, plantPipelineLayout, VK_NULL_HANDLE, 2,
+      shaderStages.data(), &configInfo.vertexInputInfo,
+      &configInfo.inputAssembly, &configInfo.viewportState,
+      &configInfo.rasterizer, &configInfo.multisampling,
+      &configInfo.depthStencil, &configInfo.colorBlending,
+      &configInfo.dynamicState, &renderingCreateInfo);
+
+  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
+                                nullptr, &plantPipeline) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create plant graphics pipeline!");
+  }
+
+  vkDestroyShaderModule(device, fragShaderModule, nullptr);
+  vkDestroyShaderModule(device, vertShaderModule, nullptr);
+
+  Debug::log(Debug::Category::VULKAN, "Plant pipeline created successfully");
 }
 
 void Application::createShadowPipeline() {
@@ -1221,14 +1281,14 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
       if (!object.isVisible()) continue;
       if (object.getMeshID() == INVALID_MESH_ID) continue;
 
-      const Mesh* const mesh = meshManager->getMesh(object.getMeshID());
-      if (!mesh || mesh->getVertexBuffer() == VK_NULL_HANDLE) continue;
-
       shadowPush.model = object.getModelMatrix();
 
       vkCmdPushConstants(commandBuffer, shadowPipelineLayout,
                          VK_SHADER_STAGE_VERTEX_BIT, 0,
                          sizeof(ShadowPushConstants), &shadowPush);
+
+      const Mesh* const mesh = meshManager->getMesh(object.getMeshID());
+      if (!mesh || mesh->getVertexBuffer() == VK_NULL_HANDLE) continue;
 
       std::array<VkBuffer, 1> vertexBuffers = {mesh->getVertexBuffer()};
       std::array<VkDeviceSize, 1> offsets = {0};
@@ -1395,7 +1455,8 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     plantPipeline);
 
-  setupViewportScissor(commandBuffer, static_cast<float>(swapChainExtent.width),
+  setupViewportScissor(commandBuffer,
+                       static_cast<float>(swapChainExtent.width),
                        static_cast<float>(swapChainExtent.height));
 
   PlantWindData windData;
@@ -1405,12 +1466,12 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
   windDebugTimer += 0.016f;
   if (windDebugTimer >= 5.0f) {
     windDebugTimer = 0.0f;
-    Debug::log(Debug::Category::PLANTMANAGER,
-               "Rendering plants with wind - Dir: (", windData.windDirection.x,
-               ", ", windData.windDirection.y, ", ", windData.windDirection.z,
-               ") Strength: ", windData.windStrength, " Time: ", windData.time,
-               " SwayAmount: ", windData.swayAmount,
-               " SwaySpeed: ", windData.swaySpeed);
+    Debug::log(
+        Debug::Category::PLANTMANAGER, "Rendering plants with wind - Dir: (",
+        windData.windDirection.x, ", ", windData.windDirection.y, ", ",
+        windData.windDirection.z, ") Strength: ", windData.windStrength,
+        " Time: ", windData.time, " SwayAmount: ", windData.swayAmount,
+        " SwaySpeed: ", windData.swaySpeed);
   }
 
   for (size_t const idx : plantObjectIndicesSet) {
@@ -1421,11 +1482,10 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
     if (object.getMeshID() == INVALID_MESH_ID) continue;
     if (object.getMaterialID() == INVALID_MATERIAL_ID) continue;
 
-    const Mesh* const mesh = meshManager->getMesh(object.getMeshID());
-    const Material* const material =
-        materialManager->getMaterial(object.getMaterialID());
+    const Mesh* const plantMesh = meshManager->getMesh(object.getMeshID());
+    const Material* const material = materialManager->getMaterial(object.getMaterialID());
 
-    if (!mesh || mesh->getVertexBuffer() == VK_NULL_HANDLE) continue;
+    if (!plantMesh || plantMesh->getVertexBuffer() == VK_NULL_HANDLE) continue;
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
 
     PlantPushConstants pushConstants{};
@@ -1442,94 +1502,25 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
         sizeof(PlantPushConstants), &pushConstants);
 
-    std::array<VkBuffer, 1> vertexBuffers = {mesh->getVertexBuffer()};
+    std::array<VkBuffer, 1> vertexBuffers = {plantMesh->getVertexBuffer()};
     std::array<VkDeviceSize, 1> offsets = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers.data(),
                            offsets.data());
-    vkCmdBindIndexBuffer(commandBuffer, mesh->getIndexBuffer(), 0,
+    vkCmdBindIndexBuffer(commandBuffer, plantMesh->getIndexBuffer(), 0,
                          VK_INDEX_TYPE_UINT16);
 
     std::array<VkDescriptorSet, 3> descriptorSetsToBind = {
         descriptorSets[frameIndex], material->getDescriptorSet(),
         lightManager->getShadowDescriptorSet()};
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            plantPipelineLayout, 0,
-                            static_cast<uint32_t>(descriptorSetsToBind.size()),
-                            descriptorSetsToBind.data(), 0, nullptr);
+    vkCmdBindDescriptorSets(
+        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, plantPipelineLayout,
+        0, static_cast<uint32_t>(descriptorSetsToBind.size()),
+        descriptorSetsToBind.data(), 0, nullptr);
 
     std::vector<uint16_t> indices;
-    mesh->getIndices(indices);
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0,
-                     0, 0);
+    plantMesh->getIndices(indices);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1,
+                     0, 0, 0);
   }
-}
-
-void Application::createPlantPipeline() {
-  Debug::log(Debug::Category::VULKAN, "Creating plant pipeline...");
-
-  VkShaderModule vertShaderModule = VK_NULL_HANDLE;
-  VkShaderModule fragShaderModule = VK_NULL_HANDLE;
-  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
-  getShaderStages("SHADERS/plant_vert.spv", "SHADERS/frag.spv",
-                  vertShaderModule, fragShaderModule, shaderStages);
-
-  PipelineConfigInfo configInfo{};
-  createDefaultPipelineConfig(configInfo);
-
-  const auto bindingDescription = Vertex::getBindingDescription();
-  const auto attributeDescriptions = Vertex::getAttributeDescriptions();
-
-  configInfo.vertexInputInfo.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  configInfo.vertexInputInfo.vertexBindingDescriptionCount = 1;
-  configInfo.vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-  configInfo.vertexInputInfo.vertexAttributeDescriptionCount =
-      static_cast<uint32_t>(attributeDescriptions.size());
-  configInfo.vertexInputInfo.pVertexAttributeDescriptions =
-      attributeDescriptions.data();
-
-  VkPushConstantRange pushConstantRange{};
-  pushConstantRange.stageFlags =
-      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-  pushConstantRange.offset = 0;
-  pushConstantRange.size = sizeof(PlantPushConstants);
-
-  std::array<VkDescriptorSetLayout, 3> layouts = {
-      descriptorSetLayout, materialDescriptorSetLayout,
-      lightManager->getShadowDescriptorSetLayout()};
-
-  VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-  pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
-  pipelineLayoutInfo.pSetLayouts = layouts.data();
-  pipelineLayoutInfo.pushConstantRangeCount = 1;
-  pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-
-  if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
-                             &plantPipelineLayout) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create plant pipeline layout!");
-  }
-
-  VkPipelineRenderingCreateInfo renderingCreateInfo{};
-  setupRenderingCreateInfo(renderingCreateInfo);
-
-  VkGraphicsPipelineCreateInfo pipelineInfo{};
-  RenderUtils::createGraphicsPipelineCreateInfo(
-      pipelineInfo, plantPipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
-      &configInfo.vertexInputInfo, &configInfo.inputAssembly,
-      &configInfo.viewportState, &configInfo.rasterizer,
-      &configInfo.multisampling, &configInfo.depthStencil,
-      &configInfo.colorBlending, &configInfo.dynamicState,
-      &renderingCreateInfo);
-
-  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-                                nullptr, &plantPipeline) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create plant graphics pipeline!");
-  }
-
-  vkDestroyShaderModule(device, fragShaderModule, nullptr);
-  vkDestroyShaderModule(device, vertShaderModule, nullptr);
-
-  Debug::log(Debug::Category::VULKAN, "Plant pipeline created successfully");
 }

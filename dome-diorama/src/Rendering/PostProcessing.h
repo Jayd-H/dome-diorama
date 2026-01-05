@@ -55,9 +55,6 @@ class PostProcessing final {
   VkPipeline pipeline = VK_NULL_HANDLE;
   VkPipeline toonPipeline = VK_NULL_HANDLE;
 
-  // Containers (24 bytes)
-  std::vector<VkDescriptorSet> descriptorSets;
-
   // Enums/Ints/Floats (4 bytes)
   VkFormat swapchainFormat;
   VkFormat depthFormat;
@@ -66,6 +63,9 @@ class PostProcessing final {
   uint32_t height = 0;
   float currentTemperature = 20.0f;
   float currentHumidity = 0.5f;
+
+  // Containers (24 bytes)
+  std::vector<VkDescriptorSet> descriptorSets;
 
   // Bools (1 byte)
   bool useToonShader = false;
