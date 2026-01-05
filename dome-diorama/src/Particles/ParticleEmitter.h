@@ -7,7 +7,7 @@
 #include "Resources/Material.h"
 
 using EmitterID = uint32_t;
-constexpr EmitterID INVALID_EMITTER_ID = 0;
+constexpr EmitterID INVALID_EMITTER_ID = 0xFFFFFFFF;
 
 struct ParticleInstanceData {
   float particleIndex;
@@ -17,16 +17,16 @@ struct ParticleInstanceData {
 };
 
 struct ParticleShaderParams {
+  // Match GLSL layout exactly - vec3 followed by float for proper std140 packing
   alignas(16) glm::vec3 emitterPosition;
-  alignas(16) glm::vec3 baseColor;
-  alignas(16) glm::vec3 tipColor;
-  alignas(16) glm::vec3 gravity;
-  alignas(16) glm::vec3 initialVelocity;
-  alignas(16) glm::vec3 windDirection;
   alignas(4) float time;
+  alignas(16) glm::vec3 baseColor;
   alignas(4) float particleLifetime;
+  alignas(16) glm::vec3 tipColor;
   alignas(4) float maxParticles;
+  alignas(16) glm::vec3 gravity;
   alignas(4) float spawnRadius;
+  alignas(16) glm::vec3 initialVelocity;
   alignas(4) float particleScale;
   alignas(4) float fadeInDuration;
   alignas(4) float fadeOutDuration;
@@ -35,10 +35,13 @@ struct ParticleShaderParams {
   alignas(4) float velocityRandomness;
   alignas(4) float scaleOverLifetime;
   alignas(4) float rotationSpeed;
+  alignas(4) float padding1;
+  alignas(16) glm::vec3 windDirection;
   alignas(4) float windStrength;
   alignas(4) float windInfluence;
-  alignas(4) float padding1;
   alignas(4) float padding2;
+  alignas(4) float padding3;
+  alignas(4) float padding4;
 };
 
 class ParticleEmitter final {

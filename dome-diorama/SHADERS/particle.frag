@@ -24,7 +24,13 @@ layout(set = 2, binding = 0) uniform ParticleParams {
     float velocityRandomness;
     float scaleOverLifetime;
     float rotationSpeed;
-    float padding;
+    float padding1;
+    vec3 windDirection;
+    float windStrength;
+    float windInfluence;
+    float padding2;
+    float padding3;
+    float padding4;
 } params;
 
 layout(location = 0) out vec4 outColor;

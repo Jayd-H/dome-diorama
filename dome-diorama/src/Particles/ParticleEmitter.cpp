@@ -9,7 +9,6 @@ ParticleEmitter::ParticleEmitter()
       materialID(0),
       time(0.0f),
       active(true) {
-  // Initialize Shader Params Defaults
   shaderParams.emitterPosition = position;
   shaderParams.time = 0.0f;
   shaderParams.baseColor = glm::vec3(1.0f);
@@ -27,13 +26,13 @@ ParticleEmitter::ParticleEmitter()
   shaderParams.velocityRandomness = 0.5f;
   shaderParams.scaleOverLifetime = 1.0f;
   shaderParams.rotationSpeed = 0.0f;
+  shaderParams.padding1 = 0.0f;
   shaderParams.windDirection = glm::vec3(0.0f);
   shaderParams.windStrength = 0.0f;
   shaderParams.windInfluence = 1.0f;
-
-  // Zero out padding
-  shaderParams.padding1 = 0.0f;
   shaderParams.padding2 = 0.0f;
+  shaderParams.padding3 = 0.0f;
+  shaderParams.padding4 = 0.0f;
 }
 
 ParticleEmitter::~ParticleEmitter() = default;
