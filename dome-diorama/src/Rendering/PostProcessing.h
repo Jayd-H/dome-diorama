@@ -40,6 +40,9 @@ class PostProcessing final {
   RenderDevice* renderDevice;
   VkDevice device;
 
+  // Containers (24 bytes)
+  std::vector<VkDescriptorSet> descriptorSets;
+
   VkImage offscreenImage = VK_NULL_HANDLE;
   VkDeviceMemory offscreenImageMemory = VK_NULL_HANDLE;
   VkImageView offscreenImageView = VK_NULL_HANDLE;
@@ -63,9 +66,6 @@ class PostProcessing final {
   uint32_t height = 0;
   float currentTemperature = 20.0f;
   float currentHumidity = 0.5f;
-
-  // Containers (24 bytes)
-  std::vector<VkDescriptorSet> descriptorSets;
 
   // Bools (1 byte)
   bool useToonShader = false;

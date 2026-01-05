@@ -563,30 +563,10 @@ void Application::toggleShadingMode() {
 }
 
 void Application::createDepthResources() {
-  VkImageCreateInfo imageInfo{};
-  RenderUtils::createImageCreateInfo(
-      imageInfo, swapChainExtent.width, swapChainExtent.height, depthFormat,
-      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-  if (vkCreateImage(device, &imageInfo, nullptr, &depthImage) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create depth image!");
-  }
-
-  VkMemoryRequirements memRequirements;
-  vkGetImageMemoryRequirements(device, depthImage, &memRequirements);
-
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = renderDevice->findMemoryType(
-      memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-  if (vkAllocateMemory(device, &allocInfo, nullptr, &depthImageMemory) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate depth image memory!");
-  }
-
-  vkBindImageMemory(device, depthImage, depthImageMemory, 0);
+  RenderUtils::createImageWithMemory(
+      device, physicalDevice, swapChainExtent.width, swapChainExtent.height,
+      depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
 
   VkImageViewCreateInfo viewInfo{};
   viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1016,19 +996,13 @@ void Application::createParticlePipeline() {
   VkPipelineRenderingCreateInfo renderingCreateInfo{};
   setupRenderingCreateInfo(renderingCreateInfo);
 
-  VkGraphicsPipelineCreateInfo pipelineInfo{};
-  RenderUtils::createGraphicsPipelineCreateInfo(
-      pipelineInfo, particlePipelineLayout, VK_NULL_HANDLE, 2,
-      shaderStages.data(), &configInfo.vertexInputInfo,
-      &configInfo.inputAssembly, &configInfo.viewportState,
-      &configInfo.rasterizer, &configInfo.multisampling,
-      &configInfo.depthStencil, &configInfo.colorBlending,
-      &configInfo.dynamicState, &renderingCreateInfo);
-
-  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-                                nullptr, &particlePipeline) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create particle graphics pipeline!");
-  }
+  RenderUtils::createGraphicsPipeline(
+      device, particlePipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
+      &configInfo.vertexInputInfo, &configInfo.inputAssembly,
+      &configInfo.viewportState, &configInfo.rasterizer,
+      &configInfo.multisampling, &configInfo.depthStencil,
+      &configInfo.colorBlending, &configInfo.dynamicState, &particlePipeline,
+      &renderingCreateInfo);
 
   vkDestroyShaderModule(device, fragShaderModule, nullptr);
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
@@ -1087,19 +1061,13 @@ void Application::createPlantPipeline() {
   VkPipelineRenderingCreateInfo renderingCreateInfo{};
   setupRenderingCreateInfo(renderingCreateInfo);
 
-  VkGraphicsPipelineCreateInfo pipelineInfo{};
-  RenderUtils::createGraphicsPipelineCreateInfo(
-      pipelineInfo, plantPipelineLayout, VK_NULL_HANDLE, 2,
-      shaderStages.data(), &configInfo.vertexInputInfo,
-      &configInfo.inputAssembly, &configInfo.viewportState,
-      &configInfo.rasterizer, &configInfo.multisampling,
-      &configInfo.depthStencil, &configInfo.colorBlending,
-      &configInfo.dynamicState, &renderingCreateInfo);
-
-  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-                                nullptr, &plantPipeline) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create plant graphics pipeline!");
-  }
+  RenderUtils::createGraphicsPipeline(
+      device, plantPipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
+      &configInfo.vertexInputInfo, &configInfo.inputAssembly,
+      &configInfo.viewportState, &configInfo.rasterizer,
+      &configInfo.multisampling, &configInfo.depthStencil,
+      &configInfo.colorBlending, &configInfo.dynamicState, &plantPipeline,
+      &renderingCreateInfo);
 
   vkDestroyShaderModule(device, fragShaderModule, nullptr);
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
@@ -1164,19 +1132,13 @@ void Application::createShadowPipeline() {
   renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
   renderingCreateInfo.depthAttachmentFormat = shadowDepthFormat;
 
-  VkGraphicsPipelineCreateInfo pipelineInfo{};
-  RenderUtils::createGraphicsPipelineCreateInfo(
-      pipelineInfo, shadowPipelineLayout, VK_NULL_HANDLE, 2,
-      shaderStages.data(), &configInfo.vertexInputInfo,
-      &configInfo.inputAssembly, &configInfo.viewportState,
-      &configInfo.rasterizer, &configInfo.multisampling,
-      &configInfo.depthStencil, &configInfo.colorBlending,
-      &configInfo.dynamicState, &renderingCreateInfo);
-
-  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-                                nullptr, &shadowPipeline) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create shadow graphics pipeline!");
-  }
+  RenderUtils::createGraphicsPipeline(
+      device, shadowPipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
+      &configInfo.vertexInputInfo, &configInfo.inputAssembly,
+      &configInfo.viewportState, &configInfo.rasterizer,
+      &configInfo.multisampling, &configInfo.depthStencil,
+      &configInfo.colorBlending, &configInfo.dynamicState, &shadowPipeline,
+      &renderingCreateInfo);
 
   vkDestroyShaderModule(device, fragShaderModule, nullptr);
   vkDestroyShaderModule(device, vertShaderModule, nullptr);

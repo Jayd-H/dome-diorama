@@ -46,6 +46,9 @@ class TextureManager final {
     TextureData& operator=(TextureData&&) = default;
   };
 
+  std::vector<TextureData> textures;
+  std::unordered_map<std::string, TextureID> filepathToID;
+
   VkDevice device;
   VkPhysicalDevice physicalDevice;
   VkCommandPool commandPool;
@@ -54,9 +57,6 @@ class TextureManager final {
   TextureID defaultWhiteTexture;
   TextureID defaultNormalTexture;
   TextureID defaultBlackTexture;
-
-  std::vector<TextureData> textures;
-  std::unordered_map<std::string, TextureID> filepathToID;
 
   TextureID createTexture(const TextureCreateInfo& createInfo);
   TextureID createDefaultTexture(const unsigned char* pixelData, uint32_t width,

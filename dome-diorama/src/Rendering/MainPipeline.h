@@ -234,18 +234,11 @@ class MainPipeline final {
     RenderUtils::createInputAssemblyState(inputAssembly,
                                           VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
-    // FIXED: Declare struct first, then pass by reference
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    RenderUtils::createGraphicsPipelineCreateInfo(
-        pipelineInfo, pipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
+    RenderUtils::createGraphicsPipeline(
+        device, pipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
         &vertexInputInfo, &inputAssembly, &viewportState, &rasterizer,
-        &multisampling, &depthStencil, &colorBlending, &dynamicState,
+        &multisampling, &depthStencil, &colorBlending, &dynamicState, &pipeline,
         &renderingCreateInfo);
-
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-                                  nullptr, &pipeline) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create graphics pipeline!");
-    }
 
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
     vkDestroyShaderModule(device, vertShaderModule, nullptr);

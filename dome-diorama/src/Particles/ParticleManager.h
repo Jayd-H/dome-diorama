@@ -36,6 +36,12 @@ class ParticleManager final {
   void cleanup();
 
  private:
+  std::vector<std::unique_ptr<ParticleEmitter>> emitters;
+  std::vector<std::vector<VkDescriptorSet>> particleDescriptorSets;
+  std::vector<std::vector<VkBuffer>> shaderParamsBuffers;
+  std::vector<std::vector<void*>> shaderParamsMapped;
+  std::vector<std::vector<VkDeviceMemory>> shaderParamsMemory;
+
   RenderDevice* renderDevice;
   MaterialManager* materialManager;
 
@@ -47,12 +53,6 @@ class ParticleManager final {
   VkDescriptorSetLayout materialDescriptorSetLayout;
   VkDescriptorSetLayout particleParamsLayout;
   VkDescriptorPool particleDescriptorPool;
-
-  std::vector<std::unique_ptr<ParticleEmitter>> emitters;
-  std::vector<std::vector<VkDescriptorSet>> particleDescriptorSets;
-  std::vector<std::vector<VkBuffer>> shaderParamsBuffers;
-  std::vector<std::vector<void*>> shaderParamsMapped;
-  std::vector<std::vector<VkDeviceMemory>> shaderParamsMemory;
 
   void createInstanceBuffer();
   void createShaderParamsBuffers(size_t frameCount);

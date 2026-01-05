@@ -8,7 +8,7 @@
 
 namespace RenderUtils {
 
-constexpr char ENTRY_POINT_MAIN[] = "main";
+constexpr const char* ENTRY_POINT_MAIN = "main";
 
 inline void readFile(const std::string& filename, std::vector<char>& buffer) {
   std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -65,8 +65,6 @@ inline void createImageCreateInfo(VkImageCreateInfo& imageInfo, uint32_t width,
   imageInfo.pQueueFamilyIndices = nullptr;
 }
 
-// Fixed OPT.33: Pass by reference instead of returning by value
-// Restored Name: createGraphicsPipelineCreateInfo
 inline void createGraphicsPipelineCreateInfo(
     VkGraphicsPipelineCreateInfo& pipelineInfo, VkPipelineLayout layout,
     VkRenderPass renderPass, uint32_t stageCount,
@@ -99,8 +97,6 @@ inline void createGraphicsPipelineCreateInfo(
   pipelineInfo.basePipelineIndex = -1;
 }
 
-// Fixed OPT.33: Pass by reference instead of returning by value
-// Restored Name: createInputAssemblyState
 inline void createInputAssemblyState(
     VkPipelineInputAssemblyStateCreateInfo& inputAssembly,
     VkPrimitiveTopology topology) {
@@ -112,8 +108,7 @@ inline void createInputAssemblyState(
   inputAssembly.primitiveRestartEnable = VK_FALSE;
 }
 
-// Fixed OPT.33: Pass by reference instead of returning by value
-// Restored Name: createColorBlendAttachment
+
 inline void createColorBlendAttachment(
     VkPipelineColorBlendAttachmentState& colorBlendAttachment) {
   colorBlendAttachment.colorWriteMask =
@@ -145,8 +140,6 @@ inline void createPipelineColorBlendStateCreateInfo(
   colorBlending.blendConstants[3] = 0.0f;
 }
 
-// Fixed OPT.33: Pass by reference instead of returning by value
-// Restored Name: createSamplerLayoutBinding
 inline void createSamplerLayoutBinding(
     VkDescriptorSetLayoutBinding& samplerLayoutBinding, uint32_t binding,
     VkShaderStageFlags stageFlags) {
@@ -156,6 +149,93 @@ inline void createSamplerLayoutBinding(
       VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
   samplerLayoutBinding.pImmutableSamplers = nullptr;
   samplerLayoutBinding.stageFlags = stageFlags;
+}
+
+inline uint32_t findMemoryType(VkPhysicalDevice physicalDevice,
+                               uint32_t typeFilter,
+                               VkMemoryPropertyFlags properties) {
+  VkPhysicalDeviceMemoryProperties memProperties;
+  vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+  for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+    if ((typeFilter & (1 << i)) &&
+        (memProperties.memoryTypes[i].propertyFlags & properties) ==
+            properties) {
+      return i;
+    }
+  }
+
+  throw std::runtime_error("Failed to find suitable memory type!");
+}
+
+inline void createImageWithMemory(
+    VkDevice device, VkPhysicalDevice physicalDevice, uint32_t width,
+    uint32_t height, VkFormat format, VkImageUsageFlags usage,
+    VkMemoryPropertyFlags properties, VkImage& image,
+    VkDeviceMemory& imageMemory, uint32_t mipLevels = 1,
+    uint32_t arrayLayers = 1, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL,
+    VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT,
+    VkImageCreateFlags flags = 0) {
+  VkImageCreateInfo imageInfo{};
+  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageInfo.extent.width = width;
+  imageInfo.extent.height = height;
+  imageInfo.extent.depth = 1;
+  imageInfo.mipLevels = mipLevels;
+  imageInfo.arrayLayers = arrayLayers;
+  imageInfo.format = format;
+  imageInfo.tiling = tiling;
+  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  imageInfo.usage = usage;
+  imageInfo.samples = samples;
+  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  imageInfo.flags = flags;
+
+  if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create image!");
+  }
+
+  VkMemoryRequirements memRequirements;
+  vkGetImageMemoryRequirements(device, image, &memRequirements);
+
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memRequirements.size;
+  allocInfo.memoryTypeIndex = findMemoryType(
+      physicalDevice, memRequirements.memoryTypeBits, properties);
+
+  if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate image memory!");
+  }
+
+  vkBindImageMemory(device, image, imageMemory, 0);
+}
+
+inline void createGraphicsPipeline(
+    VkDevice device, VkPipelineLayout layout, VkRenderPass renderPass,
+    uint32_t stageCount, const VkPipelineShaderStageCreateInfo* pStages,
+    const VkPipelineVertexInputStateCreateInfo* pVertexInputState,
+    const VkPipelineInputAssemblyStateCreateInfo* pInputAssemblyState,
+    const VkPipelineViewportStateCreateInfo* pViewportState,
+    const VkPipelineRasterizationStateCreateInfo* pRasterizationState,
+    const VkPipelineMultisampleStateCreateInfo* pMultisampleState,
+    const VkPipelineDepthStencilStateCreateInfo* pDepthStencilState,
+    const VkPipelineColorBlendStateCreateInfo* pColorBlendState,
+    const VkPipelineDynamicStateCreateInfo* pDynamicState, VkPipeline* pipeline,
+    const VkPipelineRenderingCreateInfo* pNextRenderingInfo = nullptr) {
+  VkGraphicsPipelineCreateInfo pipelineInfo{};
+  createGraphicsPipelineCreateInfo(
+      pipelineInfo, layout, renderPass, stageCount, pStages, pVertexInputState,
+      pInputAssemblyState, pViewportState, pRasterizationState,
+      pMultisampleState, pDepthStencilState, pColorBlendState, pDynamicState,
+      pNextRenderingInfo);
+
+  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
+                                nullptr, pipeline) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create graphics pipeline!");
+  }
 }
 
 }  // namespace RenderUtils

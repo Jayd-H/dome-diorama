@@ -248,31 +248,11 @@ void PostProcessing::createOffscreenResources() {
   Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Creating offscreen resources");
 
-  VkImageCreateInfo imageInfo{};
-  RenderUtils::createImageCreateInfo(
-      imageInfo, width, height, swapchainFormat,
-      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-  if (vkCreateImage(device, &imageInfo, nullptr, &offscreenImage) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create offscreen image!");
-  }
-
-  VkMemoryRequirements memRequirements;
-  vkGetImageMemoryRequirements(device, offscreenImage, &memRequirements);
-
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = renderDevice->findMemoryType(
-      memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-  if (vkAllocateMemory(device, &allocInfo, nullptr, &offscreenImageMemory) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate offscreen image memory!");
-  }
-
-  vkBindImageMemory(device, offscreenImage, offscreenImageMemory, 0);
+  RenderUtils::createImageWithMemory(
+      device, renderDevice->getPhysicalDevice(), width, height, swapchainFormat,
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, offscreenImage,
+      offscreenImageMemory);
 
   VkImageViewCreateInfo viewInfo{};
   viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -316,30 +296,10 @@ void PostProcessing::createDepthResources() {
   Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Creating depth resources");
 
-  VkImageCreateInfo imageInfo{};
-  RenderUtils::createImageCreateInfo(
-      imageInfo, width, height, depthFormat,
-      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-  if (vkCreateImage(device, &imageInfo, nullptr, &depthImage) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create depth image!");
-  }
-
-  VkMemoryRequirements memRequirements;
-  vkGetImageMemoryRequirements(device, depthImage, &memRequirements);
-
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = renderDevice->findMemoryType(
-      memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-  if (vkAllocateMemory(device, &allocInfo, nullptr, &depthImageMemory) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate depth image memory!");
-  }
-
-  vkBindImageMemory(device, depthImage, depthImageMemory, 0);
+  RenderUtils::createImageWithMemory(
+      device, renderDevice->getPhysicalDevice(), width, height, depthFormat,
+      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
 
   VkImageViewCreateInfo viewInfo{};
   viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

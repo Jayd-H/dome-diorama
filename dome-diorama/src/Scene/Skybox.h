@@ -125,6 +125,9 @@ class Skybox final {
  private:
   static constexpr float SKYBOX_RADIUS = 300.0f;
 
+  std::vector<glm::vec3> vertices;
+  std::vector<uint16_t> indices;
+
   RenderDevice* renderDevice;
   VkDevice device;
   VkCommandPool commandPool;
@@ -149,9 +152,6 @@ class Skybox final {
 
   VkFormat swapchainFormat;
   VkFormat depthFormat;
-
-  std::vector<glm::vec3> vertices;
-  std::vector<uint16_t> indices;
 
   void loadCubemap(const std::string& folderPath);
   void createSkyboxGeometry();
@@ -396,17 +396,11 @@ class Skybox final {
     std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
         vertShaderStageInfo, fragShaderStageInfo};
 
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    RenderUtils::createGraphicsPipelineCreateInfo(
-        pipelineInfo, pipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
+    RenderUtils::createGraphicsPipeline(
+        device, pipelineLayout, VK_NULL_HANDLE, 2, shaderStages.data(),
         &vertexInputInfo, &inputAssembly, &viewportState, &rasterizer,
-        &multisampling, &depthStencil, &colorBlending, &dynamicState,
+        &multisampling, &depthStencil, &colorBlending, &dynamicState, &pipeline,
         &renderingCreateInfo);
-
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-                                  nullptr, &pipeline) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create skybox graphics pipeline!");
-    }
 
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
     vkDestroyShaderModule(device, vertShaderModule, nullptr);

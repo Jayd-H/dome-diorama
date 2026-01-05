@@ -143,12 +143,13 @@ class Application final {
   VkPipeline plantPipeline = VK_NULL_HANDLE;
   VkPipelineLayout plantPipelineLayout = VK_NULL_HANDLE;
 
+  VkExtent2D swapChainExtent{0, 0};
+
   float lastFrameTime = 0.0f;
   float simulationTime = 0.0f;
   float timeScale = 1.0f;
   float scaledDeltaTime = 0.0f;
 
-  VkExtent2D swapChainExtent{0, 0};
   VkFormat swapChainImageFormat = VK_FORMAT_UNDEFINED;
   VkFormat depthFormat = VK_FORMAT_UNDEFINED;
 
