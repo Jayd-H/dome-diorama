@@ -38,11 +38,10 @@ class Camera final {
                              input.isKeyPressed(GLFW_KEY_RIGHT_CONTROL);
 
     if (ctrlPressed) {
-      const float panSpeed = fpsSpeed * deltaTime;
       const glm::vec3 forward = getForwardVector();
       const glm::vec3 right =
           glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
-      const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+      const glm::vec3 up(0.0f, 1.0f, 0.0f);
 
       glm::vec3 movement(0.0f);
 
@@ -54,9 +53,11 @@ class Camera final {
       if (input.isKeyPressed(GLFW_KEY_PAGE_DOWN)) movement -= up;
 
       if (glm::length(movement) > 0.0f) {
-        fpsPosition += glm::normalize(movement) * panSpeed;
+        const float panSpeed = fpsSpeed * deltaTime;
+        const glm::vec3 delta = glm::normalize(movement) * panSpeed;
+        fpsPosition += delta;
         if (mode == CameraMode::ORBIT) {
-          orbitPivot += glm::normalize(movement) * panSpeed;
+          orbitPivot += delta;
         }
       }
     } else {
@@ -125,11 +126,8 @@ class Camera final {
     }
   }
 
-  inline const glm::vec3& getPosition() const {
-    if (mode == CameraMode::ORBIT) {
-      return lastOrbitPosition;
-    }
-    return fpsPosition;
+  inline glm::vec3 getPosition() const {
+    return (mode == CameraMode::ORBIT) ? lastOrbitPosition : fpsPosition;
   }
 
  private:

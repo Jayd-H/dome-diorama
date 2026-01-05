@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 #include "Application.h"
 #include "Particles/EmitterTypes.h"
@@ -16,62 +17,26 @@
 #include "Util/Debug.h"
 
 void printControls() {
-  std::cout << R"( ___     ___   ___ ___    ___ 
-|   \   /   \ |   |   |  /  _]
-|    \ |     || _   _ | /  [_ 
-|  D  ||  O  ||  \_/  ||    _]
-|     ||     ||   |   ||   [_ 
-|     ||     ||   |   ||     |
-|_____| \___/ |___|___||_____|
-                              
+  std::cout << R"(
 GENERAL CONTROLS
-----------------
-  ESC                - Exit the application
-  R                  - Reset application to initial state
+ESC - Exit | R - Reset
 
 CAMERA PRESETS
---------------
-  F1                 - Camera C1: Overview (Globe view)
-  F2                 - Camera C2: Navigation (Element view)
-  F3                 - Camera C3: Close-up (Cactus view)
+F1 - Overview | F2 - Navigation | F3 - Close-up
 
 CAMERA CONTROLS
----------------
-  Arrow Keys         - Rotate Camera (Left/Right/Up/Down)
-  CTRL + Arrows      - Pan Camera (Left/Right/Forward/Backward)
-  CTRL + PgUp/PgDn   - Pan Up / Pan Down
-  Enter              - Switch between Orbit and FPS camera modes
-  Right Mouse Button - Rotate camera around scene (Orbit mode)
-  Mouse Scroll       - Zoom in/out (Orbit) / Adjust speed (FPS)
-  W/A/S/D            - Move (FPS mode)
-  Space/Shift        - Move Up/Down (FPS mode)
+Arrow Keys - Rotate | CTRL+Arrows - Pan | CTRL+PgUp/Dn - Pan Up/Down
+Enter - Toggle Orbit/FPS | RMB - Orbit | Scroll - Zoom/Speed
+W/A/S/D - Move | Space/Shift - Up/Down
 
 EFFECTS & TIME
---------------
-  F4                 - Trigger Particle Effect (Random Cactus Fire)
-  ]                  - Increase Time Scale
-  [                  - Decrease Time Scale
-  P                  - Pause/Resume time progression
+F4 - Particle Effect | ]/[ - Time Scale +/- | P - Pause
 
 RENDERING CONTROLS
-------------------
-  1                  - Fill mode (solid rendering)
-  2                  - Wireframe mode
-  3                  - Point mode
-  4                  - Nearest texture filtering
-  5                  - Linear texture filtering
-  L                  - Toggle between Phong and Gouraud shading
+1-3 - Fill/Wire/Point | 4-5 - Nearest/Linear | L - Shade Mode
 
 WEATHER CONTROLS
-----------------
-  T / G              - Increase / Decrease Temperature (+/- 5°C)
-  H / N              - Increase / Decrease Humidity (+/- 10%)
-  U / J              - Increase / Decrease Wind Speed (+/- 1 m/s)
-  Y                  - Cycle through weather states
-
-WEATHER STATES
---------------
-  Clear -> Cloudy -> Light Rain -> Heavy Rain -> Light Snow -> Heavy Snow -> Dust Storm
+T/G - Temp | H/N - Humidity | U/J - Wind | Y - Cycle
 )" << std::endl;
 }
 
@@ -83,20 +48,18 @@ std::vector<Object> createScene(const ConfigParser& config,
                                 LightManager* lightManager,
                                 LightID& sunLightID) {
   Debug::log(Debug::Category::MAIN, "Creating materials and scene...");
-
   std::vector<Object> sceneObjects;
 
-  const MaterialID sunMaterialID =
+  const MaterialID sunMat =
       materialManager->registerMaterial(MaterialBuilder()
-                                            .name("Sun Material")
+                                            .name("Sun")
                                             .albedoColor(1.0f, 0.9f, 0.6f)
                                             .emissiveIntensity(10.0f)
                                             .roughness(1.0f)
                                             .metallic(0.0f));
-
-  const MaterialID moonMaterialID =
+  const MaterialID moonMat =
       materialManager->registerMaterial(MaterialBuilder()
-                                            .name("Moon Material")
+                                            .name("Moon")
                                             .albedoColor(0.8f, 0.8f, 0.9f)
                                             .emissiveIntensity(2.0f)
                                             .roughness(1.0f)
@@ -104,30 +67,26 @@ std::vector<Object> createScene(const ConfigParser& config,
 
   const MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
 
-  const Object sun = ObjectBuilder()
-                         .name("Sun")
-                         .position(0.0f, 500.0f, 0.0f)
-                         .mesh(sphereMesh)
-                         .material(sunMaterialID)
-                         .scale(1.5f)
-                         .layerMask(0x00000001)
-                         .build();
+  sceneObjects.push_back(ObjectBuilder()
+                             .name("Sun")
+                             .position(0.0f, 500.0f, 0.0f)
+                             .mesh(sphereMesh)
+                             .material(sunMat)
+                             .scale(1.5f)
+                             .layerMask(0x1)
+                             .build());
+  sceneObjects.push_back(ObjectBuilder()
+                             .name("Moon")
+                             .position(0.0f, -450.0f, 0.0f)
+                             .mesh(sphereMesh)
+                             .material(moonMat)
+                             .scale(0.7f)
+                             .layerMask(0x1)
+                             .build());
 
-  const Object moon = ObjectBuilder()
-                          .name("Moon")
-                          .position(0.0f, -450.0f, 0.0f)
-                          .mesh(sphereMesh)
-                          .material(moonMaterialID)
-                          .scale(0.7f)
-                          .layerMask(0x00000001)
-                          .build();
-
-  sceneObjects.push_back(sun);
-  sceneObjects.push_back(moon);
-
-  const MaterialID sandMaterialID = materialManager->registerMaterial(
+  const MaterialID sandMat = materialManager->registerMaterial(
       MaterialBuilder()
-          .name("Sand Material")
+          .name("Sand")
           .albedoMap("./Models/textures/rockytrail/rocky_trail_02_diff_4k.jpg")
           .normalMap("./Models/textures/rockytrail/rocky_trail_02_ao_4k.jpg")
           .roughnessMap(
@@ -135,8 +94,7 @@ std::vector<Object> createScene(const ConfigParser& config,
           .heightMap("./Models/textures/rockytrail/rocky_trail_02_disp_4k.jpg")
           .heightScale(1.0f)
           .textureScale(50.0f));
-
-  const MeshID sandTerrainMesh = meshManager->createProceduralTerrain(
+  const MeshID terrainMesh = meshManager->createProceduralTerrain(
       config.getFloat("Terrain.terrain_size", 300.0f),
       config.getInt("Terrain.terrain_resolution", 100),
       config.getFloat("Terrain.terrain_height", 10.0f),
@@ -144,84 +102,67 @@ std::vector<Object> createScene(const ConfigParser& config,
       config.getInt("Terrain.terrain_octaves", 2),
       config.getFloat("Terrain.terrain_persistence", 0.6f),
       config.getInt("Terrain.terrain_seed", 42));
+  sceneObjects.push_back(ObjectBuilder()
+                             .name("Sand Terrain")
+                             .position(0.0f, 0.0f, 0.0f)
+                             .mesh(terrainMesh)
+                             .material(sandMat)
+                             .build());
 
-  const Object sandPlane = ObjectBuilder()
-                               .name("Sand Terrain")
-                               .position(0.0f, 0.0f, 0.0f)
-                               .mesh(sandTerrainMesh)
-                               .material(sandMaterialID)
-                               .build();
+  const MeshID skyMesh = meshManager->createSphere(100.0f, 64);
+  const MaterialID skyMat =
+      materialManager->registerMaterial(MaterialBuilder()
+                                            .name("Skybox")
+                                            .albedoColor(0.93f, 0.08f, 0.08f)
+                                            .metallic(0.0f)
+                                            .roughness(0.1f)
+                                            .transparent(true)
+                                            .opacity(0.1f));
+  sceneObjects.push_back(ObjectBuilder()
+                             .name("Skybox Sphere")
+                             .position(0.0f, 0.0f, 0.0f)
+                             .mesh(skyMesh)
+                             .material(skyMat)
+                             .scale(3.0f)
+                             .build());
 
-  sceneObjects.push_back(sandPlane);
-
-  const MeshID skyboxSphereMesh = meshManager->createSphere(100.0f, 64);
-
-  const MaterialID skyboxMaterialID = materialManager->registerMaterial(
-      MaterialBuilder()
-          .name("Skybox Sphere Material")
-          .albedoColor(238.0f / 255.0f, 21.0f / 255.0f, 21.0f / 255.0f)
-          .metallic(0.0f)
-          .roughness(0.1f)
-          .transparent(true)
-          .opacity(0.1f));
-
-  const Object skyboxSphere = ObjectBuilder()
-                                  .name("Skybox Sphere")
-                                  .position(0.0f, 0.0f, 0.0f)
-                                  .mesh(skyboxSphereMesh)
-                                  .material(skyboxMaterialID)
-                                  .scale(3.0f)
-                                  .build();
-
-  sceneObjects.push_back(skyboxSphere);
-
-  const MeshID pokeballWhiteMesh =
-      meshManager->loadFromOBJ("./Models/PokeWhite.obj");
-  const MaterialID pokeballWhiteMaterial =
+  const MeshID pokeW = meshManager->loadFromOBJ("./Models/PokeWhite.obj");
+  const MaterialID pokeWMat =
       materialManager->loadFromMTL("./Models/PokeWhite.mtl");
-
-  const MeshID pokeballBlackMesh =
-      meshManager->loadFromOBJ("./Models/PokeBlack.obj");
-  const MaterialID pokeballBlackMaterial =
+  const MeshID pokeB = meshManager->loadFromOBJ("./Models/PokeBlack.obj");
+  const MaterialID pokeBMat =
       materialManager->loadFromMTL("./Models/PokeBlack.mtl");
 
-  const Object pokeballWhite = ObjectBuilder()
-                                   .name("Pokeball White")
-                                   .position(-10.0f, -130.0f, 0.0f)
-                                   .mesh(pokeballWhiteMesh)
-                                   .material(pokeballWhiteMaterial)
-                                   .scale(3.05f)
-                                   .build();
+  sceneObjects.push_back(ObjectBuilder()
+                             .name("Pokeball White")
+                             .position(-10.0f, -130.0f, 0.0f)
+                             .mesh(pokeW)
+                             .material(pokeWMat)
+                             .scale(3.05f)
+                             .build());
+  sceneObjects.push_back(ObjectBuilder()
+                             .name("Pokeball Black")
+                             .position(0.0f, 0.0f, 0.0f)
+                             .mesh(pokeB)
+                             .material(pokeBMat)
+                             .scale(3.05f)
+                             .build());
 
-  const Object pokeballBlack = ObjectBuilder()
-                                   .name("Pokeball Black")
-                                   .position(0.0f, 0.0f, 0.0f)
-                                   .mesh(pokeballBlackMesh)
-                                   .material(pokeballBlackMaterial)
-                                   .scale(3.05f)
-                                   .build();
-
-  sceneObjects.push_back(pokeballWhite);
-  sceneObjects.push_back(pokeballBlack);
-
-  const Mesh* const terrainMesh = meshManager->getMesh(sandTerrainMesh);
-
-  PlantSpawnConfig plantConfig;
-  plantConfig.numCacti = config.getInt("Plants.num_cacti", 400);
-  plantConfig.numTrees = config.getInt("Plants.num_trees", 100);
-  plantConfig.minRadius = config.getFloat("Plants.min_spawn_radius", 8.0f);
-  plantConfig.maxRadius = config.getFloat("Plants.max_spawn_radius", 300.0f);
-  plantConfig.seed = config.getInt("Plants.spawn_seed", 67);
-  plantConfig.randomGrowthStages =
+  PlantSpawnConfig pConfig;
+  pConfig.numCacti = config.getInt("Plants.num_cacti", 400);
+  pConfig.numTrees = config.getInt("Plants.num_trees", 100);
+  pConfig.minRadius = config.getFloat("Plants.min_spawn_radius", 8.0f);
+  pConfig.maxRadius = config.getFloat("Plants.max_spawn_radius", 300.0f);
+  pConfig.seed = config.getInt("Plants.spawn_seed", 67);
+  pConfig.randomGrowthStages =
       config.getBool("Plants.random_growth_stages", true);
-  plantConfig.scaleVariance = config.getFloat("Plants.scale_variance", 0.7f);
-  plantConfig.rotationVariance =
-      config.getFloat("Plants.rotation_variance", 0.8f);
+  pConfig.scaleVariance = config.getFloat("Plants.scale_variance", 0.7f);
+  pConfig.rotationVariance = config.getFloat("Plants.rotation_variance", 0.8f);
 
   plantManager->setParticleManager(particleManager);
-  plantManager->setTerrainMesh(terrainMesh);
-
-  plantManager->spawnPlantsOnTerrain(sceneObjects, terrainMesh, plantConfig);
+  plantManager->setTerrainMesh(meshManager->getMesh(terrainMesh));
+  plantManager->spawnPlantsOnTerrain(
+      sceneObjects, meshManager->getMesh(terrainMesh), pConfig);
 
   const Light sunLight = LightBuilder()
                              .type(LightType::Sun)
@@ -231,47 +172,20 @@ std::vector<Object> createScene(const ConfigParser& config,
                              .intensity(5.0f)
                              .castsShadows(true)
                              .build();
-
   sunLightID = lightManager->addLight(sunLight);
 
-  const Light testLight = LightBuilder()
-                              .type(LightType::Point)
-                              .name("Test Light")
-                              .position(0.0f, 10.0f, 0.0f)
-                              .color(0.6f, 0.8f, 1.0f)
-                              .intensity(50.0f)
-                              .attenuation(1.0f, 0.07f, 0.017f)
-                              .castsShadows(true)
-                              .build();
-
-  // lightManager->addLight(testLight);
-
-  const Light testSun = LightBuilder()
-                            .type(LightType::Sun)
-                            .name("Test Sun")
-                            .direction(-1.0f, -1.0f, -0.5f)
-                            .color(1.0f, 0.95f, 0.8f)
-                            .intensity(2.0f)
-                            .castsShadows(true)
-                            .build();
-
-  // lightManager->addLight(testSun);
-
-  const MaterialID particleMaterialID =
+  const MaterialID partMat =
       materialManager->registerMaterial(MaterialBuilder()
-                                            .name("Particle Material")
+                                            .name("Particle")
                                             .albedoColor(1.0f, 1.0f, 1.0f)
                                             .roughness(0.0f)
                                             .metallic(0.0f)
                                             .transparent(true));
+  plantManager->setFireMaterialID(partMat);
 
-  // FIX: This line was missing, causing the fire effect to be invisible
-  plantManager->setFireMaterialID(particleMaterialID);
   Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
-             " scene objects and ", lightManager->getLightCount(), " lights");
-  Debug::log(Debug::Category::MAIN, "Spawned ", plantManager->getPlantCount(),
-             " plants");
-
+             " objects, ", lightManager->getLightCount(), " lights, ",
+             plantManager->getPlantCount(), " plants");
   return sceneObjects;
 }
 
@@ -284,12 +198,9 @@ int main() {
   const bool configLoaded = config.load("config.ini");
 
 #ifdef _DEBUG
-  // In Debug mode, load settings from config
-  if (!configLoaded) {
+  if (!configLoaded)
     Debug::log(Debug::Category::MAIN,
                "Warning: Could not load config.ini, using defaults");
-  }
-
   Debug::setEnabled(Debug::Category::MAIN,
                     config.getBool("Debug.debug_main", true));
   Debug::setEnabled(Debug::Category::CAMERA,
@@ -325,8 +236,6 @@ int main() {
   Debug::setEnabled(Debug::Category::SHADOWS,
                     config.getBool("Debug.debug_shadows", true));
 #else
-  // In Release mode (Visual Studio defines _DEBUG only in Debug mode),
-  // forcefully disable all debug output
   Debug::setEnabled(Debug::Category::MAIN, false);
   Debug::setEnabled(Debug::Category::CAMERA, false);
   Debug::setEnabled(Debug::Category::INPUT, false);
@@ -346,13 +255,10 @@ int main() {
   Debug::setEnabled(Debug::Category::SHADOWS, false);
 #endif
 
-  if (Debug::isEnabled(Debug::Category::MAIN)) {
-    printControls();
-  }
+  if (Debug::isEnabled(Debug::Category::MAIN)) printControls();
 
   try {
     Application app;
-
     Debug::log(Debug::Category::MAIN, "Initializing Vulkan...");
     app.init();
 
@@ -372,51 +278,38 @@ int main() {
     app.getWeatherSystem()->setMoonObject(&sceneObjects[1]);
 
     Debug::log(Debug::Category::MAIN,
-               "Sun object at index 0: ", sceneObjects[0].getName(),
-               " at position (", sceneObjects[0].getPosition().x, ", ",
-               sceneObjects[0].getPosition().y, ", ",
-               sceneObjects[0].getPosition().z, ")");
+               "Sun Index 0: ", sceneObjects[0].getName());
     Debug::log(Debug::Category::MAIN,
-               "Moon object at index 1: ", sceneObjects[1].getName(),
-               " at position (", sceneObjects[1].getPosition().x, ", ",
-               sceneObjects[1].getPosition().y, ", ",
-               sceneObjects[1].getPosition().z, ")");
-    Debug::log(Debug::Category::MAIN,
-               "Total scene objects: ", sceneObjects.size());
+               "Moon Index 1: ", sceneObjects[1].getName());
+    Debug::log(Debug::Category::MAIN, "Total Objects: ", sceneObjects.size());
 
-    WorldConfig worldConfig;
-    worldConfig.dayLengthInSeconds =
-        config.getFloat("World.day_length", 120.0f);
-    worldConfig.startingHour = config.getInt("World.starting_hour", 12);
-    worldConfig.startingMinute = config.getInt("World.starting_minute", 0);
-    worldConfig.startingTemperature =
+    WorldConfig wConfig;
+    wConfig.dayLengthInSeconds = config.getFloat("World.day_length", 120.0f);
+    wConfig.startingHour = config.getInt("World.starting_hour", 12);
+    wConfig.startingMinute = config.getInt("World.starting_minute", 0);
+    wConfig.startingTemperature =
         config.getFloat("World.starting_temperature", 80.0f);
-    worldConfig.minTemperature =
-        config.getFloat("World.min_temperature", 70.0f);
-    worldConfig.maxTemperature =
-        config.getFloat("World.max_temperature", 80.0f);
-    worldConfig.startingHumidity =
-        config.getFloat("World.starting_humidity", 0.3f);
-    worldConfig.minHumidity = config.getFloat("World.min_humidity", 0.1f);
-    worldConfig.maxHumidity = config.getFloat("World.max_humidity", 0.95f);
-    worldConfig.startingWindSpeed =
+    wConfig.minTemperature = config.getFloat("World.min_temperature", 70.0f);
+    wConfig.maxTemperature = config.getFloat("World.max_temperature", 80.0f);
+    wConfig.startingHumidity = config.getFloat("World.starting_humidity", 0.3f);
+    wConfig.minHumidity = config.getFloat("World.min_humidity", 0.1f);
+    wConfig.maxHumidity = config.getFloat("World.max_humidity", 0.95f);
+    wConfig.startingWindSpeed =
         config.getFloat("World.starting_wind_speed", 2.0f);
-    worldConfig.minWindSpeed = config.getFloat("World.min_wind_speed", 0.5f);
-    worldConfig.maxWindSpeed = config.getFloat("World.max_wind_speed", 10.0f);
-    worldConfig.parameterUpdateInterval =
+    wConfig.minWindSpeed = config.getFloat("World.min_wind_speed", 0.5f);
+    wConfig.maxWindSpeed = config.getFloat("World.max_wind_speed", 10.0f);
+    wConfig.parameterUpdateInterval =
         config.getFloat("World.parameter_update_interval", 30.0f);
-    worldConfig.dayNightTempVariation =
+    wConfig.dayNightTempVariation =
         config.getFloat("World.day_night_temp_variation", 8.0f);
 
-    app.setWorldConfig(worldConfig);
+    app.setWorldConfig(wConfig);
 
     Debug::log(Debug::Category::MAIN, "Scene created, starting main loop...");
     app.run();
-
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;
   }
-
   return EXIT_SUCCESS;
 }

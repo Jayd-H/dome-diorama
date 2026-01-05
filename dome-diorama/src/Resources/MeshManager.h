@@ -16,7 +16,7 @@ struct Vertex {
   glm::vec3 color;
   glm::vec2 texCoord;
   glm::vec3 normal;
-  static VkVertexInputBindingDescription getBindingDescription();
+  static const VkVertexInputBindingDescription& getBindingDescription();
   static const std::array<VkVertexInputAttributeDescription, 4>&
   getAttributeDescriptions();
 };
@@ -32,25 +32,35 @@ class Mesh final {
   Mesh(Mesh&&) = default;
   Mesh& operator=(Mesh&&) = default;
 
-  const std::vector<Vertex>& getVertices() const { return vertices; }
-  const std::vector<uint16_t>& getIndices() const { return indices; }
-  VkBuffer getVertexBuffer() const { return vertexBuffer; }
-  VkDeviceMemory getVertexBufferMemory() const { return vertexBufferMemory; }
-  VkBuffer getIndexBuffer() const { return indexBuffer; }
-  VkDeviceMemory getIndexBufferMemory() const { return indexBufferMemory; }
-  MeshType getType() const { return type; }
-  const std::string& getName() const { return name; }
+  [[nodiscard]] const std::vector<Vertex>& getVertices() const {
+    return vertices;
+  }
+  [[nodiscard]] const std::vector<uint16_t>& getIndices() const {
+    return indices;
+  }
+  [[nodiscard]] VkBuffer getVertexBuffer() const { return vertexBuffer; }
+  [[nodiscard]] VkDeviceMemory getVertexBufferMemory() const {
+    return vertexBufferMemory;
+  }
+  [[nodiscard]] VkBuffer getIndexBuffer() const { return indexBuffer; }
+  [[nodiscard]] VkDeviceMemory getIndexBufferMemory() const {
+    return indexBufferMemory;
+  }
+  [[nodiscard]] MeshType getType() const { return type; }
+  [[nodiscard]] const std::string& getName() const { return name; }
 
  private:
   friend class MeshManager;
 
   std::vector<Vertex> vertices;
   std::vector<uint16_t> indices;
+  std::string name;
+
   VkBuffer vertexBuffer = VK_NULL_HANDLE;
   VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
   VkBuffer indexBuffer = VK_NULL_HANDLE;
   VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
-  std::string name;
+
   MeshType type = MeshType::Custom;
 };
 
@@ -79,9 +89,9 @@ class MeshManager final {
                                  unsigned int seed = 0);
 
  private:
-  RenderDevice* renderDevice;
-  std::vector<std::unique_ptr<Mesh>> meshes;
   std::unordered_map<std::string, MeshID> filepathToID;
+  std::vector<std::unique_ptr<Mesh>> meshes;
+  RenderDevice* renderDevice;
   MeshID defaultCubeID;
 
   MeshID registerMesh(Mesh* mesh);
