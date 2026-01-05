@@ -459,34 +459,22 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
     weatherSystem->update(worldState, scaledDeltaTime);
   }
 
-  TimeOfDay timeOfDay;
-  worldState.getTime(timeOfDay);
-  const float normalizedTime = timeOfDay.normalizedTime;
-
-  const float sunAngle =
-      normalizedTime * glm::two_pi<float>() - glm::half_pi<float>();
-  const float sunRadius = 500.0f;
-  const glm::vec3 sunPosition =
-      glm::vec3(cos(sunAngle) * sunRadius, sin(sunAngle) * sunRadius, 0.0f);
-
-  const float moonAngle =
-      (normalizedTime + 0.5f) * glm::two_pi<float>() - glm::half_pi<float>();
-  const float moonRadius = 450.0f;
-  const glm::vec3 moonPosition =
-      glm::vec3(cos(moonAngle) * moonRadius, sin(moonAngle) * moonRadius, 0.0f);
+  // Get sun and moon positions directly from WorldState to ensure consistency
+  const glm::vec3 sunPosition = worldState.getSunDirection();
+  const glm::vec3 moonPosition = worldState.getMoonDirection();
 
   Light* const sunLight = lightManager->getLight(sunLightID);
   if (sunLight) {
-    const glm::vec3 sunDirection = worldState.getSunDirection();
-    sunLight->setDirection(-sunDirection);
+    // Sun light direction should point FROM the sun TO the scene (negative of sun position direction)
+    sunLight->setDirection(-glm::normalize(sunPosition));
 
-    const float sunHeight = sunDirection.y;
+    const float sunHeight = sunPosition.y;
 
     if (sunHeight > 0.0f) {
-      const float t = glm::smoothstep(0.0f, 0.3f, sunHeight);
+      const float t = glm::smoothstep(0.0f, 100.0f, sunHeight);
       sunLight->setColor(glm::mix(glm::vec3(1.0f, 0.7f, 0.4f),
                                   glm::vec3(1.0f, 0.98f, 0.95f), t));
-      const float normalizedIntensity = glm::smoothstep(0.0f, 0.2f, sunHeight);
+      const float normalizedIntensity = glm::smoothstep(0.0f, 50.0f, sunHeight);
       sunLight->setIntensity(normalizedIntensity * 5.0f);
     } else {
       sunLight->setIntensity(0.0f);
@@ -506,15 +494,15 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
 
   updateCameraLayer();
 
-  bool logged = false;
+  static bool logged = false;
   if (!logged) {
+    TimeOfDay timeInfo;
+    worldState.getTime(timeInfo);
     Debug::log(Debug::Category::MAIN, "Sun Position: (", sunPosition.x, ", ",
                sunPosition.y, ", ", sunPosition.z, ")");
     Debug::log(Debug::Category::MAIN, "Moon Position: (", moonPosition.x, ", ",
                moonPosition.y, ", ", moonPosition.z, ")");
-    Debug::log(Debug::Category::MAIN, "Sun Angle: ", sunAngle);
-    Debug::log(Debug::Category::MAIN, "Moon Angle: ", moonAngle);
-    Debug::log(Debug::Category::MAIN, "Normalized Time: ", normalizedTime);
+    Debug::log(Debug::Category::MAIN, "Normalized Time: ", timeInfo.normalizedTime);
     Debug::log(Debug::Category::MAIN,
                "Intensity: ", sunLight ? sunLight->getIntensity() : 0.0f);
 

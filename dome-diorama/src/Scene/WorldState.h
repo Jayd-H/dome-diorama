@@ -115,8 +115,8 @@ class WorldState final {
 
   inline glm::vec3 getSunDirection() const {
     const float angle = time.normalizedTime * glm::two_pi<float>();
-    const float radius = 500.0f;
-    const float x = cos(angle) * radius * 0.3f;
+    const float radius = 800.0f;
+    const float x = cos(angle) * radius;
     const float y = sin(angle) * radius;
     const float z = 0.0f;
     return glm::vec3(x, y, z);
@@ -124,8 +124,8 @@ class WorldState final {
 
   inline glm::vec3 getMoonDirection() const {
     const float angle = (time.normalizedTime + 0.5f) * glm::two_pi<float>();
-    const float radius = 450.0f;
-    const float x = cos(angle) * radius * 0.3f;
+    const float radius = 750.0f;
+    const float x = cos(angle) * radius;
     const float y = sin(angle) * radius;
     const float z = 0.0f;
     return glm::vec3(x, y, z);
