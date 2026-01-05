@@ -159,6 +159,7 @@
     <ClCompile Include="src\Scene\WeatherSystem.cpp" />
     <ClCompile Include="src\Util\ConfigParser.cpp" />
     <ClCompile Include="src\Util\PerlinNoise.cpp" />
+    <ClCompile Include="src\Util\RenderUtils.cpp" />
     <ClCompile Include="src\Vulkan\VulkanDepthBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>

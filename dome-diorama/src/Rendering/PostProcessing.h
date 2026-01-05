@@ -36,12 +36,11 @@ class PostProcessing final {
   void toggleToonMode() { useToonShader = !useToonShader; }
   bool isToonModeEnabled() const { return useToonShader; }
 
- private:
+private:
+  std::vector<VkDescriptorSet> descriptorSets;
+
   RenderDevice* renderDevice;
   VkDevice device;
-
-  // Containers (24 bytes)
-  std::vector<VkDescriptorSet> descriptorSets;
 
   VkImage offscreenImage = VK_NULL_HANDLE;
   VkDeviceMemory offscreenImageMemory = VK_NULL_HANDLE;
@@ -58,7 +57,6 @@ class PostProcessing final {
   VkPipeline pipeline = VK_NULL_HANDLE;
   VkPipeline toonPipeline = VK_NULL_HANDLE;
 
-  // Enums/Ints/Floats (4 bytes)
   VkFormat swapchainFormat;
   VkFormat depthFormat;
 
@@ -67,7 +65,6 @@ class PostProcessing final {
   float currentTemperature = 20.0f;
   float currentHumidity = 0.5f;
 
-  // Bools (1 byte)
   bool useToonShader = false;
 
   void createOffscreenResources();

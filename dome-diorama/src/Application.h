@@ -80,24 +80,6 @@ class Application final {
 
  private:
   std::vector<Object> sceneObjects;
-
-  std::unique_ptr<Window> window;
-  Input input;
-  Camera camera;
-  WorldState worldState;
-
-  std::unique_ptr<RenderDevice> renderDevice;
-  std::unique_ptr<TextureManager> textureManager;
-  std::unique_ptr<MaterialManager> materialManager;
-  std::unique_ptr<MeshManager> meshManager;
-  std::unique_ptr<LightManager> lightManager;
-  std::unique_ptr<PlantManager> plantManager;
-  std::unique_ptr<ParticleManager> particleManager;
-  std::unique_ptr<WeatherSystem> weatherSystem;
-  std::unique_ptr<Skybox> skybox;
-  std::unique_ptr<PostProcessing> postProcessing;
-  std::unique_ptr<MainPipeline> mainPipeline;
-
   std::vector<VkImage> swapChainImages;
   std::vector<VkImageView> swapChainImageViews;
   std::vector<VkBuffer> uniformBuffers;
@@ -111,6 +93,24 @@ class Application final {
 
   std::unordered_set<size_t> plantObjectIndicesSet;
 
+  Input input;
+  Camera camera;
+  WorldState worldState;
+  VkExtent2D swapChainExtent{0, 0};
+
+  std::unique_ptr<Window> window;
+  std::unique_ptr<RenderDevice> renderDevice;
+  std::unique_ptr<TextureManager> textureManager;
+  std::unique_ptr<MaterialManager> materialManager;
+  std::unique_ptr<MeshManager> meshManager;
+  std::unique_ptr<LightManager> lightManager;
+  std::unique_ptr<PlantManager> plantManager;
+  std::unique_ptr<ParticleManager> particleManager;
+  std::unique_ptr<WeatherSystem> weatherSystem;
+  std::unique_ptr<Skybox> skybox;
+  std::unique_ptr<PostProcessing> postProcessing;
+  std::unique_ptr<MainPipeline> mainPipeline;
+
   VkInstance instance = VK_NULL_HANDLE;
   VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
   VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -121,29 +121,21 @@ class Application final {
   VkCommandPool commandPool = VK_NULL_HANDLE;
   VkSwapchainKHR swapChain = VK_NULL_HANDLE;
   VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-
   VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
   VkDescriptorSetLayout materialDescriptorSetLayout = VK_NULL_HANDLE;
-
   VkBuffer vertexBuffer = VK_NULL_HANDLE;
   VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
   VkBuffer indexBuffer = VK_NULL_HANDLE;
   VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
-
   VkImage depthImage = VK_NULL_HANDLE;
   VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
   VkImageView depthImageView = VK_NULL_HANDLE;
-
   VkPipeline particlePipeline = VK_NULL_HANDLE;
   VkPipelineLayout particlePipelineLayout = VK_NULL_HANDLE;
-
   VkPipeline shadowPipeline = VK_NULL_HANDLE;
   VkPipelineLayout shadowPipelineLayout = VK_NULL_HANDLE;
-
   VkPipeline plantPipeline = VK_NULL_HANDLE;
   VkPipelineLayout plantPipelineLayout = VK_NULL_HANDLE;
-
-  VkExtent2D swapChainExtent{0, 0};
 
   float lastFrameTime = 0.0f;
   float simulationTime = 0.0f;
@@ -154,11 +146,10 @@ class Application final {
   VkFormat depthFormat = VK_FORMAT_UNDEFINED;
 
   uint32_t currentFrame = 0;
-
+  uint32_t currentCameraLayer = 0xFFFFFFFF;
   MeshID particleQuadMesh = 0;
   LightID sunLightID = INVALID_LIGHT_ID;
   LightID moonLightID = INVALID_LIGHT_ID;
-  uint32_t currentCameraLayer = 0xFFFFFFFF;
 
   bool framebufferResized = false;
 

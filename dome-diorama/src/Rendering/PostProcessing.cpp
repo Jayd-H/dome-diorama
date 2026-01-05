@@ -301,21 +301,8 @@ void PostProcessing::createDepthResources() {
       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
 
-  VkImageViewCreateInfo viewInfo{};
-  viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-  viewInfo.image = depthImage;
-  viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-  viewInfo.format = depthFormat;
-  viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-  viewInfo.subresourceRange.baseMipLevel = 0;
-  viewInfo.subresourceRange.levelCount = 1;
-  viewInfo.subresourceRange.baseArrayLayer = 0;
-  viewInfo.subresourceRange.layerCount = 1;
-
-  if (vkCreateImageView(device, &viewInfo, nullptr, &depthImageView) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create depth image view!");
-  }
+  depthImageView = RenderUtils::createImageView(device, depthImage, depthFormat,
+                                                VK_IMAGE_ASPECT_DEPTH_BIT);
 
   Debug::log(Debug::Category::POSTPROCESSING,
              "PostProcessing: Depth resources created");
