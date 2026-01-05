@@ -494,21 +494,6 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
 
   updateCameraLayer();
 
-  static bool logged = false;
-  if (!logged) {
-    TimeOfDay timeInfo;
-    worldState.getTime(timeInfo);
-    Debug::log(Debug::Category::MAIN, "Sun Position: (", sunPosition.x, ", ",
-               sunPosition.y, ", ", sunPosition.z, ")");
-    Debug::log(Debug::Category::MAIN, "Moon Position: (", moonPosition.x, ", ",
-               moonPosition.y, ", ", moonPosition.z, ")");
-    Debug::log(Debug::Category::MAIN, "Normalized Time: ", timeInfo.normalizedTime);
-    Debug::log(Debug::Category::MAIN,
-               "Intensity: ", sunLight ? sunLight->getIntensity() : 0.0f);
-
-    logged = true;
-  }
-
   const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
   const float sceneRadius = 200.0f;
   lightManager->updateAllShadowMatrices(sceneCenter, sceneRadius);
