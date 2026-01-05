@@ -83,14 +83,34 @@ void LightManager::updateLightBuffer() {
   lbo.numLights = static_cast<int>(lights.size());
   lbo.numShadowMaps = static_cast<int>(shadowSystem->getShadowMaps().size());
 
+  static bool logged = false;
+  if (!logged) {
+    Debug::log(Debug::Category::LIGHTS,
+               "LightManager: Updating light buffer with ", lbo.numLights,
+               " lights and ", lbo.numShadowMaps, " shadow maps");
+
+    Debug::log(Debug::Category::LIGHTS,
+               "LightManager: Light buffer size: ", sizeof(LightBufferObject),
+               " bytes");
+
+    Debug::log(Debug::Category::LIGHTS,
+               "LightManager: Light data size: ", sizeof(LightData), " bytes");
+    logged = true;
+  }
+  
+
   for (size_t i = 0; i < lights.size(); i++) {
     const auto& l = *lights[i];
-    lbo.lights[i].position_intensity =
-        glm::vec4(l.getPosition(), l.getIntensity());
-    lbo.lights[i].direction_constant =
-        glm::vec4(l.getDirection(), l.getConstant());
-    lbo.lights[i].color_linear = glm::vec4(l.getColor(), l.getLinear());
+
+    lbo.lights[i].position = glm::vec4(l.getPosition(), 1.0f);
+    lbo.lights[i].direction = glm::vec4(l.getDirection(), 0.0f);
+    lbo.lights[i].color = glm::vec4(l.getColor(), 1.0f);
+
+    lbo.lights[i].intensity = l.getIntensity();
+    lbo.lights[i].constant = l.getConstant();
+    lbo.lights[i].linear = l.getLinear();
     lbo.lights[i].quadratic = l.getQuadratic();
+
     lbo.lights[i].cutOff = l.getCutOff();
     lbo.lights[i].outerCutOff = l.getOuterCutOff();
     lbo.lights[i].type = static_cast<int>(l.getType());

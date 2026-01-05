@@ -2,17 +2,21 @@
 
 layout(constant_id = 0) const int SHADING_MODE = 0;
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(binding = 0, set = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
+    mat4 lightSpaceMatrices[4];
     vec3 eyePos;
 } ubo;
 
 struct LightData {
     mat4 lightSpaceMatrix;
-    vec4 position_intensity;
-    vec4 direction_constant;
-    vec4 color_linear;
+    vec4 position;
+    vec4 direction;
+    vec4 color;
+    float intensity;
+    float constant;
+    float linear;
     float quadratic;
     float cutOff;
     float outerCutOff;
@@ -21,6 +25,7 @@ struct LightData {
     int shadowMapIndex;
     float padding1;
     float padding2;
+    float padding3;
 };
 
 layout(binding = 1, set = 0) uniform LightBuffer {
@@ -61,15 +66,9 @@ layout(location = 4) out vec3 fragLighting;
 const float PI = 3.14159265359;
 
 vec3 calculatePointLight(LightData light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo, float roughness, float metallic) {
-    vec3 position = light.position_intensity.xyz;
-    float intensity = light.position_intensity.w;
-    float constant = light.direction_constant.w;
-    float linear = light.color_linear.w;
-    vec3 color = light.color_linear.xyz;
-
-    vec3 lightDir = normalize(position - fragPos);
-    float distance = length(position - fragPos);
-    float attenuation = 1.0 / (constant + linear * distance + light.quadratic * (distance * distance));
+    vec3 lightDir = normalize(light.position.xyz - fragPos);
+    float distance = length(light.position.xyz - fragPos);
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     
     float diff = max(dot(normal, lightDir), 0.0);
     
@@ -85,15 +84,11 @@ vec3 calculatePointLight(LightData light, vec3 normal, vec3 fragPos, vec3 viewDi
     vec3 diffuse = kD * albedo / PI;
     vec3 specular = kS * spec;
     
-    return (diffuse + specular) * color * intensity * diff * attenuation;
+    return (diffuse + specular) * light.color.xyz * light.intensity * diff * attenuation;
 }
 
 vec3 calculateSunLight(LightData light, vec3 normal, vec3 viewDir, vec3 albedo, float roughness, float metallic) {
-    vec3 direction = light.direction_constant.xyz;
-    float intensity = light.position_intensity.w;
-    vec3 color = light.color_linear.xyz;
-
-    vec3 lightDir = normalize(-direction);
+    vec3 lightDir = normalize(-light.direction.xyz);
     
     float diff = max(dot(normal, lightDir), 0.0);
     
@@ -109,7 +104,7 @@ vec3 calculateSunLight(LightData light, vec3 normal, vec3 viewDir, vec3 albedo, 
     vec3 diffuse = kD * albedo / PI;
     vec3 specular = kS * spec;
     
-    return (diffuse + specular) * color * intensity * diff;
+    return (diffuse + specular) * light.color.xyz * light.intensity * diff;
 }
 
 void main() {

@@ -12,18 +12,22 @@
 constexpr uint32_t MAX_LIGHTS = 8;
 
 struct LightData {
-  alignas(16) glm::mat4 lightSpaceMatrix;    // 64 bytes
-  alignas(16) glm::vec4 position_intensity;  // 16 bytes
-  alignas(16) glm::vec4 direction_constant;  // 16 bytes
-  alignas(16) glm::vec4 color_linear;        // 16 bytes
-  alignas(4) float quadratic;                // 4 bytes
-  alignas(4) float cutOff;                   // 4 bytes
-  alignas(4) float outerCutOff;              // 4 bytes
-  alignas(4) int type;                       // 4 bytes
-  alignas(4) int castsShadows;               // 4 bytes
-  alignas(4) int shadowMapIndex;             // 4 bytes
-  alignas(4) float padding1;                 // 4 bytes
-  alignas(4) float padding2;                 // 4 bytes (Total 144 bytes)
+  alignas(16) glm::mat4 lightSpaceMatrix;
+  alignas(16) glm::vec4 position;
+  alignas(16) glm::vec4 direction;
+  alignas(16) glm::vec4 color;
+  alignas(4) float intensity;
+  alignas(4) float constant;
+  alignas(4) float linear;
+  alignas(4) float quadratic;
+  alignas(4) float cutOff;
+  alignas(4) float outerCutOff;
+  alignas(4) int type;
+  alignas(4) int castsShadows;
+  alignas(4) int shadowMapIndex;
+  alignas(4) float padding1;
+  alignas(4) float padding2;
+  alignas(4) float padding3;
 };
 
 struct LightBufferObject {
@@ -77,7 +81,6 @@ class LightManager final {
   void debugPrintLightInfo() const;
 
  private:
-  // Reordered members for OPT-13
   std::vector<std::unique_ptr<Light>> lights;
   std::unique_ptr<ShadowSystem> shadowSystem;
   RenderDevice* renderDevice;
