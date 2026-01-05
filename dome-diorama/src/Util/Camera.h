@@ -34,13 +34,11 @@ class Camera final {
       }
     }
 
-    const float rotSpeed = 2.0f * deltaTime;
-    const float panSpeed = fpsSpeed * deltaTime;
-
     const bool ctrlPressed = input.isKeyPressed(GLFW_KEY_LEFT_CONTROL) ||
                              input.isKeyPressed(GLFW_KEY_RIGHT_CONTROL);
 
     if (ctrlPressed) {
+      const float panSpeed = fpsSpeed * deltaTime;
       const glm::vec3 forward = getForwardVector();
       const glm::vec3 right =
           glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
@@ -62,6 +60,7 @@ class Camera final {
         }
       }
     } else {
+      const float rotSpeed = 2.0f * deltaTime;
       float dYaw = 0.0f;
       float dPitch = 0.0f;
 
@@ -70,7 +69,8 @@ class Camera final {
       if (input.isKeyPressed(GLFW_KEY_UP)) dPitch += rotSpeed;
       if (input.isKeyPressed(GLFW_KEY_DOWN)) dPitch -= rotSpeed;
 
-      if (dYaw != 0.0f || dPitch != 0.0f) {
+      if (std::abs(dYaw) > std::numeric_limits<float>::epsilon() ||
+          std::abs(dPitch) > std::numeric_limits<float>::epsilon()) {
         if (mode == CameraMode::FPS) {
           fpsYaw += glm::degrees(dYaw) * 50.0f * deltaTime;
           fpsPitch += glm::degrees(dPitch) * 50.0f * deltaTime;
@@ -84,7 +84,7 @@ class Camera final {
     }
 
     if (mode == CameraMode::ORBIT) {
-      updateOrbitMode(input, deltaTime);
+      updateOrbitMode(input);
     } else {
       updateFPSMode(input, deltaTime);
     }
@@ -125,7 +125,7 @@ class Camera final {
     }
   }
 
-  inline glm::vec3 getPosition() const {
+  inline const glm::vec3& getPosition() const {
     if (mode == CameraMode::ORBIT) {
       return lastOrbitPosition;
     }
@@ -141,7 +141,7 @@ class Camera final {
     return glm::normalize(forward);
   }
 
-  inline void updateOrbitMode(const Input& input, float deltaTime) {
+  inline void updateOrbitMode(const Input& input) {
     double dx = 0.0;
     double dy = 0.0;
     input.getMouseDelta(dx, dy);

@@ -56,6 +56,7 @@ class WorldState final {
   inline explicit WorldState(const WorldConfig& config = WorldConfig())
       : rng(std::random_device{}()),
         windDirection(1.0f, 0.0f, 0.0f),
+        targetWindDirection(1.0f, 0.0f, 0.0f),
         dayLengthInSeconds(config.dayLengthInSeconds),
         currentTemperature(config.startingTemperature),
         targetTemperature(config.startingTemperature),
@@ -63,7 +64,6 @@ class WorldState final {
         targetHumidity(config.startingHumidity),
         windSpeed(config.startingWindSpeed),
         targetWindSpeed(config.startingWindSpeed),
-        targetWindDirection(1.0f, 0.0f, 0.0f),
         precipitationIntensity(0.0f),
         minTemperature(config.minTemperature),
         maxTemperature(config.maxTemperature),
@@ -98,9 +98,9 @@ class WorldState final {
   }
 
   inline float getTemperature() const { return currentTemperature; }
-  inline const glm::vec3& getWindDirection() const { return windDirection; }
+  inline glm::vec3 getWindDirection() const { return windDirection; }
   inline float getWindSpeed() const { return windSpeed; }
-  inline TimeOfDay getTime() const { return time; }
+  inline const TimeOfDay& getTime() const { return time; }
   inline WeatherState getWeather() const { return currentWeather; }
   inline float getPrecipitationIntensity() const {
     return precipitationIntensity;
@@ -240,8 +240,6 @@ inline float getSunIntensity() const {
       parameterUpdateTimer = 0.0f;
       updateTargets();
     }
-
-    const float progress = parameterUpdateTimer / parameterUpdateInterval;
 
     const float baseTransitionSpeed = transitionSmoothness;
     currentTemperature += (targetTemperature - currentTemperature) * deltaTime *

@@ -22,14 +22,16 @@ struct LightData {
   alignas(4) int type;                       // 4 bytes
   alignas(4) int castsShadows;               // 4 bytes
   alignas(4) int shadowMapIndex;             // 4 bytes
-  alignas(8) glm::vec2 _pad;                 // 8 bytes (Total 144 bytes)
+  alignas(4) float padding1;                 // 4 bytes
+  alignas(4) float padding2;                 // 4 bytes (Total 144 bytes)
 };
 
 struct LightBufferObject {
   std::array<LightData, MAX_LIGHTS> lights;
   alignas(4) int numLights;
   alignas(4) int numShadowMaps;
-  alignas(8) glm::vec2 _pad;
+  alignas(4) float padding1;
+  alignas(4) float padding2;
 };
 
 class LightManager final {

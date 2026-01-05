@@ -30,13 +30,13 @@ class Light final {
   LightType getType() const { return type; }
 
   void setPosition(const glm::vec3& p) { position = p; }
-  const glm::vec3& getPosition() const { return position; }
+  glm::vec3 getPosition() const { return position; }
 
   void setDirection(const glm::vec3& d) { direction = d; }
-  const glm::vec3& getDirection() const { return direction; }
+  glm::vec3 getDirection() const { return direction; }
 
   void setColor(const glm::vec3& c) { color = c; }
-  const glm::vec3& getColor() const { return color; }
+  glm::vec3 getColor() const { return color; }
 
   void setIntensity(float i) { intensity = i; }
   float getIntensity() const { return intensity; }
@@ -51,7 +51,7 @@ class Light final {
   float getQuadratic() const { return quadratic; }
 
   void setName(const std::string& n) { name = n; }
-  const std::string& getName() const { return name; }
+  std::string getName() const { return name; }
 
   void setCastsShadows(bool cast) { castsShadows = cast; }
   bool getCastsShadows() const { return castsShadows; }
@@ -149,7 +149,7 @@ class LightBuilder final {
     return *this;
   }
 
-  Light build() const { return light; }
+  const Light& build() const { return light; }
 
  private:
   Light light;

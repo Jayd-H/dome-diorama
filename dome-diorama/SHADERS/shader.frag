@@ -20,14 +20,16 @@ struct LightData {
     int type;
     int castsShadows;
     int shadowMapIndex;
-    vec2 padding;
+    float padding1;
+    float padding2;
 };
 
 layout(binding = 1, set = 0) uniform LightBuffer {
     LightData lights[8];
     int numLights;
     int numShadowMaps;
-    vec2 padding;
+    float padding1;
+    float padding2;
 } lightBuffer;
 
 layout(binding = 0, set = 1) uniform MaterialProperties {

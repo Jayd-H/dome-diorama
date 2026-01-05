@@ -206,3 +206,4 @@ inline bool Debug::enableTexture = false;
 inline bool Debug::enableMaterials = false;
 inline bool Debug::enablePostProcessing = false;
 inline bool Debug::enableShadows = false;
+
