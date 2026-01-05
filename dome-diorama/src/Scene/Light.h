@@ -30,13 +30,13 @@ class Light final {
   LightType getType() const { return type; }
 
   void setPosition(const glm::vec3& p) { position = p; }
-  const glm::vec3& getPosition() const { return position; }
+  void getPosition(glm::vec3& outPosition) const { outPosition = position; }
 
   void setDirection(const glm::vec3& d) { direction = d; }
-  const glm::vec3& getDirection() const { return direction; }
+  void getDirection(glm::vec3& outDirection) const { outDirection = direction; }
 
   void setColor(const glm::vec3& c) { color = c; }
-  const glm::vec3& getColor() const { return color; }
+  void getColor(glm::vec3& outColor) const { outColor = color; }
 
   void setIntensity(float i) { intensity = i; }
   float getIntensity() const { return intensity; }
@@ -51,7 +51,7 @@ class Light final {
   float getQuadratic() const { return quadratic; }
 
   void setName(const std::string& n) { name = n; }
-  const std::string& getName() const { return name; }
+  void getName(std::string& outName) const { outName = name; }
 
   void setCastsShadows(bool cast) { castsShadows = cast; }
   bool getCastsShadows() const { return castsShadows; }
@@ -65,11 +65,12 @@ class Light final {
   void setOuterCutOff(float c) { outerCutOff = c; }
   float getOuterCutOff() const { return outerCutOff; }
 
-  glm::vec3 getEffectivePosition() const {
+  void getEffectivePosition(glm::vec3& outPos) const {
     if (type == LightType::Sun) {
-      return -direction * 1000.0f;
+      outPos = -direction * 1000.0f;
+    } else {
+      outPos = position;
     }
-    return position;
   }
 
  private:
@@ -149,7 +150,7 @@ class LightBuilder final {
     return *this;
   }
 
-  Light build() const { return light; }
+  void build(Light& outLight) const { outLight = light; }
 
  private:
   Light light;

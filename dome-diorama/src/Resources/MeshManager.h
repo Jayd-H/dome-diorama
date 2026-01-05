@@ -32,25 +32,35 @@ class Mesh final {
   Mesh(Mesh&&) = default;
   Mesh& operator=(Mesh&&) = default;
 
-  [[nodiscard]] std::vector<Vertex> getVertices() const { return vertices; }
-
-  [[nodiscard]] std::vector<uint16_t> getIndices() const { return indices; }
-
-  [[nodiscard]] std::string getName() const { return name; }
-
-  [[nodiscard]] VkBuffer getVertexBuffer() const { return vertexBuffer; }
-  [[nodiscard]] VkDeviceMemory getVertexBufferMemory() const {
-    return vertexBufferMemory;
+  void getVertices(std::vector<Vertex>& outVertices) const {
+    outVertices = vertices;
   }
-  [[nodiscard]] VkBuffer getIndexBuffer() const { return indexBuffer; }
-  [[nodiscard]] VkDeviceMemory getIndexBufferMemory() const {
-    return indexBufferMemory;
+  void setVertices(const std::vector<Vertex>& v) { vertices = v; }
+
+  void getIndices(std::vector<uint16_t>& outIndices) const {
+    outIndices = indices;
   }
-  [[nodiscard]] MeshType getType() const { return type; }
+  void setIndices(const std::vector<uint16_t>& i) { indices = i; }
+
+  void getName(std::string& outName) const { outName = name; }
+  void setName(const std::string& n) { name = n; }
+
+  VkBuffer getVertexBuffer() const { return vertexBuffer; }
+  void setVertexBuffer(VkBuffer buffer) { vertexBuffer = buffer; }
+
+  VkDeviceMemory getVertexBufferMemory() const { return vertexBufferMemory; }
+  void setVertexBufferMemory(VkDeviceMemory mem) { vertexBufferMemory = mem; }
+
+  VkBuffer getIndexBuffer() const { return indexBuffer; }
+  void setIndexBuffer(VkBuffer buffer) { indexBuffer = buffer; }
+
+  VkDeviceMemory getIndexBufferMemory() const { return indexBufferMemory; }
+  void setIndexBufferMemory(VkDeviceMemory mem) { indexBufferMemory = mem; }
+
+  MeshType getType() const { return type; }
+  void setType(MeshType t) { type = t; }
 
  private:
-  friend class MeshManager;
-
   std::vector<Vertex> vertices;
   std::vector<uint16_t> indices;
   std::string name;

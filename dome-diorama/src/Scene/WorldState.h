@@ -98,16 +98,22 @@ class WorldState final {
   }
 
   inline float getTemperature() const { return currentTemperature; }
-  inline const glm::vec3& getWindDirection() const { return windDirection; }
+
+  void getWindDirection(glm::vec3& outDirection) const {
+    outDirection = windDirection;
+  }
+
   inline float getWindSpeed() const { return windSpeed; }
-  inline TimeOfDay getTime() const { return time; }
+
+  void getTime(TimeOfDay& outTime) const { outTime = time; }
+
   inline WeatherState getWeather() const { return currentWeather; }
   inline float getPrecipitationIntensity() const {
     return precipitationIntensity;
   }
   inline float getHumidity() const { return humidity; }
 
- inline glm::vec3 getSunDirection() const {
+  inline glm::vec3 getSunDirection() const {
     const float angle = time.normalizedTime * glm::two_pi<float>();
     const float radius = 500.0f;
     const float x = cos(angle) * radius * 0.3f;
@@ -125,7 +131,7 @@ class WorldState final {
     return glm::vec3(x, y, z);
   }
 
- inline float getSunIntensity() const {
+  inline float getSunIntensity() const {
     const float sunY = getSunDirection().y;
 
     float intensity = glm::smoothstep(-100.0f, 200.0f, sunY);

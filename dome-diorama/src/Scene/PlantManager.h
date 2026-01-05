@@ -54,7 +54,7 @@ class Plant final {
   int getFireEmitterID() const { return state_.fireEmitterID; }
   void setFireEmitterID(int id) { state_.fireEmitterID = id; }
 
-  [[nodiscard]] const PlantState& getState() const noexcept { return state_; }
+  void getState(PlantState& outState) const { outState = state_; }
 
   void setStage(int s) { stage_ = s; }
   void setVariant(int v) { variant_ = v; }
@@ -125,7 +125,6 @@ class PlantManager final {
   void updateEnvironment(std::vector<Object>& sceneObjects,
                          const EnvironmentConditions& conditions);
 
-
   void startFire(Plant& plant, const glm::vec3& position);
 
   inline size_t getPlantCount() const { return plants.size(); }
@@ -138,9 +137,7 @@ class PlantManager final {
     return plants[index].getObjectIndex();
   }
 
-  [[nodiscard]] const PlantWindData& getWindData() const noexcept {
-    return windData;
-  }
+  void getWindData(PlantWindData& outWindData) const { outWindData = windData; }
 
   inline void setParticleManager(ParticleManager* pm) { particleManager = pm; }
 
