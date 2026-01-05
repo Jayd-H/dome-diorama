@@ -59,7 +59,7 @@ class ShadowSystem final {
     return glm::mat4(1.0f);
   }
 
-  inline std::vector<ShadowMapData> getShadowMaps() const { return shadowMaps; }
+  inline const std::vector<ShadowMapData>& getShadowMaps() const { return shadowMaps; }
 
   inline uint32_t getShadowMapCount() const {
     return static_cast<uint32_t>(shadowMaps.size());
