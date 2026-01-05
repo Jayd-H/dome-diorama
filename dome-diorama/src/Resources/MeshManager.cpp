@@ -18,9 +18,9 @@ Vertex::getAttributeDescriptions() {
   static std::array<VkVertexInputAttributeDescription, 4> const
       attributeDescriptions = {
           {{0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)},
-           {0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)},
-           {0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)},
-           {0, 3, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)}}};
+           {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)},
+           {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)},
+           {3, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)}}};
   return attributeDescriptions;
 }
 

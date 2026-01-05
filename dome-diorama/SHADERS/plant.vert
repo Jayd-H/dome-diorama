@@ -14,9 +14,9 @@ layout(location = 4) out vec3 fragLighting;
 layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
+    mat4 lightSpaceMatrices[4];
     vec3 eyePos;
     float time;
-    mat4 lightSpaceMatrices[4];
 } ubo;
 
 layout(push_constant) uniform PushConstants {

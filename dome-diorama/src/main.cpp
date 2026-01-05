@@ -160,22 +160,6 @@ void createScene(const ConfigParser& config, MeshManager* meshManager,
       .build(pokeBObj);
   sceneObjects.push_back(pokeBObj);
 
-  PlantSpawnConfig pConfig;
-  pConfig.numCacti = config.getInt("Plants.num_cacti", 400);
-  pConfig.numTrees = config.getInt("Plants.num_trees", 100);
-  pConfig.minRadius = config.getFloat("Plants.min_spawn_radius", 8.0f);
-  pConfig.maxRadius = config.getFloat("Plants.max_spawn_radius", 300.0f);
-  pConfig.seed = config.getInt("Plants.spawn_seed", 67);
-  pConfig.randomGrowthStages =
-      config.getBool("Plants.random_growth_stages", true);
-  pConfig.scaleVariance = config.getFloat("Plants.scale_variance", 0.7f);
-  pConfig.rotationVariance = config.getFloat("Plants.rotation_variance", 0.8f);
-
-  plantManager->setParticleManager(particleManager);
-  plantManager->setTerrainMesh(meshManager->getMesh(terrainMesh));
-  plantManager->spawnPlantsOnTerrain(
-      sceneObjects, meshManager->getMesh(terrainMesh), pConfig);
-
   Light sunLight;
   LightBuilder()
       .type(LightType::Sun)
@@ -200,13 +184,29 @@ void createScene(const ConfigParser& config, MeshManager* meshManager,
   LightBuilder()
       .type(LightType::Point)
       .name("Point Light")
-      .position(0.0f, 50.0f, 0.0f)
+      .position(0.0f, 0.0f, 0.0f)
       .color(1.0f, 0.95f, 0.8f)
       .attenuation(1.0f, 0.09f, 0.032f)
       .intensity(5.0f)
       .castsShadows(true)
       .build(pointlight);
   lightManager->addLight(pointlight);
+
+  PlantSpawnConfig pConfig;
+  pConfig.numCacti = config.getInt("Plants.num_cacti", 400);
+  pConfig.numTrees = config.getInt("Plants.num_trees", 100);
+  pConfig.minRadius = config.getFloat("Plants.min_spawn_radius", 8.0f);
+  pConfig.maxRadius = config.getFloat("Plants.max_spawn_radius", 300.0f);
+  pConfig.seed = config.getInt("Plants.spawn_seed", 67);
+  pConfig.randomGrowthStages =
+      config.getBool("Plants.random_growth_stages", true);
+  pConfig.scaleVariance = config.getFloat("Plants.scale_variance", 0.7f);
+  pConfig.rotationVariance = config.getFloat("Plants.rotation_variance", 0.8f);
+
+  plantManager->setParticleManager(particleManager);
+  plantManager->setTerrainMesh(meshManager->getMesh(terrainMesh));
+  plantManager->spawnPlantsOnTerrain(
+      sceneObjects, meshManager->getMesh(terrainMesh), pConfig);
 
   Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
              " objects, ", lightManager->getLightCount(), " lights, ",

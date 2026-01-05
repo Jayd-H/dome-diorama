@@ -195,7 +195,7 @@ void Application::initVulkan() {
                                commandBuffers);
 
   Debug::log(Debug::Category::VULKAN, "Creating sync objects...");
-  Vulkan::createSyncObjects(device, MAX_FRAMES_IN_FLIGHT,
+  Vulkan::createSyncObjects(device, static_cast<int>(swapChainImages.size()),
                             imageAvailableSemaphores, renderFinishedSemaphores,
                             inFlightFences);
 
@@ -350,7 +350,7 @@ void Application::drawFrame() {
   submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
   const std::array<VkSemaphore, 1> signalSemaphores = {
-      renderFinishedSemaphores[currentFrame]};
+      renderFinishedSemaphores[imageIndex]};
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = signalSemaphores.data();
 
@@ -506,6 +506,21 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
 
   updateCameraLayer();
 
+  bool logged = false;
+  if (!logged) {
+    Debug::log(Debug::Category::MAIN, "Sun Position: (", sunPosition.x, ", ",
+               sunPosition.y, ", ", sunPosition.z, ")");
+    Debug::log(Debug::Category::MAIN, "Moon Position: (", moonPosition.x, ", ",
+               moonPosition.y, ", ", moonPosition.z, ")");
+    Debug::log(Debug::Category::MAIN, "Sun Angle: ", sunAngle);
+    Debug::log(Debug::Category::MAIN, "Moon Angle: ", moonAngle);
+    Debug::log(Debug::Category::MAIN, "Normalized Time: ", normalizedTime);
+    Debug::log(Debug::Category::MAIN,
+               "Intensity: ", sunLight ? sunLight->getIntensity() : 0.0f);
+
+    logged = true;
+  }
+
   const glm::vec3 sceneCenter = glm::vec3(0.0f, 0.0f, 0.0f);
   const float sceneRadius = 200.0f;
   lightManager->updateAllShadowMatrices(sceneCenter, sceneRadius);
@@ -570,7 +585,6 @@ void Application::createDepthResources() {
 
   depthImageView = RenderUtils::createImageView(device, depthImage, depthFormat,
                                                 VK_IMAGE_ASPECT_DEPTH_BIT);
-
 }
 
 void Application::framebufferResizeCallback(GLFWwindow* win, int width,
@@ -1405,8 +1419,7 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     plantPipeline);
 
-  setupViewportScissor(commandBuffer,
-                       static_cast<float>(swapChainExtent.width),
+  setupViewportScissor(commandBuffer, static_cast<float>(swapChainExtent.width),
                        static_cast<float>(swapChainExtent.height));
 
   PlantWindData windData;
@@ -1416,12 +1429,12 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
   windDebugTimer += 0.016f;
   if (windDebugTimer >= 5.0f) {
     windDebugTimer = 0.0f;
-    Debug::log(
-        Debug::Category::PLANTMANAGER, "Rendering plants with wind - Dir: (",
-        windData.windDirection.x, ", ", windData.windDirection.y, ", ",
-        windData.windDirection.z, ") Strength: ", windData.windStrength,
-        " Time: ", windData.time, " SwayAmount: ", windData.swayAmount,
-        " SwaySpeed: ", windData.swaySpeed);
+    Debug::log(Debug::Category::PLANTMANAGER,
+               "Rendering plants with wind - Dir: (", windData.windDirection.x,
+               ", ", windData.windDirection.y, ", ", windData.windDirection.z,
+               ") Strength: ", windData.windStrength, " Time: ", windData.time,
+               " SwayAmount: ", windData.swayAmount,
+               " SwaySpeed: ", windData.swaySpeed);
   }
 
   for (size_t const idx : plantObjectIndicesSet) {
@@ -1433,7 +1446,8 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
     if (object.getMaterialID() == INVALID_MATERIAL_ID) continue;
 
     const Mesh* const plantMesh = meshManager->getMesh(object.getMeshID());
-    const Material* const material = materialManager->getMaterial(object.getMaterialID());
+    const Material* const material =
+        materialManager->getMaterial(object.getMaterialID());
 
     if (!plantMesh || plantMesh->getVertexBuffer() == VK_NULL_HANDLE) continue;
     if (!material || material->getDescriptorSet() == VK_NULL_HANDLE) continue;
@@ -1463,14 +1477,14 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
         descriptorSets[frameIndex], material->getDescriptorSet(),
         lightManager->getShadowDescriptorSet()};
 
-    vkCmdBindDescriptorSets(
-        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, plantPipelineLayout,
-        0, static_cast<uint32_t>(descriptorSetsToBind.size()),
-        descriptorSetsToBind.data(), 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            plantPipelineLayout, 0,
+                            static_cast<uint32_t>(descriptorSetsToBind.size()),
+                            descriptorSetsToBind.data(), 0, nullptr);
 
     std::vector<uint16_t> indices;
     plantMesh->getIndices(indices);
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1,
-                     0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0,
+                     0, 0);
   }
 }
