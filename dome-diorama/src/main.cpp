@@ -67,22 +67,27 @@ std::vector<Object> createScene(const ConfigParser& config,
 
   const MeshID sphereMesh = meshManager->createSphere(10.0f, 32);
 
-  sceneObjects.push_back(ObjectBuilder()
-                             .name("Sun")
-                             .position(0.0f, 500.0f, 0.0f)
-                             .mesh(sphereMesh)
-                             .material(sunMat)
-                             .scale(1.5f)
-                             .layerMask(0x1)
-                             .build());
-  sceneObjects.push_back(ObjectBuilder()
-                             .name("Moon")
-                             .position(0.0f, -450.0f, 0.0f)
-                             .mesh(sphereMesh)
-                             .material(moonMat)
-                             .scale(0.7f)
-                             .layerMask(0x1)
-                             .build());
+  Object sunObj;
+  ObjectBuilder()
+      .name("Sun")
+      .position(0.0f, 500.0f, 0.0f)
+      .mesh(sphereMesh)
+      .material(sunMat)
+      .scale(1.5f)
+      .layerMask(0x1)
+      .build(sunObj);
+  sceneObjects.push_back(sunObj);
+
+  Object moonObj;
+  ObjectBuilder()
+      .name("Moon")
+      .position(0.0f, -450.0f, 0.0f)
+      .mesh(sphereMesh)
+      .material(moonMat)
+      .scale(0.7f)
+      .layerMask(0x1)
+      .build(moonObj);
+  sceneObjects.push_back(moonObj);
 
   const MaterialID sandMat = materialManager->registerMaterial(
       MaterialBuilder()
@@ -102,12 +107,15 @@ std::vector<Object> createScene(const ConfigParser& config,
       config.getInt("Terrain.terrain_octaves", 2),
       config.getFloat("Terrain.terrain_persistence", 0.6f),
       config.getInt("Terrain.terrain_seed", 42));
-  sceneObjects.push_back(ObjectBuilder()
-                             .name("Sand Terrain")
-                             .position(0.0f, 0.0f, 0.0f)
-                             .mesh(terrainMesh)
-                             .material(sandMat)
-                             .build());
+
+  Object terrainObj;
+  ObjectBuilder()
+      .name("Sand Terrain")
+      .position(0.0f, 0.0f, 0.0f)
+      .mesh(terrainMesh)
+      .material(sandMat)
+      .build(terrainObj);
+  sceneObjects.push_back(terrainObj);
 
   const MeshID skyMesh = meshManager->createSphere(100.0f, 64);
   const MaterialID skyMat =
@@ -118,13 +126,16 @@ std::vector<Object> createScene(const ConfigParser& config,
                                             .roughness(0.1f)
                                             .transparent(true)
                                             .opacity(0.1f));
-  sceneObjects.push_back(ObjectBuilder()
-                             .name("Skybox Sphere")
-                             .position(0.0f, 0.0f, 0.0f)
-                             .mesh(skyMesh)
-                             .material(skyMat)
-                             .scale(3.0f)
-                             .build());
+
+  Object skyObj;
+  ObjectBuilder()
+      .name("Skybox Sphere")
+      .position(0.0f, 0.0f, 0.0f)
+      .mesh(skyMesh)
+      .material(skyMat)
+      .scale(3.0f)
+      .build(skyObj);
+  sceneObjects.push_back(skyObj);
 
   const MeshID pokeW = meshManager->loadFromOBJ("./Models/PokeWhite.obj");
   const MaterialID pokeWMat =
@@ -133,20 +144,25 @@ std::vector<Object> createScene(const ConfigParser& config,
   const MaterialID pokeBMat =
       materialManager->loadFromMTL("./Models/PokeBlack.mtl");
 
-  sceneObjects.push_back(ObjectBuilder()
-                             .name("Pokeball White")
-                             .position(-10.0f, -130.0f, 0.0f)
-                             .mesh(pokeW)
-                             .material(pokeWMat)
-                             .scale(3.05f)
-                             .build());
-  sceneObjects.push_back(ObjectBuilder()
-                             .name("Pokeball Black")
-                             .position(0.0f, 0.0f, 0.0f)
-                             .mesh(pokeB)
-                             .material(pokeBMat)
-                             .scale(3.05f)
-                             .build());
+  Object pokeWObj;
+  ObjectBuilder()
+      .name("Pokeball White")
+      .position(-10.0f, -130.0f, 0.0f)
+      .mesh(pokeW)
+      .material(pokeWMat)
+      .scale(3.05f)
+      .build(pokeWObj);
+  sceneObjects.push_back(pokeWObj);
+
+  Object pokeBObj;
+  ObjectBuilder()
+      .name("Pokeball Black")
+      .position(0.0f, 0.0f, 0.0f)
+      .mesh(pokeB)
+      .material(pokeBMat)
+      .scale(3.05f)
+      .build(pokeBObj);
+  sceneObjects.push_back(pokeBObj);
 
   PlantSpawnConfig pConfig;
   pConfig.numCacti = config.getInt("Plants.num_cacti", 400);
@@ -164,14 +180,15 @@ std::vector<Object> createScene(const ConfigParser& config,
   plantManager->spawnPlantsOnTerrain(
       sceneObjects, meshManager->getMesh(terrainMesh), pConfig);
 
-  const Light sunLight = LightBuilder()
-                             .type(LightType::Sun)
-                             .name("Sun Light")
-                             .direction(0.0f, -1.0f, 0.0f)
-                             .color(1.0f, 0.95f, 0.8f)
-                             .intensity(5.0f)
-                             .castsShadows(true)
-                             .build();
+  Light sunLight;
+  LightBuilder()
+      .type(LightType::Sun)
+      .name("Sun Light")
+      .direction(0.0f, -1.0f, 0.0f)
+      .color(1.0f, 0.95f, 0.8f)
+      .intensity(5.0f)
+      .castsShadows(true)
+      .build(sunLight);
   sunLightID = lightManager->addLight(sunLight);
 
   const MaterialID partMat =
@@ -183,15 +200,16 @@ std::vector<Object> createScene(const ConfigParser& config,
                                             .transparent(true));
   plantManager->setFireMaterialID(partMat);
 
-  const Light pointlight = LightBuilder()
-                              .type(LightType::Point)
-                              .name("Point Light")
-                              .position(0.0f, 50.0f, 0.0f)
-                              .color(1.0f, 0.95f, 0.8f)
-                              .attenuation(1.0f, 0.09f, 0.032f)
-                              .intensity(5.0f)
-                              .castsShadows(true)
-                              .build();
+  Light pointlight;
+  LightBuilder()
+      .type(LightType::Point)
+      .name("Point Light")
+      .position(0.0f, 50.0f, 0.0f)
+      .color(1.0f, 0.95f, 0.8f)
+      .attenuation(1.0f, 0.09f, 0.032f)
+      .intensity(5.0f)
+      .castsShadows(true)
+      .build(pointlight);
   lightManager->addLight(pointlight);
 
   Debug::log(Debug::Category::MAIN, "Created ", sceneObjects.size(),
@@ -288,10 +306,12 @@ int main() {
     app.getWeatherSystem()->setSunObject(&sceneObjects[0]);
     app.getWeatherSystem()->setMoonObject(&sceneObjects[1]);
 
-    Debug::log(Debug::Category::MAIN,
-               "Sun Index 0: ", sceneObjects[0].getName());
-    Debug::log(Debug::Category::MAIN,
-               "Moon Index 1: ", sceneObjects[1].getName());
+    std::string sunName, moonName;
+    sceneObjects[0].getName(sunName);
+    sceneObjects[1].getName(moonName);
+
+    Debug::log(Debug::Category::MAIN, "Sun Index 0: ", sunName);
+    Debug::log(Debug::Category::MAIN, "Moon Index 1: ", moonName);
     Debug::log(Debug::Category::MAIN, "Total Objects: ", sceneObjects.size());
 
     WorldConfig wConfig;

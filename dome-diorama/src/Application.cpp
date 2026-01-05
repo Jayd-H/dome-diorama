@@ -28,7 +28,6 @@ Application::~Application() {
   try {
     Debug::log(Debug::Category::MAIN, "Application: Destructor called");
   } catch (...) {
-    // Destructors should not throw
   }
 }
 
@@ -447,21 +446,23 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   conditions.temperature = worldState.getTemperature();
   conditions.humidity = worldState.getHumidity();
   conditions.precipitationIntensity = worldState.getPrecipitationIntensity();
-  conditions.windDirection = worldState.getWindDirection();
+  worldState.getWindDirection(conditions.windDirection);
   conditions.windStrength = worldState.getWindSpeed();
   conditions.deltaTime = scaledDeltaTime;
   conditions.time = simulationTime;
 
   plantManager->updateEnvironment(sceneObjects, conditions);
 
-  particleManager->update(scaledDeltaTime, worldState.getWindDirection(),
-                          worldState.getWindSpeed());
+  glm::vec3 windDir;
+  worldState.getWindDirection(windDir);
+  particleManager->update(scaledDeltaTime, windDir, worldState.getWindSpeed());
 
   if (weatherSystem) {
     weatherSystem->update(worldState, scaledDeltaTime);
   }
 
-  const TimeOfDay timeOfDay = worldState.getTime();
+  TimeOfDay timeOfDay;
+  worldState.getTime(timeOfDay);
   const float normalizedTime = timeOfDay.normalizedTime;
 
   const float sunAngle =
@@ -496,9 +497,11 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   }
 
   for (auto& object : sceneObjects) {
-    if (object.getName() == "Sun") {
+    std::string name;
+    object.getName(name);
+    if (name == "Sun") {
       object.setPosition(sunPosition);
-    } else if (object.getName() == "Moon") {
+    } else if (name == "Moon") {
       object.setPosition(moonPosition);
     }
   }
@@ -522,7 +525,8 @@ void Application::updateUniformBuffer(uint32_t currentImage) {
   ubo.eyePos = camera.getPosition();
   ubo.time = simulationTime;
 
-  const auto& shadowMaps = lightManager->getShadowSystem()->getShadowMaps();
+  std::vector<ShadowMapData> shadowMaps;
+  lightManager->getShadowSystem()->getShadowMaps(shadowMaps);
   for (size_t i = 0; i < shadowMaps.size() && i < MAX_SHADOW_CASTERS; i++) {
     ubo.lightSpaceMatrices[i] = shadowMaps[i].lightSpaceMatrix;
   }
@@ -778,7 +782,8 @@ void Application::setCameraPreset(int presetIndex) {
       const Plant& p = plantManager->getPlant(i);
       if (p.getType() == PlantType::Cactus) {
         const Object& obj = sceneObjects[plantManager->getPlantObjectIndex(i)];
-        const glm::vec3 plantPos = obj.getPosition();
+        glm::vec3 plantPos;
+        obj.getPosition(plantPos);
         camera.setPose(plantPos + glm::vec3(5.0f, 2.0f, 5.0f),
                        plantPos + glm::vec3(0.0f, 2.0f, 0.0f));
         Debug::log(Debug::Category::CAMERA, "Camera C3: Close-up on Cactus");
@@ -792,8 +797,7 @@ void Application::triggerFireEffect() {
   std::vector<size_t> validCacti;
   for (size_t i = 0; i < plantManager->getPlantCount(); ++i) {
     const Plant& p = plantManager->getPlant(i);
-    if (p.getType() == PlantType::Cactus && !p.isOnFire() &&
-        !p.isDead()) {
+    if (p.getType() == PlantType::Cactus && !p.isOnFire() && !p.isDead()) {
       validCacti.push_back(i);
     }
   }
@@ -809,7 +813,8 @@ void Application::triggerFireEffect() {
   Plant& p = plantManager->getPlantMutable(selectedIndex);
   const Object& obj =
       sceneObjects[plantManager->getPlantObjectIndex(selectedIndex)];
-  const glm::vec3 pos = obj.getPosition();
+  glm::vec3 pos;
+  obj.getPosition(pos);
 
   plantManager->startFire(p, pos);
 
@@ -1147,7 +1152,8 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     throw std::runtime_error("Failed to begin recording command buffer!");
   }
 
-  const auto& shadowMaps = lightManager->getShadowSystem()->getShadowMaps();
+  std::vector<ShadowMapData> shadowMaps;
+  lightManager->getShadowSystem()->getShadowMaps(shadowMaps);
 
   for (size_t smIdx = 0; smIdx < shadowMaps.size(); smIdx++) {
     const auto& shadowMap = shadowMaps[smIdx];
@@ -1231,9 +1237,10 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
       vkCmdBindIndexBuffer(commandBuffer, mesh->getIndexBuffer(), 0,
                            VK_INDEX_TYPE_UINT16);
 
-      vkCmdDrawIndexed(commandBuffer,
-                       static_cast<uint32_t>(mesh->getIndices().size()), 1, 0,
-                       0, 0);
+      std::vector<uint16_t> indices;
+      mesh->getIndices(indices);
+      vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1,
+                       0, 0, 0);
     }
 
     vkCmdEndRendering(commandBuffer);
@@ -1281,7 +1288,9 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
     if (!object.isVisible()) continue;
     if (object.getMeshID() == INVALID_MESH_ID) continue;
     if (object.getMaterialID() == INVALID_MATERIAL_ID) continue;
-    if (object.getName() == "Skybox Sphere") continue;
+    std::string objName;
+    object.getName(objName);
+    if (objName == "Skybox Sphere") continue;
 
     const Mesh* const mesh = meshManager->getMesh(object.getMeshID());
     const Material* const material =
@@ -1316,18 +1325,21 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
                             static_cast<uint32_t>(descriptorSetsToBind.size()),
                             descriptorSetsToBind.data(), 0, nullptr);
 
-    vkCmdDrawIndexed(commandBuffer,
-                     static_cast<uint32_t>(mesh->getIndices().size()), 1, 0, 0,
-                     0);
+    std::vector<uint16_t> indices;
+    mesh->getIndices(indices);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0,
+                     0, 0);
   }
 
   renderPlants(commandBuffer, currentFrame);
 
   const Object* const domeGlassObject = &sceneObjects[2];
-  const float timeOfDay = worldState.getTime().normalizedTime;
+  TimeOfDay timeOfDay;
+  worldState.getTime(timeOfDay);
+  const float timeVal = timeOfDay.normalizedTime;
   const float sunIntensity = worldState.getSunIntensity();
   skybox->render(commandBuffer, descriptorSets[currentFrame], swapChainExtent,
-                 domeGlassObject, timeOfDay, sunIntensity);
+                 domeGlassObject, timeVal, sunIntensity);
 
   particleManager->render(
       commandBuffer, descriptorSets[currentFrame], particlePipelineLayout,
@@ -1386,7 +1398,8 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
   setupViewportScissor(commandBuffer, static_cast<float>(swapChainExtent.width),
                        static_cast<float>(swapChainExtent.height));
 
-  const PlantWindData& windData = plantManager->getWindData();
+  PlantWindData windData;
+  plantManager->getWindData(windData);
 
   static float windDebugTimer = 0.0f;
   windDebugTimer += 0.016f;
@@ -1445,9 +1458,10 @@ void Application::renderPlants(VkCommandBuffer commandBuffer,
                             static_cast<uint32_t>(descriptorSetsToBind.size()),
                             descriptorSetsToBind.data(), 0, nullptr);
 
-    vkCmdDrawIndexed(commandBuffer,
-                     static_cast<uint32_t>(mesh->getIndices().size()), 1, 0, 0,
-                     0);
+    std::vector<uint16_t> indices;
+    mesh->getIndices(indices);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0,
+                     0, 0);
   }
 }
 

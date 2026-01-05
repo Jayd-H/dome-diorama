@@ -66,12 +66,12 @@ class LightManager final {
     return shadowSystem->getShadowDescriptorSet();
   }
 
-  const std::vector<ShadowMapData>& getShadowMaps() const {
-    return shadowSystem->getShadowMaps();
+  void getShadowMaps(std::vector<ShadowMapData>& outMaps) const {
+    shadowSystem->getShadowMaps(outMaps);
   }
 
   int getShadowMapCount() const {
-    return static_cast<int>(shadowSystem->getShadowMaps().size());
+    return static_cast<int>(shadowSystem->getShadowMapCount());
   }
 
   ShadowSystem* getShadowSystem() const { return shadowSystem.get(); }

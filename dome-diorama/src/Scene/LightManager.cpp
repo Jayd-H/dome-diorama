@@ -33,14 +33,18 @@ LightID LightManager::addLight(const Light& light) {
     return INVALID_LIGHT_ID;
   }
 
-  Debug::log(Debug::Category::LIGHTS, "LightManager: Adding light '",
-             light.getName(), "'");
+  std::string name;
+  light.getName(name);
+  Debug::log(Debug::Category::LIGHTS, "LightManager: Adding light '", name,
+             "'");
 
   LightID id = static_cast<LightID>(lights.size() + 1);
   lights.push_back(std::make_unique<Light>(light));
 
-  if (light.getCastsShadows() &&
-      shadowSystem->getShadowMaps().size() < MAX_SHADOW_CASTERS) {
+  std::vector<ShadowMapData> shadowMaps;
+  shadowSystem->getShadowMaps(shadowMaps);
+
+  if (light.getCastsShadows() && shadowMaps.size() < MAX_SHADOW_CASTERS) {
     uint32_t shadowMapIndex =
         shadowSystem->createShadowMap(static_cast<uint32_t>(lights.size() - 1));
     lights.back()->setShadowMapIndex(shadowMapIndex);
@@ -81,7 +85,10 @@ void LightManager::removeLight(LightID id) {
 void LightManager::updateLightBuffer() {
   LightBufferObject lbo{};
   lbo.numLights = static_cast<int>(lights.size());
-  lbo.numShadowMaps = static_cast<int>(shadowSystem->getShadowMaps().size());
+
+  std::vector<ShadowMapData> shadowMaps;
+  shadowSystem->getShadowMaps(shadowMaps);
+  lbo.numShadowMaps = static_cast<int>(shadowMaps.size());
 
   static bool logged = false;
   if (!logged) {
@@ -97,14 +104,21 @@ void LightManager::updateLightBuffer() {
                "LightManager: Light data size: ", sizeof(LightData), " bytes");
     logged = true;
   }
-  
 
   for (size_t i = 0; i < lights.size(); i++) {
     const auto& l = *lights[i];
 
-    lbo.lights[i].position = glm::vec4(l.getPosition(), 1.0f);
-    lbo.lights[i].direction = glm::vec4(l.getDirection(), 0.0f);
-    lbo.lights[i].color = glm::vec4(l.getColor(), 1.0f);
+    glm::vec3 pos;
+    l.getPosition(pos);
+    lbo.lights[i].position = glm::vec4(pos, 1.0f);
+
+    glm::vec3 dir;
+    l.getDirection(dir);
+    lbo.lights[i].direction = glm::vec4(dir, 0.0f);
+
+    glm::vec3 color;
+    l.getColor(color);
+    lbo.lights[i].color = glm::vec4(color, 1.0f);
 
     lbo.lights[i].intensity = l.getIntensity();
     lbo.lights[i].constant = l.getConstant();
@@ -190,19 +204,24 @@ void LightManager::setShadowCastingEnabled(LightID id, bool enabled) {
   light->setCastsShadows(enabled);
 
   if (enabled && !wasEnabled && light->getShadowMapIndex() == UINT32_MAX) {
-    if (shadowSystem->getShadowMaps().size() < MAX_SHADOW_CASTERS) {
+    std::vector<ShadowMapData> shadowMaps;
+    shadowSystem->getShadowMaps(shadowMaps);
+    if (shadowMaps.size() < MAX_SHADOW_CASTERS) {
       uint32_t shadowMapIndex =
           shadowSystem->createShadowMap(static_cast<uint32_t>(id - 1));
       light->setShadowMapIndex(shadowMapIndex);
+      std::string name;
+      light->getName(name);
       Debug::log(Debug::Category::LIGHTS,
-                 "LightManager: Enabled shadows for light '", light->getName(),
+                 "LightManager: Enabled shadows for light '", name,
                  "' with shadow map index: ", shadowMapIndex);
     }
   } else if (!enabled && wasEnabled) {
     light->setShadowMapIndex(UINT32_MAX);
+    std::string name;
+    light->getName(name);
     Debug::log(Debug::Category::LIGHTS,
-               "LightManager: Disabled shadows for light '", light->getName(),
-               "'");
+               "LightManager: Disabled shadows for light '", name, "'");
   }
 
   updateLightBuffer();
@@ -214,14 +233,19 @@ void LightManager::debugPrintLightInfo() const {
 
   for (size_t i = 0; i < lights.size(); i++) {
     const Light* light = lights[i].get();
-    Debug::log(Debug::Category::LIGHTS, "Light ", i, ": ", light->getName());
+    std::string name;
+    light->getName(name);
+    Debug::log(Debug::Category::LIGHTS, "Light ", i, ": ", name);
     Debug::log(Debug::Category::LIGHTS, " Type: ",
                (light->getType() == LightType::Sun ? "Sun" : "Point"));
-    Debug::log(Debug::Category::LIGHTS, " Position: (", light->getPosition().x,
-               ", ", light->getPosition().y, ", ", light->getPosition().z, ")");
-    Debug::log(Debug::Category::LIGHTS, " Direction: (",
-               light->getDirection().x, ", ", light->getDirection().y, ", ",
-               light->getDirection().z, ")");
+    glm::vec3 pos;
+    light->getPosition(pos);
+    Debug::log(Debug::Category::LIGHTS, " Position: (", pos.x, ", ", pos.y,
+               ", ", pos.z, ")");
+    glm::vec3 dir;
+    light->getDirection(dir);
+    Debug::log(Debug::Category::LIGHTS, " Direction: (", dir.x, ", ", dir.y,
+               ", ", dir.z, ")");
     Debug::log(Debug::Category::LIGHTS, " Intensity: ", light->getIntensity());
     Debug::log(Debug::Category::LIGHTS,
                " Casts Shadows: ", (light->getCastsShadows() ? "Yes" : "No"));

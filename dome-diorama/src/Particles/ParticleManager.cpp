@@ -47,8 +47,10 @@ EmitterID ParticleManager::registerEmitter(ParticleEmitter* emitter) {
     return INVALID_EMITTER_ID;
   }
 
+  std::string name;
+  emitter->getName(name);
   Debug::log(Debug::Category::PARTICLES,
-             "ParticleManager: Registering emitter '", emitter->getName(), "'");
+             "ParticleManager: Registering emitter '", name, "'");
 
   const EmitterID id = static_cast<EmitterID>(emitters.size());
   emitters.push_back(std::unique_ptr<ParticleEmitter>(emitter));
@@ -152,7 +154,8 @@ void ParticleManager::render(VkCommandBuffer commandBuffer,
       continue;
     }
 
-    const ParticleShaderParams& params = emitter->getShaderParams();
+    ParticleShaderParams params;
+    emitter->getShaderParams(params);
     memcpy(shaderParamsMapped[currentFrame][i], &params,
            sizeof(ParticleShaderParams));
 

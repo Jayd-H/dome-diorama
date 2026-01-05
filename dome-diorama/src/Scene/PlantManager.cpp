@@ -117,7 +117,9 @@ float PlantManager::getTerrainHeightAt(const Mesh* terrainData, float x,
   float closestDistSq = std::numeric_limits<float>::max();
   float height = 0.0f;
 
-  for (const auto& vertex : terrainData->getVertices()) {
+  std::vector<Vertex> vertices;
+  terrainData->getVertices(vertices);
+  for (const auto& vertex : vertices) {
     const float dx = vertex.pos.x - x;
     const float dz = vertex.pos.z - z;
     const float distSq = dx * dx + dz * dz;
@@ -136,7 +138,9 @@ glm::vec3 PlantManager::getTerrainNormalAt(const Mesh* terrainData, float x,
   float closestDistSq = std::numeric_limits<float>::max();
   glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
 
-  for (const auto& vertex : terrainData->getVertices()) {
+  std::vector<Vertex> vertices;
+  terrainData->getVertices(vertices);
+  for (const auto& vertex : vertices) {
     const float dx = vertex.pos.x - x;
     const float dz = vertex.pos.z - z;
     const float distSq = dx * dx + dz * dz;
@@ -151,13 +155,18 @@ glm::vec3 PlantManager::getTerrainNormalAt(const Mesh* terrainData, float x,
 }
 
 float PlantManager::calculateMeshBottomOffset(const Mesh* mesh) const {
-  if (!mesh || mesh->getVertices().empty()) {
+  std::vector<Vertex> vertices;
+  if (mesh) {
+    mesh->getVertices(vertices);
+  }
+
+  if (!mesh || vertices.empty()) {
     return 0.0f;
   }
 
   float minY = std::numeric_limits<float>::max();
 
-  for (const auto& vertex : mesh->getVertices()) {
+  for (const auto& vertex : vertices) {
     minY = std::min(minY, vertex.pos.y);
   }
 
@@ -236,8 +245,8 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
     const float yOffset = calculateMeshBottomOffset(mesh);
     const float scaledYOffset = yOffset * trans.scaleY;
 
-    const Object cactusObj =
-        ObjectBuilder()
+    Object cactusObj;
+    ObjectBuilder()
             .name("Cactus_" + std::to_string(i))
             .position(trans.x, trans.y - scaledYOffset - trans.sinkAmount,
                       trans.z)
@@ -245,7 +254,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
             .scale(trans.scaleX, trans.scaleY, trans.scaleZ)
             .mesh(cactusMeshes[stage][variant])
             .material(cactusMaterials[stage][variant])
-            .build();
+            .build(cactusObj);
 
     sceneObjects.push_back(cactusObj);
     plantObjectIndices.push_back(sceneObjects.size() - 1);
@@ -269,8 +278,8 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
     const float yOffset = calculateMeshBottomOffset(mesh);
     const float scaledYOffset = yOffset * trans.scaleY;
 
-    const Object treeObj =
-        ObjectBuilder()
+    Object treeObj;
+    ObjectBuilder()
             .name("Tree_" + std::to_string(i))
             .position(trans.x, trans.y - scaledYOffset - trans.sinkAmount,
                       trans.z)
@@ -278,7 +287,7 @@ void PlantManager::spawnPlantsOnTerrain(std::vector<Object>& sceneObjects,
             .scale(trans.scaleX, trans.scaleY, trans.scaleZ)
             .mesh(treeMeshes[stage])
             .material(treeMaterials[stage])
-            .build();
+            .build(treeObj);
 
     sceneObjects.push_back(treeObj);
     plantObjectIndices.push_back(sceneObjects.size() - 1);
@@ -375,11 +384,13 @@ void PlantManager::shrinkPlant(std::vector<Object>& sceneObjects,
     const float oldYOffset = calculateMeshBottomOffset(oldMesh);
     const float newYOffset = calculateMeshBottomOffset(newMesh);
 
-    const glm::vec3 currentScale = obj.getScale();
+    glm::vec3 currentScale;
+    obj.getScale(currentScale);
     const float scaledOldOffset = oldYOffset * currentScale.y;
     const float scaledNewOffset = newYOffset * currentScale.y;
 
-    const glm::vec3 currentPos = obj.getPosition();
+    glm::vec3 currentPos;
+    obj.getPosition(currentPos);
     const float yAdjustment = scaledOldOffset - scaledNewOffset;
     obj.setPosition(currentPos.x, currentPos.y + yAdjustment, currentPos.z);
 
@@ -452,7 +463,9 @@ void PlantManager::updatePlantFire(Plant& plant,
                    ", HeatFactor: ", heatFactor,
                    ", BaseChance: ", baseFireChance, ", Roll was: ", roll);
         const Object& obj = sceneObjects[plant.getObjectIndex()];
-        startFire(plant, obj.getPosition());
+        glm::vec3 pos;
+        obj.getPosition(pos);
+        startFire(plant, pos);
 
         std::uniform_real_distribution<float> timeDist(
             PlantState::MIN_BURN_STAGE_REVERT_TIME,
@@ -642,8 +655,13 @@ void PlantManager::checkFireSpread(std::vector<Object>& sceneObjects) {
 
       const Object& otherObj = sceneObjects[otherPlant.getObjectIndex()];
 
+      glm::vec3 burningPos;
+      burningObj.getPosition(burningPos);
+      glm::vec3 otherPos;
+      otherObj.getPosition(otherPos);
+
       const float distance =
-          glm::length(burningObj.getPosition() - otherObj.getPosition());
+          glm::length(burningPos - otherPos);
 
       if (distance < PlantState::FIRE_SPREAD_RADIUS) {
         const float spreadChance =
@@ -664,7 +682,9 @@ void PlantManager::checkFireSpread(std::vector<Object>& sceneObjects) {
       const Object& obj = sceneObjects[plant.getObjectIndex()];
       Debug::log(Debug::Category::PLANTMANAGER,
                  "PlantManager: Fire spread to plant ", idx);
-      startFire(plant, obj.getPosition());
+      glm::vec3 pos;
+      obj.getPosition(pos);
+      startFire(plant, pos);
     }
   }
 }
@@ -773,7 +793,9 @@ void PlantManager::updatePlantSpreading(
     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
     if (dist(rng) < spreadChance) {
       const Object& parentObj = sceneObjects[plant.getObjectIndex()];
-      spawnOffspring(sceneObjects, plant, parentObj.getPosition());
+      glm::vec3 parentPos;
+      parentObj.getPosition(parentPos);
+      spawnOffspring(sceneObjects, plant, parentPos);
 
       Debug::log(Debug::Category::PLANTMANAGER, "PlantManager: Plant ",
                  plantIndex, " spawned offspring! ",
@@ -847,8 +869,8 @@ void PlantManager::spawnOffspring(std::vector<Object>& sceneObjects,
   const float yOffset = calculateMeshBottomOffset(mesh);
   const float scaledYOffset = yOffset * scaleY;
 
-  const Object newPlantObj =
-      ObjectBuilder()
+  Object newPlantObj;
+  ObjectBuilder()
           .name((parent.getType() == PlantType::Cactus ? "Cactus_" : "Tree_") +
                 std::to_string(plants.size()))
           .position(spawnX, spawnY - scaledYOffset - sinkAmount, spawnZ)
@@ -856,7 +878,7 @@ void PlantManager::spawnOffspring(std::vector<Object>& sceneObjects,
           .scale(scaleX, scaleY, scaleZ)
           .mesh(newMesh)
           .material(newMaterial)
-          .build();
+          .build(newPlantObj);
 
   sceneObjects.push_back(newPlantObj);
   plantObjectIndices.push_back(sceneObjects.size() - 1);

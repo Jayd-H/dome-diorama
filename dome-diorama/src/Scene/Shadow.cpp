@@ -428,12 +428,14 @@ glm::mat4 ShadowSystem::calculateLightSpaceMatrix(const Light& light,
     const float nearPlane = 1.0f;
     const float farPlane = sceneRadius * 6.0f;
 
+    glm::vec3 lightDir;
+    light.getDirection(lightDir);
     const glm::vec3 lightPos =
         sceneCenter -
-        glm::normalize(light.getDirection()) * (sceneRadius * 3.0f);
+        glm::normalize(lightDir) * (sceneRadius * 3.0f);
 
     glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
-    if (glm::abs(glm::dot(glm::normalize(light.getDirection()), upVector)) >
+    if (glm::abs(glm::dot(glm::normalize(lightDir), upVector)) >
         0.99f) {
       upVector = glm::vec3(1.0f, 0.0f, 0.0f);
     }
@@ -453,24 +455,26 @@ glm::mat4 ShadowSystem::calculateLightSpaceMatrix(const Light& light,
     const float farPlane = glm::min(maxDistance, 500.0f);
 
     glm::vec3 targetPos = sceneCenter;
-    const glm::vec3 toScene = targetPos - light.getPosition();
+    glm::vec3 lightPos;
+    light.getPosition(lightPos);
+    const glm::vec3 toScene = targetPos - lightPos;
     if (glm::length(toScene) > 0.001f) {
-      targetPos = light.getPosition() + glm::normalize(toScene) * 10.0f;
+      targetPos = lightPos + glm::normalize(toScene) * 10.0f;
     }
 
     glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
-    const glm::vec3 forward = glm::normalize(targetPos - light.getPosition());
+    const glm::vec3 forward = glm::normalize(targetPos - lightPos);
     if (glm::abs(glm::dot(forward, upVector)) > 0.99f) {
       upVector = glm::vec3(1.0f, 0.0f, 0.0f);
     }
 
-    lightView = glm::lookAt(light.getPosition(), targetPos, upVector);
+    lightView = glm::lookAt(lightPos, targetPos, upVector);
     lightProjection = glm::perspective(fov, aspect, nearPlane, farPlane);
     lightProjection[1][1] *= -1;
 
     Debug::log(Debug::Category::SHADOWS, "Point light shadow - Pos: (",
-               light.getPosition().x, ", ", light.getPosition().y, ", ",
-               light.getPosition().z, ") Target: (", targetPos.x, ", ",
+               lightPos.x, ", ", lightPos.y, ", ",
+               lightPos.z, ") Target: (", targetPos.x, ", ",
                targetPos.y, ", ", targetPos.z, ") Far: ", farPlane);
   }
 
