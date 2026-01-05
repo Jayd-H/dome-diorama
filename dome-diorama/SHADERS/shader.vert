@@ -13,20 +13,22 @@ struct LightData {
     vec4 position_intensity;
     vec4 direction_constant;
     vec4 color_linear;
-    vec2 padding;
     float quadratic;
     float cutOff;
     float outerCutOff;
     int type;
     int castsShadows;
     int shadowMapIndex;
+    float padding1;
+    float padding2;
 };
 
 layout(binding = 1, set = 0) uniform LightBuffer {
     LightData lights[8];
     int numLights;
     int numShadowMaps;
-    vec2 padding;
+    float padding1;
+    float padding2;
 } lightBuffer;
 
 layout(binding = 0, set = 1) uniform MaterialProperties {

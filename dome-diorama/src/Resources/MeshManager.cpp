@@ -7,22 +7,20 @@
 #include "Util/Debug.h"
 #include "Util/PerlinNoise.h"
 
-VkVertexInputBindingDescription Vertex::getBindingDescription() {
-  VkVertexInputBindingDescription bindingDescription{};
-  bindingDescription.binding = 0;
-  bindingDescription.stride = sizeof(Vertex);
-  bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+const VkVertexInputBindingDescription& Vertex::getBindingDescription() {
+  static VkVertexInputBindingDescription bindingDescription = {
+      0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX};
   return bindingDescription;
 }
 
 const std::array<VkVertexInputAttributeDescription, 4>&
 Vertex::getAttributeDescriptions() {
-  static const std::array<VkVertexInputAttributeDescription, 4>
-      attributeDescriptions{
+  static std::array<VkVertexInputAttributeDescription, 4>
+      attributeDescriptions = {
           {{0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)},
-           {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)},
-           {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)},
-           {3, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)}}};
+           {0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)},
+           {0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)},
+           {0, 3, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)}}};
   return attributeDescriptions;
 }
 
@@ -545,6 +543,8 @@ void MeshManager::cleanup() {
 
   Debug::log(Debug::Category::MESH, "MeshManager: Cleanup complete");
 }
+
+
 
 MeshID MeshManager::registerMesh(Mesh* mesh) {
   if (!mesh) {
