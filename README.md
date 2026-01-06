@@ -1,6 +1,6 @@
 # Dome Diorama
 
-Little desert world built with a custom rendering engine in Vulkan.
+Little desert world simulation built with a custom rendering engine in Vulkan. Lab books for both modules in their respective folders, final lab book at `/FinalLab/FinalLab.md` because I did not want to pollute the root with images.
 
 ## Controls
 
@@ -69,14 +69,15 @@ const Object myObject = ObjectBuilder()
 | Method | Parameters | Description |
 | - | - | - |
 | .name() | std::string | Sets a descriptive name for debugging and logging. |
-| .mesh() | MeshID | **Required.** Assigns the geometry ID (created via `MeshManager`). |
-| .material() | MaterialID | **Required.** Assigns the look/shader ID (created via `MaterialManager`). |
+| .mesh() | MeshID | **Required.** Assigns the geometry ID (created via MeshManager). |
+| .material() | MaterialID | **Required.** Assigns the look/shader ID (created via MaterialManager). |
 | .position() | float x, y, z OR glm::vec3 | Sets the object's location in world space. |
 | .scale() | float OR glm::vec3 | Sets the size. Passing a single float scales uniformly on all axes. |
 | .rotation() | glm::quat | Sets rotation using a quaternion. |
 | .rotationEuler() | float p, y, r OR glm::vec3 | Sets rotation using degrees (converted to quaternions internally). |
-| .visible() | bool | Toggles rendering visibility (defaults to `true`). |
-| .build() | None | Finalizes the configuration and returns the `Object`. |
+| .visible() | bool | Toggles rendering visibility (defaults to true). |
+| .layerMask() | uint32_t | Sets rendering layer bits (e.g., 0x1 for specific passes). |
+| .build() | Object& | Finalizes the configuration and populates the passed Object. |
 
 #### Post-Creation Manipulation
 Once an `Object` is created, you can modify it directly using standard setters. This is useful for game logic or animation updates.
@@ -93,21 +94,22 @@ Once an `Object` is created, you can modify it directly using standard setters. 
 Here is a practical example of loading a custom mesh and creating an object from it:
 
 ```cpp
-// 1. Load the resources
-const MeshID pokeballMesh = meshManager->loadFromOBJ("./Models/PokeWhite.obj");
-const MaterialID pokeballMat = materialManager->loadFromMTL("./Models/PokeWhite.mtl");
+    // 1. Load the resources
+    const MeshID pokeballMesh = meshManager->loadFromOBJ("./Models/PokeWhite.obj");
+    const MaterialID pokeballMat = materialManager->loadFromMTL("./Models/PokeWhite.mtl");
 
-// 2. Build the object
-const Object pokeball = ObjectBuilder()
-    .name("Pokeball White")
-    .position(-10.0f, -130.0f, 0.0f) // Place deep in the scene
-   .mesh(pokeballMesh)
-    .material(pokeballMat)
-    .scale(3.05f)                    // Uniform scale
-    .build();
+    // 2. Build the object
+    Object pokeball;
+    ObjectBuilder()
+        .name("Pokeball White")
+        .position(-10.0f, -130.0f, 0.0f) // Place deep in the scene
+        .mesh(pokeballMesh)
+        .material(pokeballMat)
+        .scale(3.05f)                    // Uniform scale
+        .build(pokeball);
 
-// 3. Add to scene
-sceneObjects.push_back(pokeball);
+    // 3. Add to scene
+    sceneObjects.push_back(pokeball);
 ```
 
 ### Materials
@@ -189,7 +191,7 @@ const Light sun = LightBuilder()
     .direction(0.0f, -1.0f, 0.0f) // Pointing straight down
     .intensity(2.0f)
     .castsShadows(true)
-    .build();
+    .build(sun);
 
 lightManager->addLight(sun);
 ```
@@ -197,15 +199,15 @@ lightManager->addLight(sun);
 **API Reference**
 | Method | Parameters | Description |
 | - | - | - |
-| .type() | LightType | `LightType::Sun` (infinite distance) or `LightType::Point` (local bulb). |
+| .type() | LightType | LightType::Sun (infinite distance) or LightType::Point (local bulb). |
 | .name() | std::string | Debug name for the light. |
 | .color() | float r, g, b OR vec3 | Sets the light color (RGB). |
 | .intensity() | float | Brightness multiplier. |
-| .position() | float x, y, z OR vec3 | World position (Only affects `Point` lights). |
-| .direction() | float x, y, z OR vec3 | Light direction vector (Only affects `Sun` lights). |
-| .attenuation() | float c, l, q | Sets falloff: Constant, Linear, Quadratic (Only affects `Point` lights). |
+| .position() | float x, y, z OR vec3 | World position (Only affects Point lights). |
+| .direction() | float x, y, z OR vec3 | Light direction vector (Only affects Sun lights). |
+| .attenuation() | float c, l, q | Sets falloff: Constant, Linear, Quadratic (Only affects Point lights). |
 | .castsShadows() | bool | If true, allocates a shadow map for this light. |
-| .build() | None | Finalizes the configuration and returns the `Light` object. |
+| .build() | Light& | Finalizes the configuration and populates the passed Light. |
 
 **Light Types Explained**
 
@@ -241,6 +243,63 @@ const Light fireLight = LightBuilder()
     .build();
 
 lightManager->addLight(fireLight);
+```
+
+### Particle Simulation
+
+The engine features a GPU-accelerated particle system. Particles are managed by emitters, which can be configured to simulate fire, smoke, rain, snow, or dust.
+
+Emitters are created using ParticleEmitterBuilder. Unlike Objects and Lights, the builder **returns a pointer** to a new heap-allocated emitter, which you then pass to ParticleManager.
+
+**Basic Syntax:**
+```cpp
+    ParticleEmitter* const fireEmitter = ParticleEmitterBuilder()
+        .name("Campfire Emitter")
+        .position(0.0f, 1.0f, 0.0f)
+        .maxParticles(500)
+        .baseColor(glm::vec3(1.0f, 0.5f, 0.0f))
+        .tipColor(glm::vec3(1.0f, 0.0f, 0.0f))
+        .build(); // Returns a new ParticleEmitter*
+
+    // Registering transfers ownership to ParticleManager
+    EmitterID id = particleManager->registerEmitter(fireEmitter);
+```
+**API Reference**
+
+| Method | Parameters | Description |
+| - | - | - |
+| .name() | std::string | Debug name. |
+| .position() | vec3 | World position of the emitter source. |
+| .maxParticles() | size_t | Maximum number of active particles. |
+| .particleLifetime() | float | How long (seconds) a particle lives. |
+| .material() | MaterialID | Material used for the particle quad (usually transparent). |
+| .baseColor() | vec3 | Color at the start of the particle's life. |
+| .tipColor() | vec3 | Color at the end of the particle's life. |
+| .gravity() | vec3 | Constant force applied (e.g., 0, -9.8, 0 for physics). |
+| .initialVelocity() | vec3 | Starting velocity vector. |
+| .velocityRandomness() | float | Multiplier for randomizing initial velocity. |
+| .spawnRadius() | float | Radius around the position where particles spawn. |
+| .particleScale() | float | Base size of the particles. |
+| .scaleOverLifetime() | float | Multiplier for size change (e.g., 2.0 grows double). |
+| .rotationSpeed() | float | Speed of particle rotation. |
+| .windInfluence() | float | How strongly global wind affects these particles (0.0 - 1.0). |
+| .fadeTimings() | float in, float out | Duration of fade-in and fade-out effects. |
+| .billboardMode() | enum | Spherical (faces cam), Cylindrical (upright), or None. |
+| .colorMode() | enum | Gradient (lerp base->tip), BaseOnly, or TipOnly. |
+
+**Presets**
+
+The EmitterPresets class provides helpers to quickly configure common effects:
+```cpp
+    ParticleEmitterBuilder builder;
+    // Configures builder for fire, smoke, dust, rain, or snow
+    EmitterPresets::createFire(builder); 
+
+    ParticleEmitter* fire = builder
+        .position(10.0f, 0.0f, 10.0f) // Override preset position
+        .build();
+
+    particleManager->registerEmitter(fire);
 ```
 
 ## Real-Time Graphics

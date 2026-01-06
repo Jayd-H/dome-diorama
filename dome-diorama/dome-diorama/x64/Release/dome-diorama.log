@@ -1,12 +1,22 @@
-﻿  Performing Custom Build Tools
-  Performing Custom Build Tools
-  Performing Custom Build Tools
-C:\Program Files\Microsoft Visual Studio\18\Insiders\MSBuild\Microsoft\VC\v180\Microsoft.CppCommon.targets(254,5): warning MSB8064: Custom build for item "toon.frag" succeeded, but specified dependency "d:\files\documents\aprojects\cpp\dome-diorama\dome-diorama\toon.frag" does not exist. This may cause incremental build to work incorrectly.
-C:\Program Files\Microsoft Visual Studio\18\Insiders\MSBuild\Microsoft\VC\v180\Microsoft.CppCommon.targets(254,5): warning MSB8064: Custom build for item "toon.vert" succeeded, but specified dependency "d:\files\documents\aprojects\cpp\dome-diorama\dome-diorama\toon.vert" does not exist. This may cause incremental build to work incorrectly.
-  Application.cpp
+﻿  Application.cpp
+  main.cpp
+  ParticleEmitter.cpp
+  MaterialManager.cpp
+  MeshManager.cpp
+  ParticleManager.cpp
+  LightManager.cpp
+  PlantManager.cpp
+  PostProcessing.cpp
+  RenderDevice.cpp
+  TextureManager.cpp
+  Shadow.cpp
+  Skybox.cpp
+  WeatherSystem.cpp
+  ConfigParser.cpp
+  RenderUtils.cpp
   Generating code
-  12 of 4855 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
-    3 functions were new in current compilation
-    12 functions had inline decision re-evaluated but remain unchanged
+  791 of 4945 functions (16.0%) were compiled, the rest were copied from previous compilation.
+    200 functions were new in current compilation
+    447 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   dome-diorama.vcxproj -> D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\x64\Release\dome-diorama.exe

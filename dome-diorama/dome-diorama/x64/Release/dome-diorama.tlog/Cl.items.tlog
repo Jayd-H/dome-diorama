@@ -4,6 +4,7 @@ D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Particles\Particl
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Resources\MaterialManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\MaterialManager.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Resources\MeshManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\MeshManager.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Particles\ParticleManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\ParticleManager.obj
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Scene\LightManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\LightManager.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Scene\PlantManager.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\PlantManager.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Rendering\PostProcessing.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\PostProcessing.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Rendering\RenderDevice.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\RenderDevice.obj
@@ -13,4 +14,5 @@ D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Scene\Skybox.cpp;
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Scene\WeatherSystem.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\WeatherSystem.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Util\ConfigParser.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\ConfigParser.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Util\PerlinNoise.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\PerlinNoise.obj
+D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Util\RenderUtils.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\RenderUtils.obj
 D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\src\Vulkan\VulkanDepthBuffer.cpp;D:\Files\Documents\AProjects\CPP\dome-diorama\dome-diorama\dome-diorama\x64\Release\VulkanDepthBuffer.obj
