@@ -7,6 +7,7 @@ Little desert world built with a custom rendering engine in Vulkan.
 ### General Controls
 - **ESC** - Exit the application
 - **R** - Reset application to initial state (C1 camera, default time/world)
+- **K** - Toggle Toon Shader
 
 ### Camera Presets
 - **F1** - Camera C1: Overview (Globe view)
