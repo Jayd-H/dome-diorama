@@ -13,6 +13,7 @@ Little desert world simulation built with a custom rendering engine in Vulkan. L
 - **F1** - Camera C1: Overview (Globe view)
 - **F2** - Camera C2: Navigation (Element view)
 - **F3** - Camera C3: Close-up (Cactus view)
+- **F4** - Move Camera on and Burn a Random Plant
 
 ### Camera Movement
 - **Arrow Keys** - Rotate Camera (Left/Right/Up/Down)
