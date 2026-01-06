@@ -1,307 +1,6 @@
 # Lab I - Final Lab
 
-I will split this up by module, in C++ I will talk about implementation, in Real-Time Graphics I will talk about features.I will also include the controls:
-
-## Controls
-
-### General Controls
-- **ESC** - Exit the application
-- **R** - Reset application to initial state (C1 camera, default time/world)
-- **K** - Toggle Toon Shader
-
-### Camera Presets
-- **F1** - Camera C1: Overview (Globe view)
-- **F2** - Camera C2: Navigation (Element view)
-- **F3** - Camera C3: Close-up (Cactus view)
-- **F4** - Center the Camera on and Burn a Random Plant
-
-### Camera Movement
-- **Arrow Keys** - Rotate Camera (Left/Right/Up/Down)
-- **CTRL + Arrows** - Pan Camera (Left/Right/Forward/Backward)
-- **CTRL + PgUp** - Pan Up
-- **CTRL + PgDn** - Pan Down
-- **Enter** - Switch between Orbit and FPS modes
-- **Right Mouse** - Rotate (Orbit mode only)
-- **Scroll** - Zoom (Orbit) / Adjust Speed (FPS)
-
-### Effects & Time
-- **F4** - Trigger Particle Effect (Random Cactus Fire) & Follow Camera
-- **]** - Increase Time Scale (Speed up effects)
-- **[** - Decrease Time Scale (Slow down effects)
-- **P** - Pause/Resume time progression
-
-### Rendering Controls
-- **1** - Fill mode
-- **2** - Wireframe mode
-- **3** - Point mode
-- **4** - Nearest texture filtering
-- **5** - Linear texture filtering
-- **L** - Toggle Phong/Gouraud shading
-
-### Weather Controls
-- **T** - Increase Temperature (+5°C)
-- **G** - Decrease Temperature (-5°C)
-- **H** - Increase Humidity (+10%)
-- **N** - Decrease Humidity (-10%)
-- **U** - Increase Wind Speed (+1 m/s)
-- **J** - Decrease Wind Speed (-1 m/s)
-- **Y** - Cycle Weather State
-
 ## C++ Programming & Design
-
-
-### Objects
-
-You can create a new entity using the `ObjectBuilder`. 
-
-**Basic Syntax:**
-```cpp
-const Object myObject = ObjectBuilder()
-    .name("Object Name")
-    .mesh(myMeshID)
-    .material(myMaterialID)
-    .position(0.0f, 0.0f, 0.0f)
-    .scale(1.0f)
-    .build();
-```
-
-**API Reference**
-
-| Method | Parameters | Description |
-| - | - | - |
-| .name() | std::string | Sets a descriptive name for debugging and logging. |
-| .mesh() | MeshID | **Required.** Assigns the geometry ID (created via MeshManager). |
-| .material() | MaterialID | **Required.** Assigns the look/shader ID (created via MaterialManager). |
-| .position() | float x, y, z OR glm::vec3 | Sets the object's location in world space. |
-| .scale() | float OR glm::vec3 | Sets the size. Passing a single float scales uniformly on all axes. |
-| .rotation() | glm::quat | Sets rotation using a quaternion. |
-| .rotationEuler() | float p, y, r OR glm::vec3 | Sets rotation using degrees (converted to quaternions internally). |
-| .visible() | bool | Toggles rendering visibility (defaults to true). |
-| .layerMask() | uint32_t | Sets rendering layer bits (e.g., 0x1 for specific passes). |
-| .build() | Object& | Finalizes the configuration and populates the passed Object. |
-
-#### Post-Creation Manipulation
-Once an `Object` is created, you can modify it directly using standard setters. This is useful for game logic or animation updates.
-
-```cpp
- // Example: Moving an object after creation
- myObject.setPosition(10.0f, 5.0f, 0.0f);
- myObject.setScale(2.0f);
-
-// Rotating using Euler angles (Degrees)
- myObject.setRotationEuler(0.0f, 90.0f, 0.0f);
-```
-#### Complete Example
-Here is a practical example of loading a custom mesh and creating an object from it:
-
-```cpp
-    // 1. Load the resources
-    const MeshID pokeballMesh = meshManager->loadFromOBJ("./Models/PokeWhite.obj");
-    const MaterialID pokeballMat = materialManager->loadFromMTL("./Models/PokeWhite.mtl");
-
-    // 2. Build the object
-    Object pokeball;
-    ObjectBuilder()
-        .name("Pokeball White")
-        .position(-10.0f, -130.0f, 0.0f) // Place deep in the scene
-        .mesh(pokeballMesh)
-        .material(pokeballMat)
-        .scale(3.05f)                    // Uniform scale
-        .build(pokeball);
-
-    // 3. Add to scene
-    sceneObjects.push_back(pokeball);
-```
-
-### Materials
-Materials determine how light interacts with the surfaces of your objects. The engine uses a PBR (Physically Based Rendering) workflow, supporting standard maps for Albedo, Normals, Roughness, Metallic, and Ambient Occlusion.
-
-Materials are created using the `MaterialBuilder` and must be registered with the `MaterialManager` to obtain a `MaterialID`.
-
-**Basic Syntax:**
-```cpp
-const MaterialID myMaterial = materialManager->registerMaterial(
-    MaterialBuilder()
-        .name("Gold Material")
-        .albedoColor(1.0f, 0.8f, 0.0f) // Yellow-ish
-        .metallic(1.0f)                // Fully metallic
-        .roughness(0.2f)               // Shiny
-);
-```
-
-**API Reference**
-
-| Method | Parameters | Description |
-| - | - | - |
-| .name() | std::string | Debug name for the material. |
-| .albedoColor() | float r, g, b OR vec3 | Sets the base color tint (default is White). |
-| .albedoMap() | TextureID OR string | Sets the base color texture. |
-| .normalMap() | TextureID OR string | Sets the normal map for surface detail. |
-| .roughness() | float (0.0 - 1.0) | Sets surface microsurface (0 = smooth/mirror, 1 = matte). |
-| .roughnessMap()| TextureID OR string | Sets the roughness texture map. |
-| .metallic() | float (0.0 - 1.0) | Sets conductivity (0 = dielectric/plastic, 1 = metal). |
-| .metallicMap() | TextureID OR string | Sets the metallic texture map. |
-| .emissiveIntensity()| float | Multiplier for emissive light output. |
-| .emissiveMap() | TextureID OR string | Sets the texture for self-illumination. |
-| .aoMap() | TextureID OR string | Sets the Ambient Occlusion map. |
-| .heightMap() | TextureID OR string | Sets the displacement/height map. |
-| .heightScale() | float | Multiplier for height map displacement strength. |
-| .transparent() | bool | Enables alpha blending (default `false`). |
-| .opacity() | float (0.0 - 1.0) | Sets alpha level. `< 1.0` triggers transparency. |
-| .textureScale()| float | UV tiling scale. |
-| .doubleSided() | bool | Disables backface culling for this material. |
-
-**Loading from .MTL**
-
-The engine supports loading standard Wavefront Material (.mtl) files. This parses the file and automatically loads referenced textures relative to the .mtl file location.
-
-```cpp
-// Returns the ID of the first material found in the file
-const MaterialID externalMat = materialManager->loadFromMTL("./Models/Castle.mtl");
-```
-
-**Complete Example**
-
-Here is a complex material setup using a full set of PBR texture maps:
-```cpp
-const MaterialID sandMaterialID = materialManager->registerMaterial(
-    MaterialBuilder()
-        .name("Sand Material")
-        // You can pass filepaths directly to the builder
-        .albedoMap("./Models/textures/sand_diff_4k.jpg")
-        .normalMap("./Models/textures/sand_norm_4k.jpg")
-        .roughnessMap("./Models/textures/sand_arm_4k.jpg")
-        .heightMap("./Models/textures/sand_disp_4k.jpg")
-        // Tweak properties
-        .heightScale(0.1f)     // Slight displacement
-        .textureScale(50.0f)   // Repeat texture 50 times
-        .roughness(1.0f)       // Base roughness multiplier
-```
-
-### Lights
-
-The engine supports two primary light types: **Sun** (Directional) and **Point** lights. Lights can also cast dynamic shadows.
-
-Similar to Objects and Materials, lights are constructed using a fluent `LightBuilder` interface. Once built, add them to the `LightManager` to register them in the scene.
-
-**Basic Syntax:**
-```cpp
-const Light sun = LightBuilder()
-    .type(LightType::Sun)
-    .name("Main Sun")
-    .direction(0.0f, -1.0f, 0.0f) // Pointing straight down
-    .intensity(2.0f)
-    .castsShadows(true)
-    .build(sun);
-
-lightManager->addLight(sun);
-```
-
-**API Reference**
-| Method | Parameters | Description |
-| - | - | - |
-| .type() | LightType | LightType::Sun (infinite distance) or LightType::Point (local bulb). |
-| .name() | std::string | Debug name for the light. |
-| .color() | float r, g, b OR vec3 | Sets the light color (RGB). |
-| .intensity() | float | Brightness multiplier. |
-| .position() | float x, y, z OR vec3 | World position (Only affects Point lights). |
-| .direction() | float x, y, z OR vec3 | Light direction vector (Only affects Sun lights). |
-| .attenuation() | float c, l, q | Sets falloff: Constant, Linear, Quadratic (Only affects Point lights). |
-| .castsShadows() | bool | If true, allocates a shadow map for this light. |
-| .build() | Light& | Finalizes the configuration and populates the passed Light. |
-
-**Light Types Explained**
-
-1. Sun (Directional) Simulates a light source infinitely far away (like the sun). The position is ignored; only direction matters. Rays are parallel.
-
-2. Point Light Simulates a light bulb at a specific location. It emits light in all directions and fades out over distance based on the attenuation settings.
-
-**Complete Example**
-
-Here is how to set up a scene with a main sun and a flickering fire light:
-
-```cpp
-// 1. Create the Sun
-const Light sunLight = LightBuilder()
-    .type(LightType::Sun)
-    .name("Sun Light")
-    .direction(-0.5f, -1.0f, -0.5f)
-    .color(1.0f, 0.95f, 0.8f)      // Warm sunlight
-    .intensity(5.0f)
-    .castsShadows(true)            // Enable shadows
-    .build();
-
-lightManager->addLight(sunLight);
-
-// 2. Create a local fire light
-const Light fireLight = LightBuilder()
-    .type(LightType::Point)
-    .name("Campfire")
-    .position(10.0f, 0.5f, 10.0f)
-    .color(1.0f, 0.4f, 0.0f)       // Orange fire
-    .intensity(3.0f)
-    .attenuation(1.0f, 0.09f, 0.032f) // Standard falloff
-    .build();
-
-lightManager->addLight(fireLight);
-```
-
-### Particle Simulation
-
-The engine features a GPU-accelerated particle system. Particles are managed by emitters, which can be configured to simulate fire, smoke, rain, snow, or dust.
-
-Emitters are created using ParticleEmitterBuilder. Unlike Objects and Lights, the builder **returns a pointer** to a new heap-allocated emitter, which you then pass to ParticleManager.
-
-**Basic Syntax:**
-```cpp
-    ParticleEmitter* const fireEmitter = ParticleEmitterBuilder()
-        .name("Campfire Emitter")
-        .position(0.0f, 1.0f, 0.0f)
-        .maxParticles(500)
-        .baseColor(glm::vec3(1.0f, 0.5f, 0.0f))
-        .tipColor(glm::vec3(1.0f, 0.0f, 0.0f))
-        .build(); // Returns a new ParticleEmitter*
-
-    // Registering transfers ownership to ParticleManager
-    EmitterID id = particleManager->registerEmitter(fireEmitter);
-```
-**API Reference**
-
-| Method | Parameters | Description |
-| - | - | - |
-| .name() | std::string | Debug name. |
-| .position() | vec3 | World position of the emitter source. |
-| .maxParticles() | size_t | Maximum number of active particles. |
-| .particleLifetime() | float | How long (seconds) a particle lives. |
-| .material() | MaterialID | Material used for the particle quad (usually transparent). |
-| .baseColor() | vec3 | Color at the start of the particle's life. |
-| .tipColor() | vec3 | Color at the end of the particle's life. |
-| .gravity() | vec3 | Constant force applied (e.g., 0, -9.8, 0 for physics). |
-| .initialVelocity() | vec3 | Starting velocity vector. |
-| .velocityRandomness() | float | Multiplier for randomizing initial velocity. |
-| .spawnRadius() | float | Radius around the position where particles spawn. |
-| .particleScale() | float | Base size of the particles. |
-| .scaleOverLifetime() | float | Multiplier for size change (e.g., 2.0 grows double). |
-| .rotationSpeed() | float | Speed of particle rotation. |
-| .windInfluence() | float | How strongly global wind affects these particles (0.0 - 1.0). |
-| .fadeTimings() | float in, float out | Duration of fade-in and fade-out effects. |
-| .billboardMode() | enum | Spherical (faces cam), Cylindrical (upright), or None. |
-| .colorMode() | enum | Gradient (lerp base->tip), BaseOnly, or TipOnly. |
-
-**Presets**
-
-The EmitterPresets class provides helpers to quickly configure common effects:
-```cpp
-    ParticleEmitterBuilder builder;
-    // Configures builder for fire, smoke, dust, rain, or snow
-    EmitterPresets::createFire(builder); 
-
-    ParticleEmitter* fire = builder
-        .position(10.0f, 0.0f, 10.0f) // Override preset position
-        .build();
-
-    particleManager->registerEmitter(fire);
-```
 
 ### Overview of Classes
 | Category | Class Name | Role | Responsibilities |
@@ -733,14 +432,25 @@ graph TD
 ```
 
 
-
 ### Design Evaluation
+
 #### Pros
-Through using the builder pattern, I believe it enhanced clarity and abstraction. By wrapping complex initialisation logic and optional parameters into these interfaces, the API can hide the verbose nature of the underlying C++ and Vulkan structures, ultimately making the client code readable and self-documenting. I am quite proud of the API I have built. Reusability is also well-supported especially when it comes to my resources. Classes like `MeshManager` and `TextureManager` can focus strictly on the lifecycle and memory management of their assets and by returning handles like `MeshID` or `MaterialID` it abstracts the underlying data structures and does not expose the system in nefarious ways. Furthermore, I am very proud of my particle system, with all particles sharing a long set of parameters that the shader can handle and render. This allows for a centralised area where all particles live, but still allows flexibility within emitters that fire particles and rain particles can be rendered with the same shader, all without the actual objects needing to know how they are drawn. I am also quite pleased with how I have made my plant system, it is all encapsulated and uses the existing structure to create the objects. 
+
+Through using the builder pattern, I believe it enhanced clarity and abstraction within my API. By wrapping complex initialisation logic and optional parameters into interfaces like `ObjectBuilder` and `ParticleEmitterBuilder`, the client code became readable and self-documenting, hiding the verbose nature of the underlying C++ and Vulkan structures. I am quite proud of this architectural choice as it simplified scene construction significantly. Reusability is also well-supported, especially regarding resources. Classes like `MeshManager` and `TextureManager` focus strictly on the lifecycle and memory management of their assets (using RAII principles), returning handles like `MeshID` or `MaterialID`. This abstracts the underlying pointers and prevents the system from being exposed in nefarious ways. 
+
+Furthermore, I am very proud of my particle system. By centralising the rendering logic in `ParticleManager` while keeping configuration in `ParticleEmitter`, I achieved a high degree of flexibility. Emitters for fire, rain, and snow share the same underlying shader parameters but behave completely differently, all without the individual emitter objects needing to know how they are drawn. I also successfully implemented a data-driven approach for the engine's configuration via the `ConfigParser`.
 
 #### Cons
-I think the biggest flaw architecturally speaking is my coupling. Classes like `PlantManager`, `WeatherSystem` and `WorldState` share tight dependencies and are generally less isolated than they ideally should be. I believe that my implementation of `Application` needs quite a bit more work as it acts as a monolithic god class, orchestrating too much. This lack of separation makes the main loop suffer and can lead to annoying to catch bugs. Furthermore, the specific gameplay logic like `PlantManager` and `WeatherSystem` is hard-codeed into the core engine sequence. Ideally, the main generic engine should not be aware of plants, yet it has to be. If I had more time, this is where I would begin rewriting, separating the engine into specific 'passes' with `Application` itself not being in control of so much at once. Additionally, if I had more time I would have preferred creating a component-based approach so that every entity is not forced to carry specific attributes like mesh and material data. As it serves, it is fine but could have some improvement as that would also improve performance.
+I think the biggest flaw architecturally speaking is my coupling. Classes like `PlantManager`, `WeatherSystem` and `WorldState` share tight dependencies and are generally less isolated than they ideally should be. I believe that my implementation of `Application` needs quite a bit more work as it acts as a monolithic 'God Class', orchestrating too much of the specific gameplay logic. This lack of separation makes the main loop suffer and can lead to bugs that are annoying to catch. Another critical weakness is the violation of the open/closed principle in my rendering path. Currently, adding a new render pass requires modifying the `Application::recordCommandBuffer` method directly to inject new draw calls, rather than having a dynamic render list that the renderer simply iterates over. This makes the renderer rigid and prone to breakage when adding features. I also relied too heavily on hard-coded asset paths within my managers; specifically in `PlantManager`, where model paths are string literals buried in the implementation file rather than being loaded from an external manifest.
 
+I also recognise that the synchronization between my logical and visual representations is somewhat fragile. In `PlantManager.h`, I currently maintain a `plantObjectIndices` vector to map my `Plant` logic entities to their corresponding `Object` visual counterparts in the main scene list. This indirect referencing via the `objectIndex_` member variable is error-prone; if the main object list in `Application` were ever reordered or filtered, my plant logic would completely break. Merging these into a single entity or using stable handles instead of raw indices would be a much more robust solution for the future.
+
+#### Future Improvements
+If I had more time, the first thing I would change is the rendering architecture. I would implement a Render Graph or a dynamic pass system. This would allow me to define render passes (like Shadows, Main, Post-Process) as data or independent modules, solving the Open/Closed violation in `Application.cpp`. Furthermore, I would move away from the current monolithic `Object` class toward a component-based architecture. Currently, every object is forced to carry specific attributes like mesh and material IDs. Breaking these into `TransformComponent`, `RenderComponent`, and `LogicComponent` would decouple the logic, allow for more diverse entity types (like invisible logic triggers), and improve cache locality for better performance.
+
+I would also implement an **Event System** to further decouple the gameplay logic. Currently, `Application.cpp` acts as a massive switchboard, manually routing input in `keyCallback` to specific subsystems like `app->postProcessing->toggleToonMode()` or `app->triggerFireEffect()`. An event bus would allow the `WeatherSystem` or `PlantManager` to subscribe to relevant input events without the main application explicitly managing those relationships, significantly cleaning up that function and reducing the hard dependencies between the core loop and the game systems.
+
+A small nitpick I have with my code is the under-use of having separate files for different things. For example, my mesh class definition is located in `MeshManager.cpp` and my material class definition is located in `MaterialManager.cpp`. While not a substantial issue, it would be more satisfying to separate them. 
 
 ### Parasoft Warnings
 
@@ -748,6 +458,42 @@ I think the biggest flaw architecturally speaking is my coupling. Classes like `
 
 I only get one severity 5.
 ## Real-Time Graphics
+
+### Evaluation
+
+#### Geometry Representation and Processing
+
+The engine uses a unified `Vertex` structure defined in `MeshManager`, containing position, colour, texture coordinates, and normal data. This layout simplifies the input but potentially wastes memory bandwidth for passes that only require position data, such as the shadow map generation passes in `ShadowSystem::createShadowPipeline`.
+
+Terrain geometry is generated procedurally on the CPU using `PerlinNoise::octaveNoise` within `MeshManager::createProceduralTerrain`. While this allows for deterministic terrain generation via seeding and does not reduce performance once the mesh has been create, a more scalable and potentially more interesting approach would be to implement GPU-based tessellation or a compute shader to generate the heightmap. Having this would reduce the current CPU bottleneck and also allow for dynamic terrain modification during runtime.
+
+#### Shading and Lighting
+
+Lighting calculations primarily occur in `MainPipeline`, which utilises Vulkan constants to toggle between Phong and Gouraud shading without recompiling the pipeline. The lighting model supports both directional (Sun) and positional (Point) lights, managed by `LightManager`. Data is passed to the GPU with the `LightBufferObject` struct. 
+
+However, the current shading implementation is limited. The lighting loop in the fragment shader scales linearly with the number of lights, constrained by the hardcoded `MAX_LIGHTS` constant (currently set to 8) in `LightManager`. This limits the scene complexity.
+
+#### Shadow Generation
+
+Shadows are generated using a standard depth-only pass managed by `ShadowSystem`. The system calculates an orthographic projection matrix for directional lights (Sun) to capture the scene within a defined radius. The implementation in `ShadowSystem::calculateLightSpaceMatrix` centers the projection on the scene center rather than the camera frustum. This is a disadvantage as it results in artifacts and somewhat insufficient shadow resolution near the camera, regardless of the 16k resolution set. A cascaded shadow map approach would significantly improve the environment.
+
+#### Application-Graphics Connection
+
+Application objects are decoupled from their graphics resources via a handle-based system. The `Application` class acts as the bridge, iterating through logical objects and retrieving the corresponding Vulkan resources from `MeshManager` and `MaterialManager` during the render loop. I believe this pattern allows thousands of objects, like the 1,100 plants in my test scene, to share a single geometry and texture in memory, drastically reducing VRAM. However, the connection is maintained through manual iteration in `Application::recordCommandBuffer`. The CPU must traverse the scene graph every frame, check visibility, and issue draw calls. I think this architecture differs from a more modern architecture where visible sets are culled and sorted into indirect draw buffers, reducing driver overhead.
+
+#### Behaviour Updates and Propagation
+
+Behavioural updates are computed on the CPU and propagated to the GPU with Push Constants and Uniform Buffers. `World State` updates environmental parameters like wind and sun position each frame, which is then aggregated into the `UniformBufferObject` and copied to a mapped GPU buffer in `Application::updateUniformBuffer`. For dynamic entities like plants, `PlantManager` calculates sway and growth parameters, which are then passed individually via `PlantPushConstants` immediately before the draw call in `Application::renderPlants`
+
+#### Extensions and Scalability
+
+The `Material` struct includes a `heightMap` ID and `heightScale`, but due to time constraints, the shader pipeline does not currently implement vertex displacement or parallax occlusion mapping. Implementing this would add significant depth to the sand terrain material. 
+
+#### Future Feature Wishlist!
+
+Ideally I would implement a hybrid raytracer for lighting calculations. Replacing the current shadow map implementation with ray-traced shadows would solve the resolution issues inherent in the orthographic projected used for the sun. Additionally, ray-traced ambient occlusion would ground the plants on the terrain far better. I however understand the feasibility of this.
+
+I would also like to expand the post-processing pipeline. While the current edge-detection toon shader works well, the architecture in `PostProcessing` allows for easy chaining of effects. I love to experiment with screen-space effects like bloom for the fire particles, although even now I do have some colour-grading with hue shift to match the season. 
 
 ### Core Features
 
@@ -763,7 +509,7 @@ Procedural terrain is generated using `PerlinNoise`. The `MeshManager` construct
 
 **Globe**
 
-A sphere mesh is proceurally generated by `MeshManager` to serve as the base for planets and the skybox. There is no 'glass' effect on it however. 
+A sphere mesh is procedurally generated by `MeshManager` to serve as the base for planets and the skybox. There is no 'glass' effect on it however. 
 
 ![alt text](image-2.png)
 
@@ -809,7 +555,7 @@ The scene supports multiple light sources and types. Sun type lights have a dire
 
 **Camera**
 
-A `Camera` class provides view projection matricies. It supports both perspective and orthographic projections.
+A `Camera` class provides view projection matrices. It supports both perspective and orthographic projections.
 
 **Controls**
 
@@ -931,7 +677,7 @@ While all the pieces are there, I did not have time to implement it fully.
 
 **Deferred Rendering**
 
-The final stage of rendering is given to `PostProcessing`. This allows shader effects to be added.
+The final stage of rendering is given to `PostProcessing`. This allows shader effects to be added. For example, currently the entire scene shifts hue and saturation based on the world effects like temperature and humidity.
 
 **Stats for Graphics**
 
